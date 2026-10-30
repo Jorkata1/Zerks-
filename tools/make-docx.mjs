@@ -3,7 +3,8 @@
 //
 //   node tools/make-docx.mjs [docs/ideas.md] [docs/Zerks-X6-ideas.docx]
 //
-// Supported markdown: "# " title, the first plain line after it as the subtitle,
+// Supported markdown: "# " title, the first plain line after it as the subtitle
+// (its first " · " part names the file in the footer),
 // "## " and "### " headings, "- " bullets, "1. " numbered steps, a line that is
 // only _text_ as a grey note, **bold**, [label](url) and pipe tables. A comment
 // right above a table sets its layout:
@@ -110,6 +111,15 @@ let layout = {};
 let numberedList = 0;
 let inNumberedList = false;
 
+/** True when the next non-empty line starts a table, so the line before it stays on the table's page. */
+const beforeTable = (i) => {
+  for (let j = i + 1; j < lines.length; j++) {
+    const next = lines[j].trim();
+    if (next) return next.startsWith("|") || /^<!--\s*docx:/.test(next);
+  }
+  return false;
+};
+
 for (let i = 0; i < lines.length; i++) {
   const line = lines[i].trim();
   if (!/^\d+\.\s/.test(line)) inNumberedList = false;
@@ -120,6 +130,7 @@ for (let i = 0; i < lines.length; i++) {
     layout = parseLayout(comment[1]);
     continue;
   }
+  if (/^<!--.*-->$/.test(line)) continue;
   if (line.startsWith("|")) {
     const rows = [];
     for (; i < lines.length && lines[i].trim().startsWith("|"); i++) {
@@ -138,7 +149,7 @@ for (let i = 0; i < lines.length; i++) {
   }
   if (line.startsWith("## ") || line.startsWith("### ")) {
     const level = line.startsWith("## ") ? HeadingLevel.HEADING_1 : HeadingLevel.HEADING_2;
-    children.push(new Paragraph({ heading: level, children: [new TextRun({ text: line.replace(/^#+\s/, ""), font: FONT })] }));
+    children.push(new Paragraph({ heading: level, keepNext: true, children: [new TextRun({ text: line.replace(/^#+\s/, ""), font: FONT })] }));
     continue;
   }
   if (line.startsWith("- ")) {
@@ -162,12 +173,14 @@ for (let i = 0; i < lines.length; i++) {
     children.push(new Paragraph({ spacing: { after: 240 }, children: runs(line, { size: 24, color: GREY }) }));
     continue;
   }
-  children.push(new Paragraph({ spacing: { after: 120, line: 300 }, children: runs(line) }));
+  children.push(new Paragraph({ spacing: { after: 120, line: 300 }, keepNext: beforeTable(i), children: runs(line) }));
 }
 
+// The subtitle's first part names the file ("Файл за идеи", "Ход на играта") for the footer and metadata.
+const label = subtitle.split(" · ")[0] || "файл";
 const doc = new Document({
   creator: "Claude",
-  title: `${title} — файл за идеи`,
+  title: `${title} — ${label}`,
   styles: {
     default: { document: { run: { font: FONT, size: 22 } } },
     paragraphStyles: [
@@ -185,7 +198,7 @@ const doc = new Document({
     {
       properties: { page: { margin: { top: 1134, bottom: 1134, left: 1134, right: 1134 } } },
       footers: {
-        default: new Footer({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: `${title} · файл за идеи · стр. `, font: FONT, size: 18, color: GREY }), new TextRun({ children: [PageNumber.CURRENT], font: FONT, size: 18, color: GREY })] })] }),
+        default: new Footer({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: `${title} · ${label} · стр. `, font: FONT, size: 18, color: GREY }), new TextRun({ children: [PageNumber.CURRENT], font: FONT, size: 18, color: GREY })] })] }),
       },
       children,
     },
