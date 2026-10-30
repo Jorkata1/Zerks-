@@ -4,6 +4,8 @@
 
 - `docs/notes.md`: бележки, задачи, решения, дневник
 - `docs/ideas.md`: файлът за идеи; `npm run docx` прави от него `docs/Zerks-X6-ideas.docx`
+- `docs/handover.md`: предаването на екипа
+- `docs/practices.md`, `docs/practices-tools.md`: наученото от кода на предишния проект
 - `deck/project/`: презентацията (визията)
 - `CLAUDE.md`: правилата за двата чата и командите „обнови чат“ и „актуализирай и качи“
 
