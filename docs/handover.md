@@ -1,4 +1,4 @@
-<!-- Синхронизирано с документа „Предаване на екипа: Zerks-X6“ (https://claude.ai/artifact/UKt9X6dDdkwBrJkWmNEBKJ) при rev 35. -->
+<!-- Синхронизирано с документа „Предаване на екипа: Zerks-X6“ (https://claude.ai/artifact/UKt9X6dDdkwBrJkWmNEBKJ) при rev 36. -->
 
 # Предаване на екипа: Zerks-X6
 
@@ -15,7 +15,7 @@ Oct 30, 2026 · @Georgi Gushev
 | [GitHub: Jorkata1/Zerks-](https://github.com/Jorkata1/Zerks-) | Единственият източник: презентация, бележки, Word файлове, ходът на играта, копия на този документ и на практиките, правилата в CLAUDE.md | И двамата качвате тук |
 | [Zerks-X6: визия](https://claude.ai/artifact/M24iSRvk2nLpCtVkvGpYvf) | Презентация, 24 слайда: история, игра, прогресия, план | И двамата редактирате |
 | [Zerks-X6: бележки](https://claude.ai/artifact/8kvHeAVcx15sZRertKdhzx) | Текуща работа: схема на цикъла, задачи, решения, дневник | И двамата редактирате |
-| [Zerks-X6: ход на играта](https://claude.ai/artifact/UHthtpLjANB3bH1q85vqbP) | Играта стъпка по стъпка: 10 глави, системи; Word файл за попълване `docs/Zerks-X6-game-flow.docx` в репото | Частен, споделете |
+| [Zerks-X6: ход на играта](https://claude.ai/artifact/UHthtpLjANB3bH1q85vqbP) | Играта стъпка по стъпка: 10 глави, системи; Word файл за попълване `docs/Zerks-X6-game-flow.docx` в репото | И двамата редактирате |
 | Zerks-X6-ideas.docx | Word файлът за идеи: идеята, предложенията и отговорите, въпросите, таблица за нови идеи | В репото: `docs/Zerks-X6-ideas.docx` |
 | [Практики за игри](https://claude.ai/artifact/XL3TUQFuxrNgXHr3J8k71P) | Наученото от кода: процес, проверки, кинематография, капани в three.js, архитектура; раздел Инструменти със скриптовете за запис и преглед | Споделен с колегата |
 | Този документ | Предаването на екипа | Споделен с колегата |
