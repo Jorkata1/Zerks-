@@ -1,0 +1,13 @@
+{
+  "name": "zerks-x6",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Zerks-X6: визия, бележки и идеи за играта",
+  "type": "module",
+  "scripts": {
+    "docx": "node tools/make-docx.mjs docs/ideas.md docs/Zerks-X6-ideas.docx"
+  },
+  "devDependencies": {
+    "docx": "9.5.1"
+  }
+}
