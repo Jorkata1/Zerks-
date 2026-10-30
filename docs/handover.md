@@ -1,4 +1,4 @@
-<!-- Синхронизирано с документа „Предаване на екипа: Zerks-X6“ (https://claude.ai/artifact/UKt9X6dDdkwBrJkWmNEBKJ) при rev 34. -->
+<!-- Синхронизирано с документа „Предаване на екипа: Zerks-X6“ (https://claude.ai/artifact/UKt9X6dDdkwBrJkWmNEBKJ) при rev 35. -->
 
 # Предаване на екипа: Zerks-X6
 
@@ -12,10 +12,11 @@ Oct 30, 2026 · @Georgi Gushev
 
 | Документ | Какво има вътре | Достъп |
 | --- | --- | --- |
-| [GitHub: Jorkata1/Zerks-](https://github.com/Jorkata1/Zerks-) | Единственият източник: презентация, бележки, Word файл, копия на този документ и на практиките, правилата в CLAUDE.md | И двамата качвате тук |
+| [GitHub: Jorkata1/Zerks-](https://github.com/Jorkata1/Zerks-) | Единственият източник: презентация, бележки, Word файлове, ходът на играта, копия на този документ и на практиките, правилата в CLAUDE.md | И двамата качвате тук |
 | [Zerks-X6: визия](https://claude.ai/artifact/M24iSRvk2nLpCtVkvGpYvf) | Презентация, 24 слайда: история, игра, прогресия, план | И двамата редактирате |
 | [Zerks-X6: бележки](https://claude.ai/artifact/8kvHeAVcx15sZRertKdhzx) | Текуща работа: схема на цикъла, задачи, решения, дневник | И двамата редактирате |
-| Zerks-X6-ideas.docx | Word файлът за идеи: идеята, 20 предложения, 7 въпроса, таблица за нови идеи | Ще е в репото; до тогава е в чата на Жоро |
+| [Zerks-X6: ход на играта](https://claude.ai/artifact/UHthtpLjANB3bH1q85vqbP) | Играта стъпка по стъпка: 10 глави, системи; Word файл за попълване `docs/Zerks-X6-game-flow.docx` в репото | Частен, споделете |
+| Zerks-X6-ideas.docx | Word файлът за идеи: идеята, предложенията и отговорите, въпросите, таблица за нови идеи | В репото: `docs/Zerks-X6-ideas.docx` |
 | [Практики за игри](https://claude.ai/artifact/XL3TUQFuxrNgXHr3J8k71P) | Наученото от кода: процес, проверки, кинематография, капани в three.js, архитектура; раздел Инструменти със скриптовете за запис и преглед | Споделен с колегата |
 | Този документ | Предаването на екипа | Споделен с колегата |
 
@@ -147,16 +148,18 @@ Zerks-X6 е във Фаза 0 (концепция), почти готова: н�
 
 ```text
 Zerks-/
-  CLAUDE.md                 правилата и двете команди; всеки нов чат го чете сам
-  README.md                 кратко описание
-  docs/notes.md             бележки: сега работим по, задачи, решения, дневник
-  docs/ideas.md             съдържанието на Word файла
-  docs/Zerks-X6-ideas.docx  генериран от ideas.md (npm run docx)
-  docs/handover.md          този документ
-  docs/practices.md         наученото от кода („Практики за игри“, раздел Практики)
-  docs/practices-tools.md   скриптовете за запис и преглед (раздел Инструменти)
-  deck/project/             презентацията (deck.json и слайдовете)
-  tools/make-docx.mjs       генераторът на Word файла
+  CLAUDE.md                     правилата и двете команди; всеки нов чат го чете сам
+  README.md                     кратко описание
+  docs/notes.md                 бележки: сега работим по, задачи, решения, дневник
+  docs/ideas.md                 съдържанието на Word файла с идеи
+  docs/Zerks-X6-ideas.docx      генериран от ideas.md (npm run docx)
+  docs/game-flow.md             ходът на играта: глави, стъпки, системи
+  docs/Zerks-X6-game-flow.docx  Word файлът за попълване, генериран от game-flow.md
+  docs/handover.md              този документ
+  docs/practices.md             наученото от кода („Практики за игри“, раздел Практики)
+  docs/practices-tools.md       скриптовете за запис и преглед (раздел Инструменти)
+  deck/project/                 презентацията (deck.json и слайдовете)
+  tools/make-docx.mjs           генераторът на Word файловете
 ```
 
 Word файлът има текстово копие (`ideas.md`), защото GitHub не може да покаже или слее промени в `.docx`.
