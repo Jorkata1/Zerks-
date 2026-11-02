@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=390, initial-scale=1">
+<title>Zerks-X6 mockup v2</title>
+<script type="importmap">{ "imports": { "three": "./node_modules/three/build/three.module.js", "three/addons/": "./node_modules/three/examples/jsm/" } }</script>
+<style>
+  @font-face { font-family: 'Exo 2'; src: url(fonts/exo2-cyrillic.woff2) format('woff2'); font-weight: 100 900; unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+  @font-face { font-family: 'Exo 2'; src: url(fonts/exo2-latin.woff2) format('woff2'); font-weight: 100 900; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+  /* one accent (teal), cool glass, hairline borders, chamfered corners */
+  :root { --ink: #eaf2ff; --muted: rgba(205, 222, 245, .62); --glass: rgba(8, 14, 30, .46); --glass-strong: rgba(8, 14, 30, .78); --line: rgba(170, 225, 255, .22); --accent: #4fd1a5; --accent-dim: rgba(79, 209, 165, .25); }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 390px; height: 844px; overflow: hidden; background: #0b1022; font-family: 'Exo 2', sans-serif; color: var(--ink); font-variant-numeric: tabular-nums; }
+  #view, #hud { position: absolute; inset: 0; } #hud { pointer-events: none; }
+  .shade { position: absolute; left: 0; right: 0; top: 0; height: 120px; background: linear-gradient(rgba(4, 8, 18, .5), rgba(4, 8, 18, 0)); }
+  .shade.b { top: auto; bottom: 0; height: 150px; background: linear-gradient(rgba(4, 8, 18, 0), rgba(4, 8, 18, .45)); }
+  .status { position: absolute; top: 0; left: 0; right: 0; height: 47px; display: flex; align-items: center; justify-content: space-between; padding: 7px 30px 0 34px; font: 600 16px -apple-system, 'Inter', sans-serif; }
+  .status .r { display: flex; gap: 6px; align-items: center; }
+  .glass { background: var(--glass); backdrop-filter: blur(10px) saturate(140%); border: 1px solid var(--line); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 6px 20px rgba(0, 0, 0, .18); }
+  .cham { clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); }
+  /* top-left: atmosphere gauge with the level hex */
+  .gauge { position: absolute; top: 52px; left: 12px; width: 66px; height: 66px; }
+  .gauge .disc { position: absolute; inset: 5px; border-radius: 50%; }
+  .gauge .val { position: absolute; inset: 0; display: grid; place-items: center; font-weight: 700; font-size: 19px; letter-spacing: -.5px; }
+  .gauge .val small { font-size: 10px; font-weight: 600; color: var(--muted); margin-left: 1px; }
+  .gauge .ico { position: absolute; left: 50%; top: 13px; transform: translateX(-50%); opacity: .8; }
+  .lvl { position: absolute; top: 96px; left: 58px; width: 30px; height: 30px; }
+  .lvl span { position: absolute; inset: 0; display: grid; place-items: center; font-weight: 700; font-size: 12px; }
+  /* top-right: three resources, the rest on tap */
+  .res { position: absolute; top: 58px; right: 12px; display: flex; align-items: center; height: 34px; padding: 0 6px 0 10px; }
+  .res .it { display: flex; align-items: center; gap: 5px; font-weight: 600; font-size: 13.5px; padding: 0 8px; }
+  .res .it + .it { border-left: 1px solid var(--line); }
+  .res .chev { width: 22px; display: grid; place-items: center; opacity: .7; }
+  .side { position: absolute; right: 12px; top: 102px; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; }
+  /* map pins */
+  .pin { position: absolute; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; }
+  .pin .lead { width: 1px; height: 12px; background: linear-gradient(var(--line), rgba(170, 225, 255, .6)); }
+  .pin .foot { width: 5px; height: 5px; border-radius: 50%; background: var(--ink); box-shadow: 0 0 6px var(--accent); }
+  .pin .tiny { margin-top: 2px; font-size: 10px; font-weight: 700; letter-spacing: .4px; color: var(--ink); text-shadow: 0 1px 3px rgba(0, 0, 0, .6); }
+  .hexp { position: relative; width: 34px; height: 38px; display: grid; place-items: center; }
+  .hexp svg.bg { position: absolute; inset: 0; }
+  .pulse { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+  /* dock: icons only, build raised in the middle */
+  .dock { position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); width: 318px; height: 60px; border-radius: 22px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; }
+  .dock .b { width: 44px; height: 44px; display: grid; place-items: center; position: relative; }
+  .dock .b.off { opacity: .38; }
+  .dock .b .lock { position: absolute; right: 2px; bottom: 4px; }
+  .dock .b .dot { position: absolute; right: 3px; top: 3px; min-width: 15px; height: 15px; border-radius: 8px; background: var(--accent); color: #062019; font-size: 9.5px; font-weight: 800; display: grid; place-items: center; padding: 0 3px; box-shadow: 0 0 8px var(--accent); }
+  .dock .build { width: 64px; height: 70px; margin-top: -26px; position: relative; display: grid; place-items: center; filter: drop-shadow(0 0 12px rgba(79, 209, 165, .55)); }
+  .dock .build svg.bg { position: absolute; inset: 0; }
+  .home { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 134px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, .9); }
+  /* sheet opened by tapping a building */
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; height: 342px; padding: 10px 16px 34px; background: var(--glass-strong); backdrop-filter: blur(16px) saturate(150%); border-top: 1px solid var(--line); clip-path: polygon(0 18px, 18px 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%); }
+  .sheet .grab { width: 40px; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, .3); margin: 0 auto 12px; }
+  .sh-head { display: flex; align-items: center; gap: 12px; }
+  .sh-head h3 { font-size: 19px; font-weight: 700; letter-spacing: .2px; }
+  .sh-head p { font-size: 12px; color: var(--muted); margin-top: 1px; }
+  .sh-head .x { margin-left: auto; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+  .stat { padding: 9px 10px; border: 1px solid var(--line); background: rgba(255, 255, 255, .04); }
+  .stat .k { font-size: 10.5px; color: var(--muted); letter-spacing: .6px; text-transform: uppercase; }
+  .stat .v { font-size: 18px; font-weight: 700; margin-top: 2px; } .stat .v em { font-style: normal; font-size: 12px; color: var(--accent); margin-left: 3px; font-weight: 600; }
+  .bar { height: 3px; background: rgba(255, 255, 255, .14); margin-top: 6px; position: relative; } .bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); }
+  .segs { display: flex; gap: 2px; margin-top: 7px; } .segs i { flex: 1; height: 3px; background: rgba(255, 255, 255, .16); } .segs i.on { background: var(--accent); }
+  .crew { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
+  .slot { width: 46px; height: 50px; position: relative; display: grid; place-items: center; }
+  .crew p { font-size: 11.5px; color: var(--muted); margin-left: 4px; line-height: 1.35; }
+  .up { display: flex; gap: 8px; margin-top: 14px; align-items: stretch; }
+  .mult { display: flex; border: 1px solid var(--line); } .mult span { padding: 0 10px; display: grid; place-items: center; font-size: 13px; font-weight: 700; color: var(--muted); } .mult span.on { background: var(--accent-dim); color: var(--ink); }
+  .go { flex: 1; height: 52px; background: linear-gradient(180deg, #5fe0b4, #3dbb91); color: #04261c; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); box-shadow: 0 0 18px rgba(79, 209, 165, .45); }
+  .go b { font-size: 16px; letter-spacing: .4px; } .go .cost { display: flex; gap: 10px; font-weight: 700; font-size: 13px; } .go .cost span { display: flex; align-items: center; gap: 3px; }
+</style>
+</head>
+<body>
+<div id="view"></div>
+<div id="hud"></div>
+<script type="module" src="src/main.js"></script>
+<script>
+// ---------- icon set: one stroke style, 24px grid ----------
+const S = (d, c = '#eaf2ff', w = 1.8) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const I = {
+  people: S('<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.6 2.7-5.6 6-5.6s6 2 6 5.6"/><path d="M16 4.8a3 3 0 0 1 0 6M18.5 14.6c1.6.7 2.5 2.4 2.5 5.4"/>'),
+  research: S('<path d="M9 3h6M10 3v6.2L4.6 18.4A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.4-2.6L14 9.2V3"/><path d="M7.5 15h9"/>'),
+  map: S('<path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20z"/><path d="M9 4v13.5M15 6.5V20"/>'),
+  build: S('<path d="M12 3 20 7.5v9L12 21l-8-4.5v-9z"/><path d="M12 8v8M8 12h8"/>', '#04261c', 2.2),
+  echo: `<svg width="26" height="26" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="#eaf2ff"/><rect x="6.2" y="9.6" width="11.6" height="4.6" rx="2.3" fill="#0b1022"/><rect x="8.4" y="11.1" width="7.2" height="1.6" rx=".8" fill="#4fd1a5"/><path d="M12 3.5V1.6" stroke="#eaf2ff" stroke-width="1.4"/><circle cx="12" cy="1.4" r="1" fill="#4fd1a5"/></svg>`,
+  lock: `<svg width="11" height="11" viewBox="0 0 12 12"><rect x="2" y="5.2" width="8" height="6" rx="1.4" fill="#cfe0f5"/><path d="M3.8 5.2V3.8a2.2 2.2 0 0 1 4.4 0v1.4" stroke="#cfe0f5" stroke-width="1.4" fill="none"/></svg>`,
+  chev: S('<path d="M7 10l5 5 5-5"/>', '#eaf2ff', 2),
+  moon: `<svg width="18" height="18" viewBox="0 0 24 24"><path d="M15.5 3.5a8.5 8.5 0 1 0 5 13.6A7 7 0 0 1 15.5 3.5z" fill="#dfe8f5"/></svg>`,
+  close: S('<path d="M7 7l10 10M17 7 7 17"/>', '#eaf2ff', 2),
+};
+const R = {   // resource glyphs, coloured
+  o2: `<svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.6" fill="none" stroke="#7fe7c8" stroke-width="1.6"/><circle cx="8" cy="8" r="2.4" fill="#7fe7c8"/></svg>`,
+  water: `<svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 1.6s-4.6 5.4-4.6 8.4a4.6 4.6 0 0 0 9.2 0C12.6 7 8 1.6 8 1.6z" fill="#6cc4ff"/></svg>`,
+  carbon: `<svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 1.5 14 5.3v5.4L8 14.5 2 10.7V5.3z" fill="#2a2b33" stroke="#aab6c8" stroke-width="1.2"/></svg>`,
+  stone: `<svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 11.5 4.6 4.6 10 3l4 4.6-1.4 5.4H4.6z" fill="#d4a37c"/></svg>`,
+  food: `<svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 14.5c-4 0-5.4-4-4.4-7S8 4 8 4s3.4-1 4.4 3-.4 7.5-4.4 7.5z" fill="#86d16a"/><path d="M8 4c0-1.6 1-2.6 2.6-2.8" stroke="#5aa246" stroke-width="1.4" fill="none"/></svg>`,
+  steel: `<svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 6h12v6H2z" fill="#a9b4c2"/><path d="M2 6l2-2.5h8L14 6" fill="#d6dde6"/></svg>`,
+  crystal: `<svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 1 12.6 6 8 15 3.4 6z" fill="#b48cff"/><path d="M8 1 12.6 6H3.4z" fill="#dccbff"/></svg>`,
+  wake: S('<circle cx="9" cy="8" r="3"/><path d="M3.5 19c0-3.3 2.5-5.2 5.5-5.2s5.5 1.9 5.5 5.2"/><path d="M18 8v6M15 11h6"/>', '#04261c', 2.1),
+  ship: `<svg width="18" height="18" viewBox="0 0 24 24" fill="#eaf2ff"><path d="M3 13l4-5h10l4 5-4 3H7z"/><path d="M9 8l2-3h4l1 3" fill="#9fb3cc"/></svg>`,
+  chute: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#eaf2ff" stroke-width="1.7"><path d="M3 11a9 7 0 0 1 18 0z" fill="#ff8a3d" stroke="none"/><path d="M4 11l6.5 7M20 11l-6.5 7M12 11v7"/><rect x="9.5" y="17.5" width="5" height="4" rx="1" fill="#eaf2ff" stroke="none"/></svg>`,
+};
+const hexPath = (w, h, inset = 1) => { const x0 = inset, x1 = w - inset, y0 = inset, y1 = h - inset, q = (h - 2 * inset) / 4; return `M${w / 2} ${y0} L${x1} ${y0 + q} L${x1} ${y1 - q} L${w / 2} ${y1} L${x0} ${y1 - q} L${x0} ${y0 + q} Z`; };
+function hexPin(inner, { fill = 'rgba(8,14,30,.62)', stroke = 'rgba(170,225,255,.55)', glow = false, w = 34, h = 38 } = {}) {
+  return `<div class="hexp" style="width:${w}px;height:${h}px">${glow ? `<svg class="pulse" width="${w + 22}" height="${h + 24}" viewBox="0 0 ${w + 22} ${h + 24}"><path d="${hexPath(w + 22, h + 24, 2)}" fill="none" stroke="rgba(79,209,165,.35)" stroke-width="1.5"/></svg><svg class="pulse" width="${w + 10}" height="${h + 12}" viewBox="0 0 ${w + 10} ${h + 12}"><path d="${hexPath(w + 10, h + 12, 1.5)}" fill="none" stroke="rgba(79,209,165,.6)" stroke-width="1.5"/></svg>` : ''}<svg class="bg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><path d="${hexPath(w, h)}" fill="${fill}" stroke="${stroke}" stroke-width="1.2"/></svg><div style="position:relative">${inner}</div></div>`;
+}
+const pinAt = (p, inner, tiny = '') => `<div class="pin" style="left:${p.x.toFixed(1)}px;top:${p.y.toFixed(1)}px">${inner}${tiny ? `<div class="tiny">${tiny}</div>` : ''}<div class="lead"></div><div class="foot"></div></div>`;
+
+function gauge(pct, late) {
+  const r = 28, C = 2 * Math.PI * r, seg = C / 5, gap = 3;
+  let track = '', arc = '';
+  for (let i = 0; i < 5; i++) track += `<circle cx="33" cy="33" r="${r}" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="4" stroke-dasharray="${seg - gap} ${C - seg + gap}" stroke-dashoffset="${-i * seg}" transform="rotate(-90 33 33)"/>`;
+  const filled = pct / 100 * C;
+  for (let i = 0; i < 5; i++) { const s0 = i * seg, s1 = Math.min(filled, s0 + seg - gap); if (s1 > s0) arc += `<circle cx="33" cy="33" r="${r}" fill="none" stroke="#4fd1a5" stroke-width="4" stroke-linecap="butt" stroke-dasharray="${s1 - s0} ${C}" stroke-dashoffset="${-s0}" transform="rotate(-90 33 33)" style="filter:drop-shadow(0 0 3px rgba(79,209,165,.9))"/>`; }
+  let ticks = ''; for (let i = 0; i < 60; i++) { const a = i / 60 * Math.PI * 2; ticks += `<line x1="${33 + Math.cos(a) * 31.5}" y1="${33 + Math.sin(a) * 31.5}" x2="${33 + Math.cos(a) * (i % 12 ? 32.6 : 33.6)}" y2="${33 + Math.sin(a) * (i % 12 ? 32.6 : 33.6)}" stroke="rgba(200,230,255,.35)" stroke-width="1"/>`; }
+  return `<div class="gauge"><div class="disc glass"></div><svg width="66" height="66" viewBox="0 0 66 66" style="position:absolute;inset:0">${ticks}${track}${arc}</svg>
+    <svg class="ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#cfe0f5" stroke-width="2"><circle cx="12" cy="12" r="6"/><ellipse cx="12" cy="12" rx="11" ry="4" transform="rotate(-20 12 12)"/></svg>
+    <div class="val" style="padding-top:6px"><span>${pct}<small>%</small></span></div></div>`;
+}
+function levelHex(n) { return `<div class="lvl"><svg width="30" height="30" viewBox="0 0 30 30"><path d="${hexPath(30, 30, 1.5)}" fill="rgba(8,14,30,.8)" stroke="#4fd1a5" stroke-width="1.6"/></svg><span>${n}</span></div>`; }
+
+function hud() {
+  const a = window.__anchors, st = window.__state, L = st.late, panel = st.panel;
+  let h = `<div class="shade"></div>${panel ? '' : '<div class="shade b"></div>'}`;
+  h += `<div class="status"><span>9:41</span><span class="r"><svg width="18" height="11" viewBox="0 0 18 11" fill="#fff"><rect x="0" y="7" width="3" height="4" rx=".8"/><rect x="5" y="5" width="3" height="6" rx=".8"/><rect x="10" y="2.5" width="3" height="8.5" rx=".8"/><rect x="15" y="0" width="3" height="11" rx=".8"/></svg><svg width="16" height="11" viewBox="0 0 16 12"><path d="M8 11.5 5.6 9a3.4 3.4 0 0 1 4.8 0zM3.4 6.8a6.6 6.6 0 0 1 9.2 0l-1.4 1.4a4.6 4.6 0 0 0-6.4 0zM1 4.4a10 10 0 0 1 14 0l-1.4 1.4a8 8 0 0 0-11.2 0z" fill="#fff"/></svg><svg width="27" height="13" viewBox="0 0 27 13"><rect x=".7" y=".7" width="22.6" height="11.6" rx="3.4" fill="none" stroke="#fff" stroke-opacity=".5"/><rect x="2.4" y="2.4" width="17" height="8.2" rx="1.8" fill="#fff"/><rect x="24.4" y="4.3" width="1.8" height="4.4" rx=".9" fill="#fff" fill-opacity=".5"/></svg></span></div>`;
+  h += gauge(L ? 90 : 19, L) + levelHex(L ? 78 : 10);
+  const items = L ? [['food', '18.4K'], ['steel', '6.3K'], ['crystal', '412']] : [['o2', '82%'], ['water', '58'], ['carbon', '34']];
+  h += `<div class="res glass cham">${items.map(([k, v]) => `<div class="it">${R[k]}${v}</div>`).join('')}<div class="chev">${I.chev}</div></div>`;
+  if (L) h += `<div class="side glass">${I.moon}</div>`;
+  if (!panel) {
+    if (!L) {
+      h += pinAt(a.drill, hexPin(R.carbon));
+      h += pinAt(a.water, hexPin(R.water));
+      h += pinAt(a.hab, hexPin(R.wake, { fill: '#4fd1a5', stroke: '#bff5e2', glow: true }));
+      h += pinAt(a.zone, hexPin(I.lock.replace('width="11" height="11"', 'width="14" height="14"')), '20%');
+      h += pinAt(a.rubble, hexPin(S('<path d="M14.5 4.5l5 5M17 7 6 18"/><path d="M12.5 3.5c3 0 6 1.5 8 4"/>', '#eaf2ff', 2)));
+      h += pinAt(a.empty, hexPin(S('<path d="M12 6v12M6 12h12"/>', '#4fd1a5', 2.4), { stroke: 'rgba(79,209,165,.85)' }));
+    } else {
+      h += pinAt(a.ship, `<div style="position:relative;width:40px;height:40px;display:grid;place-items:center"><svg width="40" height="40" viewBox="0 0 40 40" style="position:absolute"><circle cx="20" cy="20" r="18" fill="rgba(8,14,30,.62)" stroke="rgba(170,225,255,.3)" stroke-width="1"/><circle cx="20" cy="20" r="15" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="3"/><circle cx="20" cy="20" r="15" fill="none" stroke="#4fd1a5" stroke-width="3" stroke-dasharray="${0.8 * 94.2} 94.2" transform="rotate(-90 20 20)"/></svg><div style="position:relative">${R.ship}</div></div>`, '8/10');
+      h += pinAt(a.capsule, hexPin(R.chute, { glow: true }));
+      h += pinAt(a.shuttle, hexPin(R.crystal));
+      h += pinAt(a.field, hexPin(R.food));
+    }
+    const dockB = (ico, cls = '', extra = '') => `<div class="b ${cls}">${ico}${extra}</div>`;
+    h += `<div class="dock glass">${dockB(I.people, L ? '' : 'off', L ? '' : `<span class="lock">${I.lock}</span>`)}${dockB(`<svg width="44" height="44" viewBox="0 0 44 44" style="position:absolute"><circle cx="22" cy="22" r="17" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="2"/><circle cx="22" cy="22" r="17" fill="none" stroke="#4fd1a5" stroke-width="2" stroke-dasharray="${0.6 * 106.8} 106.8" transform="rotate(-90 22 22)"/></svg>` + I.research)}<div class="build"><svg class="bg" width="64" height="70" viewBox="0 0 64 70"><defs><linearGradient id="bg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6be6bd"/><stop offset="1" stop-color="#36b58b"/></linearGradient></defs><path d="${hexPath(64, 70, 1.5)}" fill="url(#bg1)" stroke="#c6f7e6" stroke-width="1.5"/></svg><div style="position:relative">${I.build.replace('width="22" height="22"', 'width="28" height="28"')}</div></div>${dockB(I.map, L ? '' : 'off', L ? '' : `<span class="lock">${I.lock}</span>`)}${dockB(I.echo, '', '<span class="dot">3</span>')}</div>`;
+  } else {
+    // tapped: the carbon drill
+    const seg = n => Array.from({ length: 10 }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('');
+    const slot = (inner, locked) => `<div class="slot"><svg width="46" height="50" viewBox="0 0 46 50" style="position:absolute"><path d="${hexPath(46, 50, 1.5)}" fill="rgba(255,255,255,.04)" stroke="rgba(170,225,255,.4)" stroke-width="1.2" stroke-dasharray="4 3"/></svg><div style="position:relative;opacity:${locked ? .5 : 1}">${inner}</div></div>`;
+    h += `<div class="sheet"><div class="grab"></div>
+      <div class="sh-head">${hexPin(R.carbon.replace('width="16" height="16"', 'width="20" height="20"'), { w: 44, h: 48 })}<div><h3>Карбонова сонда</h3><p>Ниво 12 · Дъното на каньона</p></div><div class="x">${I.close}</div></div>
+      <div class="stats">
+        <div class="stat"><div class="k">Добив</div><div class="v">18<span style="font-size:12px;color:var(--muted);font-weight:600">/мин</span><em>+2</em></div><div class="bar"><i style="width:60%"></i></div></div>
+        <div class="stat"><div class="k">Склад</div><div class="v">34<span style="font-size:12px;color:var(--muted);font-weight:600"> /120</span></div><div class="bar"><i style="width:28%"></i></div></div>
+        <div class="stat"><div class="k">Скок ×2</div><div class="v">8<span style="font-size:12px;color:var(--muted);font-weight:600"> нива</span></div><div class="segs">${seg(2)}</div></div>
+      </div>
+      <div class="crew">${slot(I.people, true)}${slot(I.people, true)}${slot(`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#eaf2ff" stroke-width="1.8"><path d="M4 20l6-14 4 7 2-3 4 10z"/></svg>`, true)}<p>Работници и геолог<br>от глава 2</p></div>
+      <div class="up"><div class="mult"><span class="on">×1</span><span>×10</span><span>MAX</span></div><div class="go"><b>ПОДОБРИ</b><div class="cost"><span>${R.carbon}40</span><span>${R.stone}12</span></div></div></div>
+    </div>`;
+  }
+  if (!panel) h += '<div class="home"></div>'; else h += '<div class="home" style="z-index:2"></div>';
+  document.getElementById('hud').innerHTML = h;
+  document.fonts.ready.then(() => { window.__ready = true; });
+}
+window.addEventListener('scene-ready', hud);
+</script>
+</body>
+</html>
