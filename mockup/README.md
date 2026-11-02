@@ -53,6 +53,7 @@ npm run shots
 
 ## Източници и лицензи
 
+- **Ковчегът и карбоновата сонда:** гладките модели от CellCog в `art/3d` (02.11.2026); `fetch-assets.sh` ги копира в `models/`. Старите модели, построени с код, са още в `src/models.js`.
 - **Kenney Space Kit** (kenney.nl): модели на хангари, куполи, чинии, генератори, роувър, астронавт, ракета, скали. Лиценз CC0. Взети са от npm копието `@anabis/kenney-space-kit-mirror`.
 - **Poly Haven** (polyhaven.com): сканирани текстури (почва, трева, бетон, асфалт, чакъл, метал) и небето `kloofendal_48d_partly_cloudy_puresky`. Лиценз CC0.
 - **Exo 2** (Google Fonts): шрифтът на интерфейса. Лиценз SIL Open Font License 1.1.
