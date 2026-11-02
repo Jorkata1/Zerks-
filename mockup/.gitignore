@@ -1,0 +1,5 @@
+# downloaded by fetch-assets.sh and npm install, not kept in git
+node_modules/
+models/
+ph/
+out/

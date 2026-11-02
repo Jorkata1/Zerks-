@@ -1,0 +1,13 @@
+{
+  "name": "zerks-x6-mockup",
+  "private": true,
+  "description": "Still frames of the Zerks-X6 screen: a three.js scene with the game HUD on top, rendered at iPhone size.",
+  "scripts": {
+    "assets": "bash fetch-assets.sh",
+    "serve": "python3 -m http.server 8777 --bind 127.0.0.1",
+    "shots": "node shot.js 3 early,early-zoom,early-panel,late,late-zoom"
+  },
+  "dependencies": {
+    "three": "0.170.0"
+  }
+}
