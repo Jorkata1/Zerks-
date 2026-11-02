@@ -18,6 +18,10 @@ if [ ! -f models/rover.glb ]; then
   echo "models: $(ls models/*.glb | wc -l) Kenney models"
 fi
 
+# the smooth CellCog models kept in the repo (art/3d)
+mkdir -p models
+cp ../art/3d/*.glb models/
+
 # Poly Haven: colour, normal and roughness maps, plus one sky
 UA='Mozilla/5.0'
 mkdir -p ph

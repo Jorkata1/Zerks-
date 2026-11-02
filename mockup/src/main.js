@@ -95,6 +95,14 @@ await Promise.all(KIT.map(async n => {
   const wrap = new THREE.Group(); wrap.add(root); kitSrc[n] = wrap;
 }));
 const kit = (n, s = 3) => { const o = kitSrc[n].clone(true); o.scale.setScalar(s); return o; };
+// smooth models made with CellCog (art/3d, copied into models/ by fetch-assets.sh): origin on the ground at the centre of the footprint, 1 unit = 1 m
+const smooth = {};
+await Promise.all(['ark-v1', 'carbon-drill-v1'].map(async n => {
+  const root = (await gltf.loadAsync('models/' + n + '.glb')).scene;
+  root.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  smooth[n] = root;
+}));
+const smoothModel = n => { const g = new THREE.Group(); g.add(smooth[n].clone(true)); return g; };
 function rocket(s = 2.4) { const g = new THREE.Group(); let y = 0; for (const [n, h] of [['rocket_finsA', 0.7], ['rocket_fuelA', 0.5], ['rocket_sidesA', 1], ['rocket_sidesA', 1], ['rocket_topA', 0.8]]) { const p = kit(n, s); p.position.y = y * s; g.add(p); y += h; } return g; }
 const cloud = T.cloudTex(), glow = T.glowTex();
 function dust(x, y, z, size, color, opacity) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: cloud, color, transparent: true, opacity, depthWrite: false, rotation: T.rng() * 6 })); s.position.set(x, y, z); s.scale.set(size, size * 0.62, 1); scene.add(s); return s; }
@@ -195,7 +203,7 @@ function zone1(late) {
     lab: R(-16.5, -7.5, -3, -12), rub2: R(-7.5, -1.5, -3, -12), hab: R(1.5, 7.5, -3, -9), solarC: R(1.5, 7.5, -9, -12), drill: R(7.5, 16.5, -3, -12),
     rub3: R(-16.5, -4.5, -12, -21), rub4: R(-4.5, -1.5, -12, -21), rub5: R(1.5, 16.5, -12, -21),
   };
-  landing(L.ark); put(K.ark(), L.ark.cx + 0.6, L.ark.cz, 0, 0.8);
+  landing(L.ark); put(smoothModel('ark-v1'), L.ark.cx, L.ark.cz, 0, 0.8);
   pad(L.geo); at(kit('satelliteDish_large', 6.2), L.geo, 1, Math.PI * 0.8);
   pad(L.water, 'deposit'); at(K.waterExtractor(), L.water, 0.78, 0, -0.6, -0.8);
   pad(L.rover); at(kit('rover', 7), L.rover, 1, -Math.PI / 2);
@@ -206,7 +214,7 @@ function zone1(late) {
   solarArray(L.solarB); batteryBank(L.batt);
   pad(L.store); at(kit('hangar_largeA', 2.8), L.store, 1, Math.PI / 2); put(kit('barrels', 3), L.store.x1 - 1.2, L.store.zb + 1.0, 0.4);
   pad(L.lab); at(kit('hangar_roundGlass', 2.2), L.lab, 1, 0, 0.7, 1.2); at(kit('satelliteDish_detailed', 3.2), L.lab, 1, 0.7, -2.9, -2.9);
-  pad(L.drill, 'deposit'); at(K.drillRig(), L.drill, 0.88, 0, -0.8, -1.2);
+  pad(L.drill, 'deposit'); at(smoothModel('carbon-drill-v1'), L.drill, 1.1, 0, 0, -0.9);
   pad(L.hab); at(kit('hangar_roundB', 1.7), L.hab, 1, Math.PI);
   solarArray(L.solarC);
   if (!late) { pad(L.free, 'empty'); L.rub5.crystals = true; for (const k of ['rub1', 'rub2', 'rub3', 'rub4', 'rub5']) pad(L[k], 'rubble'); }
