@@ -13,6 +13,7 @@ import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 const STATE = (location.hash || '#early').slice(1);
 const LATE = STATE.startsWith('late');
 const PANEL = STATE.endsWith('panel');
+const BUILD = STATE.endsWith('build'); // an empty plot tapped: the build menu is open
 const ZOOM = STATE.endsWith('zoom');
 const DPR = Number(new URLSearchParams(location.search).get('dpr') || 1);
 const W = 390, H = 844;
@@ -242,7 +243,7 @@ function buildEarly() {
   const beam = new THREE.Mesh(new THREE.ConeGeometry(1.5, 4.4, 32, 1, true), new THREE.MeshBasicMaterial({ color: 0x4fd1a5, transparent: true, opacity: 0.12, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
   beam.position.set(L.hab.cx - 0.6, Wd.gy(0, L.hab.cz) + 2.6, L.hab.cz + 1.2); beam.lookAt(ex, ey, ez); beam.rotateX(Math.PI / 2); scene.add(beam);
   halo(ex, ey, ez, 2.2, 0x6ff2c4, 0.45);
-  if (PANEL) { selectFrame(L.drill); beam.visible = false; } else selectFrame(L.hab);
+  if (PANEL) { selectFrame(L.drill); beam.visible = false; } else if (BUILD) { selectFrame(L.free); beam.visible = false; } else selectFrame(L.hab);
   // zone 2 under dust: the outlines of its plots, in their different sizes
   for (const r of LATE_Z2) pad(r, 'locked');
   for (let i = 0; i < 16; i++) dust(-24 + i * 3.2 + T.rng() * 2, Wd.gy(0, -32) + 4 + T.rng() * 4, -33 - T.rng() * 5, 14 + T.rng() * 8, 0xe6b48e, 0.7);
@@ -253,7 +254,7 @@ function buildEarly() {
   P('drill', L.drill.cx + 2.8, Wd.gy(0, L.drill.cz) + 2.4, L.drill.cz + 2.8); P('water', L.water.cx + 0.4, Wd.gy(0, L.water.cz) + 1.4, L.water.cz + 1.6);
   P('hab', L.hab.cx, Wd.gy(0, L.hab.cz) + 3.6, L.hab.cz); P('empty', L.free.cx, Wd.gy(0, L.free.cz) + 0.4, L.free.cz); P('rubble', L.rub5.cx, Wd.gy(0, L.rub5.cz) + 1.0, L.rub5.cz);
   P('zone', 0, Wd.gy(0, -24) + 0.5, -24.5); P('echo', ex, ey + 1, ez);
-  if (ZOOM) { camera.position.set(-1, 60, 62); camera.lookAt(-1, 0, 9); } else { camera.position.set(0, 118, 90); camera.lookAt(0, 0, 8); }
+  if (ZOOM) { camera.position.set(-1, 60, 62); camera.lookAt(-1, 0, 9); } else if (BUILD) { camera.position.set(0, 118, 106); camera.lookAt(0, 0, 24); } else { camera.position.set(0, 118, 90); camera.lookAt(0, 0, 8); }
   frameSun(0, 2, 70, 90);
 }
 
@@ -345,5 +346,5 @@ composer.render();
 const out = {};
 for (const [k, v] of Object.entries(anchors)) { const p = v.clone().project(camera); out[k] = { x: (p.x + 1) / 2 * W, y: (1 - p.y) / 2 * H }; }
 window.__anchors = out;
-window.__state = { late: LATE, panel: PANEL };
+window.__state = { late: LATE, panel: PANEL || BUILD, build: BUILD };
 window.dispatchEvent(new Event('scene-ready'));
