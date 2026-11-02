@@ -13,7 +13,8 @@ import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 const STATE = (location.hash || '#early').slice(1);
 const LATE = STATE.startsWith('late');
 const PANEL = STATE.endsWith('panel');
-const BUILD = STATE.endsWith('build'); // an empty plot tapped: the build menu is open
+const BUILD = STATE.endsWith('build'); // the Build button pressed: the build menu is open
+const PLACE = STATE.endsWith('place'); // a building chosen: its spot glows on the map and ЕХО points at it
 const ZOOM = STATE.endsWith('zoom');
 const DPR = Number(new URLSearchParams(location.search).get('dpr') || 1);
 const W = 390, H = 844;
@@ -211,7 +212,7 @@ function zone1(late) {
   solarArray(L.solarA);
   pad(L.proc); at(K.processor(), L.proc, 1.0);
   cargo(L.cargo);
-  pad(L.fab); at(K.fabricator(), L.fab, 1.0);
+  pad(L.fab); at(K.research(true), L.fab, 0.95, 0, 0.4, 0.3); // no fabricator (decided 02.11.2026): this plot holds the research station
   solarArray(L.solarB); batteryBank(L.batt);
   pad(L.store); at(kit('hangar_largeA', 2.8), L.store, 1, Math.PI / 2); put(kit('barrels', 3), L.store.x1 - 1.2, L.store.zb + 1.0, 0.4);
   pad(L.lab); at(kit('hangar_roundGlass', 2.2), L.lab, 1, 0, 0.7, 1.2); at(kit('satelliteDish_detailed', 3.2), L.lab, 1, 0.7, -2.9, -2.9);
@@ -237,13 +238,24 @@ function buildEarly() {
   put(kit('astronautA', 2.3), 0, 13.2, 0.4);
   for (let i = 0; i < 8; i++) { const x = L.water.cx + 0.6 + T.rng() * 2, z = L.water.cz + 0.6 + T.rng() * 1.8; K.sph(scene, 0.22 + T.rng() * 0.35, K.M.ice, x, Wd.gy(x, z) + 0.05, z, { seg: 6, seg2: 4, s: [1, 0.5, 1] }); }
   for (let i = 0; i < 14; i++) { const x = L.drill.cx - 3.4 + T.rng() * 6.8, z = L.drill.cz + 2.4 + T.rng() * 1.4, r = 0.18 + T.rng() * 0.28; const m = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), K.M.carbon); m.position.set(x, Wd.gy(x, z) + r * 0.5, z); m.rotation.set(T.rng() * 3, T.rng() * 3, 0); m.castShadow = true; scene.add(m); }
-  // ЕХО hovers by the new hab and lights it up
-  const ex = L.hab.cx - 2.6, ez = L.hab.cz + 3.4, ey = Wd.gy(ex, ez) + 5.0;
+  // ЕХО hovers by the new hab and lights it up; in placement it lights the free spot for the chosen building
+  const tgt = PLACE ? L.free : L.hab;
+  const ex = tgt.cx - 2.6, ez = tgt.cz + 3.4, ey = Wd.gy(ex, ez) + 5.0;
   put(K.echoBot(), ex, ez, -0.6, 1.1, ey);
   const beam = new THREE.Mesh(new THREE.ConeGeometry(1.5, 4.4, 32, 1, true), new THREE.MeshBasicMaterial({ color: 0x4fd1a5, transparent: true, opacity: 0.12, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
-  beam.position.set(L.hab.cx - 0.6, Wd.gy(0, L.hab.cz) + 2.6, L.hab.cz + 1.2); beam.lookAt(ex, ey, ez); beam.rotateX(Math.PI / 2); scene.add(beam);
+  beam.position.set(tgt.cx - 0.6, Wd.gy(0, tgt.cz) + 2.6, tgt.cz + 1.2); beam.lookAt(ex, ey, ez); beam.rotateX(Math.PI / 2); scene.add(beam);
   halo(ex, ey, ez, 2.2, 0x6ff2c4, 0.45);
-  if (PANEL) { selectFrame(L.drill); beam.visible = false; } else if (BUILD) { selectFrame(L.free); beam.visible = false; } else selectFrame(L.hab);
+  if (PANEL) { selectFrame(L.drill); beam.visible = false; }
+  else if (BUILD) beam.visible = false;
+  else if (PLACE) {
+    selectFrame(L.free);
+    // the chosen building stands on its spot as a see-through ghost until "Строй тук"
+    const ghostMat = new THREE.MeshStandardMaterial({ color: 0x4fd1a5, emissive: 0x4fd1a5, emissiveIntensity: 0.9, transparent: true, opacity: 0.6, depthWrite: false });
+    const ghost = kit('hangar_roundB', 1.7); ghost.traverse(o => { if (o.isMesh) { o.material = ghostMat; o.castShadow = false; } });
+    at(ghost, L.free, 1, Math.PI);
+    halo(L.free.cx, Wd.gy(0, L.free.cz) + 1.2, L.free.cz, 9, 0x6ff2c4, 0.35);
+  } else selectFrame(L.hab);
+  P('place', L.free.cx, Wd.gy(0, L.free.cz) + 6.5, L.free.cz);
   // zone 2 under dust: the outlines of its plots, in their different sizes
   for (const r of LATE_Z2) pad(r, 'locked');
   for (let i = 0; i < 16; i++) dust(-24 + i * 3.2 + T.rng() * 2, Wd.gy(0, -32) + 4 + T.rng() * 4, -33 - T.rng() * 5, 14 + T.rng() * 8, 0xe6b48e, 0.7);
@@ -254,7 +266,7 @@ function buildEarly() {
   P('drill', L.drill.cx + 2.8, Wd.gy(0, L.drill.cz) + 2.4, L.drill.cz + 2.8); P('water', L.water.cx + 0.4, Wd.gy(0, L.water.cz) + 1.4, L.water.cz + 1.6);
   P('hab', L.hab.cx, Wd.gy(0, L.hab.cz) + 3.6, L.hab.cz); P('empty', L.free.cx, Wd.gy(0, L.free.cz) + 0.4, L.free.cz); P('rubble', L.rub5.cx, Wd.gy(0, L.rub5.cz) + 1.0, L.rub5.cz);
   P('zone', 0, Wd.gy(0, -24) + 0.5, -24.5); P('echo', ex, ey + 1, ez);
-  if (ZOOM) { camera.position.set(-1, 60, 62); camera.lookAt(-1, 0, 9); } else if (BUILD) { camera.position.set(0, 118, 106); camera.lookAt(0, 0, 24); } else { camera.position.set(0, 118, 90); camera.lookAt(0, 0, 8); }
+  if (ZOOM) { camera.position.set(-1, 60, 62); camera.lookAt(-1, 0, 9); } else { camera.position.set(0, 118, 90); camera.lookAt(0, 0, 8); }
   frameSun(0, 2, 70, 90);
 }
 
@@ -346,5 +358,5 @@ composer.render();
 const out = {};
 for (const [k, v] of Object.entries(anchors)) { const p = v.clone().project(camera); out[k] = { x: (p.x + 1) / 2 * W, y: (1 - p.y) / 2 * H }; }
 window.__anchors = out;
-window.__state = { late: LATE, panel: PANEL || BUILD, build: BUILD };
+window.__state = { late: LATE, panel: PANEL || BUILD || PLACE, build: BUILD, place: PLACE };
 window.dispatchEvent(new Event('scene-ready'));

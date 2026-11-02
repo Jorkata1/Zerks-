@@ -5,7 +5,7 @@
   "scripts": {
     "assets": "bash fetch-assets.sh",
     "serve": "python3 -m http.server 8777 --bind 127.0.0.1",
-    "shots": "node shot.js 3 early,early-zoom,early-panel,early-build,late,late-zoom"
+    "shots": "node shot.js 3 early,early-zoom,early-panel,early-build,early-place,late,late-zoom"
   },
   "dependencies": {
     "three": "0.170.0"

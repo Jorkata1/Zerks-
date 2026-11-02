@@ -86,6 +86,16 @@
   .card .meta { font-size: 11px; color: var(--ink); margin-top: 4px; display: flex; gap: 7px; align-items: center; font-weight: 600; }
   .card .meta span { display: flex; align-items: center; gap: 2px; }
   .card .note { font-size: 10.5px; color: var(--muted); margin-top: 4px; line-height: 1.25; }
+  .hint { position: absolute; top: 134px; left: 50%; transform: translateX(-50%); padding: 8px 14px; font-size: 13px; font-weight: 600; display: flex; gap: 8px; align-items: center; white-space: nowrap; }
+  .hint b { color: var(--accent); }
+  .bubble { position: absolute; transform: translate(-50%, calc(-100% - 12px)); padding: 8px 11px; font-size: 12.5px; font-weight: 600; line-height: 1.3; width: 176px; background: var(--glass-strong); border: 1px solid rgba(79, 209, 165, .7); box-shadow: 0 0 16px rgba(79, 209, 165, .35); }
+  .bubble:after { content: ''; position: absolute; left: var(--tx, 50%); bottom: -7px; width: 12px; height: 12px; background: inherit; border-right: 1px solid rgba(79, 209, 165, .7); border-bottom: 1px solid rgba(79, 209, 165, .7); transform: translateX(-50%) rotate(45deg); }
+  .bubble .who { font-size: 10px; letter-spacing: .6px; color: var(--accent); font-weight: 800; margin-bottom: 2px; }
+  .placebar { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 16px 30px; background: var(--glass-strong); backdrop-filter: blur(16px) saturate(150%); border-top: 1px solid var(--line); clip-path: polygon(0 18px, 18px 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%); }
+  .placebar .row { display: flex; align-items: center; gap: 12px; }
+  .placebar h4 { font-size: 16px; font-weight: 700; } .placebar p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .placebar .btns { display: flex; gap: 8px; margin-top: 14px; }
+  .cancel { width: 104px; height: 52px; border: 1px solid var(--line); display: grid; place-items: center; font-weight: 700; font-size: 14px; color: var(--muted); clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); }
   .card .tag { position: absolute; top: -8px; right: 6px; font-size: 9px; font-weight: 800; letter-spacing: .3px; background: #4fd1a5; color: #04261c; padding: 1px 6px; }
 </style>
 </head>
@@ -162,6 +172,13 @@ function hud() {
     }
     const dockB = (ico, cls = '', extra = '') => `<div class="b ${cls}">${ico}${extra}</div>`;
     h += `<div class="dock glass">${dockB(I.people, L ? '' : 'off', L ? '' : `<span class="lock">${I.lock}</span>`)}${dockB(`<svg width="44" height="44" viewBox="0 0 44 44" style="position:absolute"><circle cx="22" cy="22" r="17" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="2"/><circle cx="22" cy="22" r="17" fill="none" stroke="#4fd1a5" stroke-width="2" stroke-dasharray="${0.6 * 106.8} 106.8" transform="rotate(-90 22 22)"/></svg>` + I.research)}<div class="build"><svg class="bg" width="64" height="70" viewBox="0 0 64 70"><defs><linearGradient id="bg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6be6bd"/><stop offset="1" stop-color="#36b58b"/></linearGradient></defs><path d="${hexPath(64, 70, 1.5)}" fill="url(#bg1)" stroke="#c6f7e6" stroke-width="1.5"/></svg><div style="position:relative">${I.build.replace('width="22" height="22"', 'width="28" height="28"')}</div></div>${dockB(I.map, L ? '' : 'off', L ? '' : `<span class="lock">${I.lock}</span>`)}${dockB(I.echo, '', '<span class="dot">3</span>')}</div>`;
+  } else if (st.place) {
+    // a building chosen: its spot glows, ЕХО points at it, one tap confirms
+    h += `<div class="hint glass cham">${S('<path d="M12 21s-6-5.6-6-10a6 6 0 0 1 12 0c0 4.4-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/>', '#4fd1a5', 2)}Натиснете <b>светещото място</b></div>`;
+    const bx = Math.min(Math.max(a.place.x, 104), 390 - 104);
+    h += `<div class="bubble" style="left:${bx.toFixed(1)}px;top:${a.place.y.toFixed(1)}px;--tx:${(a.place.x - bx + 88).toFixed(1)}px"><div class="who">ЕХО</div>Тук е мястото за модула. Натиснете го.</div>`;
+    h += `<div class="placebar"><div class="row">${hexPin(S('<path d="M4 18V11a8 8 0 0 1 16 0v7z"/><path d="M10 18v-4h4v4"/><path d="M4 18h16"/>'), { w: 44, h: 48, fill: 'rgba(79,209,165,.25)', stroke: '#4fd1a5' })}<div><h4>Жилищен модул</h4><p>2×2 · 5 места · строи се за 0:45</p></div></div>
+      <div class="btns"><div class="cancel">Отказ</div><div class="go"><b>СТРОЙ ТУК</b><div class="cost"><span>${R.carbon}30</span><span>${R.stone}20</span></div></div></div></div>`;
   } else if (st.build) {
     // tapped: an empty 2x3 plot, the build menu lists what fits and what comes later
     const small = s => s.replace('width="16" height="16"', 'width="13" height="13"');
@@ -177,17 +194,17 @@ function hud() {
     const cost = (c, s, t) => `<div class="meta"><span>${small(R.carbon)}${c}</span><span>${small(R.stone)}${s}</span><span style="color:var(--muted)">${t}</span></div>`;
     const note = t => `<div class="note">${t}</div>`;
     h += `<div class="sheet tall"><div class="grab"></div>
-      <div class="sh-head">${hexPin(S('<path d="M12 6v12M6 12h12"/>', '#4fd1a5', 2.4), { w: 44, h: 48, stroke: 'rgba(79,209,165,.85)' })}<div><h3>Строеж</h3><p>Свободен парцел 2×3 · Дъното на каньона</p></div><div class="x">${I.close}</div></div>
+      <div class="sh-head">${hexPin(S('<path d="M12 6v12M6 12h12"/>', '#4fd1a5', 2.4), { w: 44, h: 48, stroke: 'rgba(79,209,165,.85)' })}<div><h3>Строеж</h3><p>Изберете сграда · ЕХО ще покаже мястото ѝ</p></div><div class="x">${I.close}</div></div>
       <div class="tabs"><span class="on">Всички</span><span>Добив</span><span>Живот</span><span>Домове</span><span>Енергия</span></div>
       <div class="cards">
         ${card(B.hab, 'Жилищен модул', '2×2', cost(30, 20, '0:45'), { sel: true, tag: 'ЕХО' })}
         ${card(B.store, 'Склад', '3×2', cost(20, 30, '0:30'))}
         ${card(B.plant, 'Лаборатория за растения', '3×2', note(`${I.lock} от атм. 20%`), { dim: true })}
         ${card(B.solar, 'Слънчеви панели', '2×1', note(`${I.lock} в глава 2`), { dim: true })}
-        ${card(B.air, 'Атмосферен процесор', '3×3', note('Не се побира'), { dim: true })}
-        ${card(B.quarry, 'Кариера', '3×2', note('Само до скалите'), { dim: true })}
+        ${card(B.air, 'Атмосферен процесор', '3×3', note('Няма място 3×3'), { dim: true })}
+        ${card(B.quarry, 'Кариера', '3×2', note('Мястото е под отломки'), { dim: true })}
       </div>
-      <div class="up"><div class="go"><b>СТРОЙ · ЖИЛИЩЕН МОДУЛ</b><div class="cost"><span>${R.carbon}30</span><span>${R.stone}20</span></div></div></div>
+      <div class="up"><div class="go"><b>КЪМ МЯСТОТО</b><div class="cost"><span>${R.carbon}30</span><span>${R.stone}20</span></div></div></div>
     </div>`;
   } else {
     // tapped: the carbon drill
