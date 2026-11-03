@@ -1,4 +1,4 @@
-<!-- Синхронизирано с документа „Zerks-X6: концепция на играта“ (https://claude.ai/artifact/7KmjjsSyxWqGJGAwKntLeB) при rev 14. -->
+<!-- Синхронизирано с документа „Zerks-X6: концепция на играта“ (https://claude.ai/artifact/7KmjjsSyxWqGJGAwKntLeB) при rev 28. -->
 
 # Zerks-X6: концепция на играта
 
