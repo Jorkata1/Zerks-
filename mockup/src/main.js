@@ -219,9 +219,24 @@ function zone1(late) {
   pad(L.drill, 'deposit'); at(smoothModel('carbon-drill-v1'), L.drill, 1.1, 0, 0, -0.9);
   pad(L.hab); at(kit('hangar_roundB', 1.7), L.hab, 1, Math.PI);
   solarArray(L.solarC);
-  if (!late) { pad(L.free, 'empty'); L.rub5.crystals = true; for (const k of ['rub1', 'rub2', 'rub3', 'rub4', 'rub5']) pad(L[k], 'rubble'); }
+  // level 10 by docs/levels.md: no rubble left; the silicon furnace, the common kitchen and the mine stand on the old rubble plots
+  if (!late) { pad(L.free, 'empty'); pad(L.rub4, 'empty'); pad(L.rub5, 'empty'); pad(L.rub1); at(K.smelter(), L.rub1, 0.78, Math.PI); pad(L.rub2); at(K.habModule(1), L.rub2, 1, Math.PI / 2); mine(L.rub3); }
   else { houses(L.free); houses(L.rub1); houses(L.rub2); houses(L.rub3); pad(L.rub4); houses(L.rub5); }
   return L;
+}
+function mine(r) {
+  // the mine: a rock hill with a timbered tunnel, rails and a cart of stone
+  pad(r);
+  const y = Wd.gy(r.cx, r.cz) + 0.3, dark = new THREE.MeshStandardMaterial({ color: 0x1d1820, roughness: 0.9 });
+  for (const [dx, dz, n, sc] of [[-3.6, -2.4, 'rock_largeA', 3.4], [-1.2, -2.9, 'rock_largeB', 3.8], [1.6, -2.7, 'rock_largeA', 3.6], [4.0, -2.1, 'rock_largeB', 3.0], [-4.7, -0.3, 'rocks_smallA', 2.6], [4.7, 0.3, 'rocks_smallB', 2.6]]) put(kit(n, sc), r.cx + dx, r.cz + dz, T.rng() * 6.28);
+  const px = r.cx - 0.6, pz = r.cz - 0.9;
+  K.rbox(scene, 2.2, 2.4, 1.4, dark, px, y + 1.2, pz, { r: 0.2 });
+  for (const dx of [-1.3, 1.3]) K.rbox(scene, 0.4, 2.9, 0.45, K.M.orange, px + dx, y + 1.45, pz + 0.6, { r: 0.06 });
+  K.rbox(scene, 3.2, 0.45, 0.6, K.M.orange, px, y + 3.0, pz + 0.6, { r: 0.06 });
+  for (const dx of [-0.45, 0.45]) K.rbox(scene, 0.12, 0.12, 3.6, K.M.steel, px + dx, y + 0.08, pz + 2.4, { r: 0.03 });
+  K.rbox(scene, 1.4, 0.8, 1.1, K.M.metal, px, y + 0.6, pz + 3.0, { r: 0.12 });
+  put(kit('rocks_smallA', 1.2), px, pz + 3.0, 0, 1, y + 1.0);
+  put(kit('barrels', 2.2), r.cx + 3.8, r.cz + 2.8, 0.3);
 }
 function zoneStreets(late) {
   // avenue up the middle from the Ark to the shipyard, cross streets between the blocks
@@ -249,10 +264,10 @@ function buildEarly() {
   else if (BUILD) beam.visible = false;
   else if (PLACE) {
     selectFrame(L.free);
-    // the chosen building stands on its spot as a see-through ghost until "Строй тук"
+    // the chosen building (the greenhouse) stands on its spot as a see-through ghost until "Build here"
     const ghostMat = new THREE.MeshStandardMaterial({ color: 0x4fd1a5, emissive: 0x4fd1a5, emissiveIntensity: 0.9, transparent: true, opacity: 0.6, depthWrite: false });
-    const ghost = kit('hangar_roundB', 1.7); ghost.traverse(o => { if (o.isMesh) { o.material = ghostMat; o.castShadow = false; } });
-    at(ghost, L.free, 1, Math.PI);
+    const ghost = K.greenhouse(7); ghost.traverse(o => { if (o.isMesh) { o.material = ghostMat; o.castShadow = false; } });
+    at(ghost, L.free, 1, Math.PI / 2);
     halo(L.free.cx, Wd.gy(0, L.free.cz) + 1.2, L.free.cz, 9, 0x6ff2c4, 0.35);
   } else selectFrame(L.hab);
   P('place', L.free.cx, Wd.gy(0, L.free.cz) + 6.5, L.free.cz);

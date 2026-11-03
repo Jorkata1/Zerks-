@@ -112,7 +112,7 @@ function hud() {
     h += bubble(a.echo, 'Something is buried here. Tap the rubble!');
   } else {
     for (const k of ['w-drill', 'w-pump', 'w-veg']) h += badge(a[k], `${ICON.person()}<span class="ok">${ICON.check}</span>`);
-    h += badge(a['w-quarry'], ICON.plus, '', 'empty');
+    h += badge(a['w-mine'], ICON.plus, '', 'empty');
     h += badge(a['w-proc'], ICON.plus, 'free slot', 'empty');
     h += badge(a.cook, ICON.chef, 'cook');
     h += badge(a.dome, ICON.bed, '4/4 beds');

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="bg">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=390, initial-scale=1">
@@ -152,8 +152,8 @@ function hud() {
   const a = window.__anchors, st = window.__state, L = st.late, panel = st.panel;
   let h = `<div class="shade"></div>${panel ? '' : '<div class="shade b"></div>'}`;
   h += `<div class="status"><span>9:41</span><span class="r"><svg width="18" height="11" viewBox="0 0 18 11" fill="#fff"><rect x="0" y="7" width="3" height="4" rx=".8"/><rect x="5" y="5" width="3" height="6" rx=".8"/><rect x="10" y="2.5" width="3" height="8.5" rx=".8"/><rect x="15" y="0" width="3" height="11" rx=".8"/></svg><svg width="16" height="11" viewBox="0 0 16 12"><path d="M8 11.5 5.6 9a3.4 3.4 0 0 1 4.8 0zM3.4 6.8a6.6 6.6 0 0 1 9.2 0l-1.4 1.4a4.6 4.6 0 0 0-6.4 0zM1 4.4a10 10 0 0 1 14 0l-1.4 1.4a8 8 0 0 0-11.2 0z" fill="#fff"/></svg><svg width="27" height="13" viewBox="0 0 27 13"><rect x=".7" y=".7" width="22.6" height="11.6" rx="3.4" fill="none" stroke="#fff" stroke-opacity=".5"/><rect x="2.4" y="2.4" width="17" height="8.2" rx="1.8" fill="#fff"/><rect x="24.4" y="4.3" width="1.8" height="4.4" rx=".9" fill="#fff" fill-opacity=".5"/></svg></span></div>`;
-  h += gauge(L ? 90 : 19, L) + levelHex(L ? 78 : 10);
-  const items = L ? [['food', '18.4K'], ['steel', '6.3K'], ['crystal', '412']] : [['o2', '82%'], ['water', '58'], ['carbon', '34']];
+  h += gauge(L ? 90 : 28, L) + levelHex(L ? 78 : 10);
+  const items = L ? [['food', '18.4K'], ['steel', '6.3K'], ['crystal', '412']] : [['carbon', '2.4K'], ['water', '1.6K'], ['food', '620']];
   h += `<div class="res glass cham">${items.map(([k, v]) => `<div class="it">${R[k]}${v}</div>`).join('')}<div class="chev">${I.chev}</div></div>`;
   if (L) h += `<div class="side glass">${I.moon}</div>`;
   if (!panel) {
@@ -161,64 +161,67 @@ function hud() {
       h += pinAt(a.drill, hexPin(R.carbon));
       h += pinAt(a.water, hexPin(R.water));
       h += pinAt(a.hab, hexPin(R.wake, { fill: '#4fd1a5', stroke: '#bff5e2', glow: true }));
-      h += pinAt(a.zone, hexPin(I.lock.replace('width="11" height="11"', 'width="14" height="14"')), '20%');
-      h += pinAt(a.rubble, hexPin(S('<path d="M14.5 4.5l5 5M17 7 6 18"/><path d="M12.5 3.5c3 0 6 1.5 8 4"/>', '#eaf2ff', 2)));
+      h += pinAt(a.zone, hexPin(I.lock.replace('width="11" height="11"', 'width="14" height="14"')), 'RESEARCH');
       h += pinAt(a.empty, hexPin(S('<path d="M12 6v12M6 12h12"/>', '#4fd1a5', 2.4), { stroke: 'rgba(79,209,165,.85)' }));
     } else {
-      h += pinAt(a.ship, `<div style="position:relative;width:40px;height:40px;display:grid;place-items:center"><svg width="40" height="40" viewBox="0 0 40 40" style="position:absolute"><circle cx="20" cy="20" r="18" fill="rgba(8,14,30,.62)" stroke="rgba(170,225,255,.3)" stroke-width="1"/><circle cx="20" cy="20" r="15" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="3"/><circle cx="20" cy="20" r="15" fill="none" stroke="#4fd1a5" stroke-width="3" stroke-dasharray="${0.8 * 94.2} 94.2" transform="rotate(-90 20 20)"/></svg><div style="position:relative">${R.ship}</div></div>`, '8/10');
+      h += pinAt(a.ship, `<div style="position:relative;width:40px;height:40px;display:grid;place-items:center"><svg width="40" height="40" viewBox="0 0 40 40" style="position:absolute"><circle cx="20" cy="20" r="18" fill="rgba(8,14,30,.62)" stroke="rgba(170,225,255,.3)" stroke-width="1"/><circle cx="20" cy="20" r="15" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="3"/><circle cx="20" cy="20" r="15" fill="none" stroke="#4fd1a5" stroke-width="3" stroke-dasharray="${0.8 * 94.2} 94.2" transform="rotate(-90 20 20)"/></svg><div style="position:relative">${R.ship}</div></div>`, '7/10');
       h += pinAt(a.capsule, hexPin(R.chute, { glow: true }));
       h += pinAt(a.shuttle, hexPin(R.crystal));
       h += pinAt(a.field, hexPin(R.food));
     }
     const dockB = (ico, cls = '', extra = '') => `<div class="b ${cls}">${ico}${extra}</div>`;
-    h += `<div class="dock glass">${dockB(I.people, L ? '' : 'off', L ? '' : `<span class="lock">${I.lock}</span>`)}${dockB(`<svg width="44" height="44" viewBox="0 0 44 44" style="position:absolute"><circle cx="22" cy="22" r="17" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="2"/><circle cx="22" cy="22" r="17" fill="none" stroke="#4fd1a5" stroke-width="2" stroke-dasharray="${0.6 * 106.8} 106.8" transform="rotate(-90 22 22)"/></svg>` + I.research)}<div class="build"><svg class="bg" width="64" height="70" viewBox="0 0 64 70"><defs><linearGradient id="bg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6be6bd"/><stop offset="1" stop-color="#36b58b"/></linearGradient></defs><path d="${hexPath(64, 70, 1.5)}" fill="url(#bg1)" stroke="#c6f7e6" stroke-width="1.5"/></svg><div style="position:relative">${I.build.replace('width="22" height="22"', 'width="28" height="28"')}</div></div>${dockB(I.map, L ? '' : 'off', L ? '' : `<span class="lock">${I.lock}</span>`)}${dockB(I.echo, '', '<span class="dot">3</span>')}</div>`;
+    h += `<div class="dock glass">${dockB(I.people)}${dockB(`<svg width="44" height="44" viewBox="0 0 44 44" style="position:absolute"><circle cx="22" cy="22" r="17" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="2"/><circle cx="22" cy="22" r="17" fill="none" stroke="#4fd1a5" stroke-width="2" stroke-dasharray="${0.6 * 106.8} 106.8" transform="rotate(-90 22 22)"/></svg>` + I.research)}<div class="build"><svg class="bg" width="64" height="70" viewBox="0 0 64 70"><defs><linearGradient id="bg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6be6bd"/><stop offset="1" stop-color="#36b58b"/></linearGradient></defs><path d="${hexPath(64, 70, 1.5)}" fill="url(#bg1)" stroke="#c6f7e6" stroke-width="1.5"/></svg><div style="position:relative">${I.build.replace('width="22" height="22"', 'width="28" height="28"')}</div></div>${dockB(I.map, L ? '' : 'off', L ? '' : `<span class="lock">${I.lock}</span>`)}${dockB(I.echo, '', '<span class="dot">3</span>')}</div>`;
   } else if (st.place) {
-    // a building chosen: its spot glows, ЕХО points at it, one tap confirms
-    h += `<div class="hint glass cham">${S('<path d="M12 21s-6-5.6-6-10a6 6 0 0 1 12 0c0 4.4-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/>', '#4fd1a5', 2)}Натиснете <b>светещото място</b></div>`;
+    // a building chosen: its spot glows, ECHO points at it, one tap confirms
+    h += `<div class="hint glass cham">${S('<path d="M12 21s-6-5.6-6-10a6 6 0 0 1 12 0c0 4.4-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/>', '#4fd1a5', 2)}Tap the <b>glowing spot</b></div>`;
     const bx = Math.min(Math.max(a.place.x, 104), 390 - 104);
-    h += `<div class="bubble" style="left:${bx.toFixed(1)}px;top:${a.place.y.toFixed(1)}px;--tx:${(a.place.x - bx + 88).toFixed(1)}px"><div class="who">ЕХО</div>Тук е мястото за модула. Натиснете го.</div>`;
-    h += `<div class="placebar"><div class="row">${hexPin(S('<path d="M4 18V11a8 8 0 0 1 16 0v7z"/><path d="M10 18v-4h4v4"/><path d="M4 18h16"/>'), { w: 44, h: 48, fill: 'rgba(79,209,165,.25)', stroke: '#4fd1a5' })}<div><h4>Жилищен модул</h4><p>2×2 · 5 места · строи се за 0:45</p></div></div>
-      <div class="btns"><div class="cancel">Отказ</div><div class="go"><b>СТРОЙ ТУК</b><div class="cost"><span>${R.carbon}30</span><span>${R.stone}20</span></div></div></div></div>`;
+    h += `<div class="bubble" style="left:${bx.toFixed(1)}px;top:${a.place.y.toFixed(1)}px;--tx:${(a.place.x - bx + 88).toFixed(1)}px"><div class="who">ECHO</div>This is the spot for the greenhouse. Tap it.</div>`;
+    h += `<div class="placebar"><div class="row">${hexPin(S('<path d="M3 18a9 9 0 0 1 18 0z"/><path d="M12 9v9M7.5 11.5 9 18M16.5 11.5 15 18"/>'), { w: 44, h: 48, fill: 'rgba(79,209,165,.25)', stroke: '#4fd1a5' })}<div><h4>Greenhouse</h4><p>3×2 · food and atmosphere · builds in 2:00</p></div></div>
+      <div class="btns"><div class="cancel">Cancel</div><div class="go"><b>BUILD HERE</b><div class="cost"><span>${R.carbon}900</span><span>${R.stone}400</span></div></div></div></div>`;
   } else if (st.build) {
-    // tapped: an empty 2x3 plot, the build menu lists what fits and what comes later
+    // the Build button: the menu lists what can be built at level 10 and what comes later
     const small = s => s.replace('width="16" height="16"', 'width="13" height="13"');
     const B = {
       hab: S('<path d="M4 18V11a8 8 0 0 1 16 0v7z"/><path d="M10 18v-4h4v4"/><path d="M4 18h16"/>'),
       store: S('<path d="M4 8l8-4 8 4v9l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v9"/>'),
       plant: S('<path d="M12 20V10"/><path d="M12 13c-4 0-6-3-6-7 4 0 6 3 6 7zM12 11c0-4 2-6 6-6 0 4-2 6-6 6z"/>'),
       air: S('<path d="M4 9h11a3 3 0 1 0-3-3M4 13h14a3 3 0 1 1-3 3M4 17h7"/>'),
-      quarry: S('<path d="M3 19l5-9 4 5 3-4 6 8z"/><path d="M14 4l2 3"/>'),
+      green: S('<path d="M3 18a9 9 0 0 1 18 0z"/><path d="M12 9v9M7.5 11.5 9 18M16.5 11.5 15 18"/>'),
+      batt: S('<rect x="4" y="7" width="15" height="10" rx="1.5"/><path d="M19 10.5h1.5v3H19M8 10v4M11 10v4"/>'),
+      animal: S('<circle cx="7" cy="9" r="1.8"/><circle cx="12" cy="6.5" r="1.8"/><circle cx="17" cy="9" r="1.8"/><path d="M12 12c-3 0-5 3-5 5 0 1.6 1.6 2 5 2s5-.4 5-2c0-2-2-5-5-5z"/>'),
+      wind: S('<path d="M12 12v9M12 12l-1-8M12 12l7 4M12 12l-7 4"/><circle cx="12" cy="12" r="1.2"/>'),
+      shuttle: S('<path d="M12 3c3 3 4 7 4 11l-4 3-4-3c0-4 1-8 4-11z"/><path d="M8 14l-3 3v2l3-1M16 14l3 3v2l-3-1"/>'),
       solar: S('<path d="M4 9h16l-2 8H6z"/><path d="M9 9l-1 8M15 9l1 8M5 13h14"/><path d="M12 17v3"/>'),
     };
     const card = (ico, name, size, body, opts = {}) => `<div class="card ${opts.sel ? 'sel' : ''} ${opts.dim ? 'dim' : ''}">${opts.tag ? `<span class="tag">${opts.tag}</span>` : ''}<div class="ic"><svg class="bg" width="38" height="42" viewBox="0 0 38 42"><path d="${hexPath(38, 42, 1.2)}" fill="${opts.sel ? 'rgba(79,209,165,.25)' : 'rgba(8,14,30,.5)'}" stroke="${opts.sel ? '#4fd1a5' : 'rgba(170,225,255,.45)'}" stroke-width="1.2"/></svg><div style="position:relative">${ico}</div></div><div><h4>${name}</h4><span class="sz">${size}</span>${body}</div></div>`;
     const cost = (c, s, t) => `<div class="meta"><span>${small(R.carbon)}${c}</span><span>${small(R.stone)}${s}</span><span style="color:var(--muted)">${t}</span></div>`;
     const note = t => `<div class="note">${t}</div>`;
     h += `<div class="sheet tall"><div class="grab"></div>
-      <div class="sh-head">${hexPin(S('<path d="M12 6v12M6 12h12"/>', '#4fd1a5', 2.4), { w: 44, h: 48, stroke: 'rgba(79,209,165,.85)' })}<div><h3>Строеж</h3><p>Изберете сграда · ЕХО ще покаже мястото ѝ</p></div><div class="x">${I.close}</div></div>
-      <div class="tabs"><span class="on">Всички</span><span>Добив</span><span>Живот</span><span>Домове</span><span>Енергия</span></div>
+      <div class="sh-head">${hexPin(S('<path d="M12 6v12M6 12h12"/>', '#4fd1a5', 2.4), { w: 44, h: 48, stroke: 'rgba(79,209,165,.85)' })}<div><h3>Build</h3><p>Pick a building · ECHO shows its spot</p></div><div class="x">${I.close}</div></div>
+      <div class="tabs"><span class="on">All</span><span>Mining</span><span>Life</span><span>Homes</span><span>Energy</span></div>
       <div class="cards">
-        ${card(B.hab, 'Жилищен модул', '2×2', cost(30, 20, '0:45'), { sel: true, tag: 'ЕХО' })}
-        ${card(B.store, 'Склад', '3×2', cost(20, 30, '0:30'))}
-        ${card(B.plant, 'Лаборатория за растения', '3×2', note(`${I.lock} от атм. 20%`), { dim: true })}
-        ${card(B.solar, 'Слънчеви панели', '2×1', note(`${I.lock} в глава 2`), { dim: true })}
-        ${card(B.air, 'Атмосферен процесор', '3×3', note('Няма място 3×3'), { dim: true })}
-        ${card(B.quarry, 'Кариера', '3×2', note('Мястото е под отломки'), { dim: true })}
+        ${card(B.green, 'Greenhouse', '3×2', cost('900', '400', '2:00'), { sel: true, tag: 'ECHO' })}
+        ${card(B.solar, 'Solar panels', '2×1', note('60 silicon · 120 carbon · 0:40'))}
+        ${card(B.batt, 'Battery bank', '2×1', note('40 silicon · 80 carbon · 0:50'))}
+        ${card(B.animal, 'Animal lab', '3×3', note(`${I.lock} chapter 4`), { dim: true })}
+        ${card(B.wind, 'Wind turbine', '1×1', note(`${I.lock} chapter 5`), { dim: true })}
+        ${card(B.shuttle, 'Shuttle pad', '3×3', note(`${I.lock} level 60`), { dim: true })}
       </div>
-      <div class="up"><div class="go"><b>КЪМ МЯСТОТО</b><div class="cost"><span>${R.carbon}30</span><span>${R.stone}20</span></div></div></div>
+      <div class="up"><div class="go"><b>TO THE SPOT</b><div class="cost"><span>${R.carbon}900</span><span>${R.stone}400</span></div></div></div>
     </div>`;
   } else {
     // tapped: the carbon drill
     const seg = n => Array.from({ length: 10 }, (_, i) => `<i class="${i < n ? 'on' : ''}"></i>`).join('');
     const slot = (inner, locked) => `<div class="slot"><svg width="46" height="50" viewBox="0 0 46 50" style="position:absolute"><path d="${hexPath(46, 50, 1.5)}" fill="rgba(255,255,255,.04)" stroke="rgba(170,225,255,.4)" stroke-width="1.2" stroke-dasharray="4 3"/></svg><div style="position:relative;opacity:${locked ? .5 : 1}">${inner}</div></div>`;
     h += `<div class="sheet"><div class="grab"></div>
-      <div class="sh-head">${hexPin(R.carbon.replace('width="16" height="16"', 'width="20" height="20"'), { w: 44, h: 48 })}<div><h3>Карбонова сонда</h3><p>Ниво 12 · Дъното на каньона</p></div><div class="x">${I.close}</div></div>
+      <div class="sh-head">${hexPin(R.carbon.replace('width="16" height="16"', 'width="20" height="20"'), { w: 44, h: 48 })}<div><h3>Carbon drill</h3><p>Level 10 · Canyon floor</p></div><div class="x">${I.close}</div></div>
       <div class="stats">
-        <div class="stat"><div class="k">Добив</div><div class="v">18<span style="font-size:12px;color:var(--muted);font-weight:600">/мин</span><em>+2</em></div><div class="bar"><i style="width:60%"></i></div></div>
-        <div class="stat"><div class="k">Склад</div><div class="v">34<span style="font-size:12px;color:var(--muted);font-weight:600"> /120</span></div><div class="bar"><i style="width:28%"></i></div></div>
-        <div class="stat"><div class="k">Скок ×2</div><div class="v">8<span style="font-size:12px;color:var(--muted);font-weight:600"> нива</span></div><div class="segs">${seg(2)}</div></div>
+        <div class="stat"><div class="k">Output</div><div class="v">18<span style="font-size:12px;color:var(--muted);font-weight:600">/min</span><em>+2</em></div><div class="bar"><i style="width:60%"></i></div></div>
+        <div class="stat"><div class="k">Ready</div><div class="v">34<span style="font-size:12px;color:var(--muted);font-weight:600"> /120</span></div><div class="bar"><i style="width:28%"></i></div></div>
+        <div class="stat"><div class="k">Worker</div><div class="v">1<span style="font-size:12px;color:var(--muted);font-weight:600"> /1</span></div><div class="bar"><i style="width:100%"></i></div></div>
       </div>
-      <div class="crew">${slot(I.people, true)}${slot(I.people, true)}${slot(`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#eaf2ff" stroke-width="1.8"><path d="M4 20l6-14 4 7 2-3 4 10z"/></svg>`, true)}<p>Работници и геолог<br>от глава 2</p></div>
-      <div class="up"><div class="mult"><span class="on">×1</span><span>×10</span><span>MAX</span></div><div class="go"><b>ПОДОБРИ</b><div class="cost"><span>${R.carbon}40</span><span>${R.stone}12</span></div></div></div>
+      <div class="crew">${slot(I.people, false)}<p>The worker collects the carbon<br>and keeps the drill running while you're away</p></div>
+      <div class="up"><div class="mult"><span class="on">${S('<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>', '#eaf2ff', 2).replace('width="22" height="22"', 'width="15" height="15"')}&nbsp;12:00</span></div><div class="go"><b>UPGRADE</b><div class="cost"><span>${R.carbon}1.2K</span><span>${R.stone}400</span></div></div></div>
     </div>`;
   }
   if (!panel) h += '<div class="home"></div>'; else h += '<div class="home" style="z-index:2"></div>';

@@ -90,7 +90,7 @@ const P = {
   ark: R(-12, 9, 23, 13.5), cargo: R(10.5, 16.5, 23, 13.5),
   pump: cell(0, 0), proc: cell(1, 0), drill: cell(2, 0),
   research: cell(0, 1), geo: cell(1, 1), veg: cell(2, 1),
-  dome: cell(0, 2), kitchen: cell(1, 2), quarry: cell(2, 2),
+  dome: cell(0, 2), kitchen: cell(1, 2), mine: cell(2, 2),
 };
 const padMat = flat(C.pad), edgeMat = flat(C.padEdge);
 function pad(r, kind = 'built') {
@@ -146,15 +146,24 @@ function kitchen() {
   for (const z of [2.2, 3.5]) { g.add(at(rb(3.6, 0.15, 0.8, M.wood, 0.06), -0.6, 0.95, z)); for (const s of [-0.55, 0.55]) g.add(at(rb(3.6, 0.12, 0.3, M.wood, 0.05), -0.6, 0.55, z + s)); }
   return shadowAll(g);
 }
-function quarry() {
+function mine() {
+  // the mine: a rock hill with a timbered tunnel, rails and a cart of stone (level 2: one worker, stone only)
   const g = new THREE.Group();
-  for (let i = 0; i < 6; i++) { const m = new THREE.Mesh(rockGeo, flat(i % 2 ? C.rock : C.rock2)); const s = 1.1 + rnd() * 0.8; m.scale.set(s, s * 0.8, s); m.position.set(1.6 + rnd() * 2.2, s * 0.4, -2.2 + rnd() * 2.5); m.castShadow = true; g.add(m); }
-  for (let i = 0; i < 6; i++) g.add(at(rb(0.9, 0.7, 0.9, flat(0xd9b892), 0.15), -2.6 + (i % 3) * 1.0, 0.65 + Math.floor(i / 3) * 0.72, 2.0));
-  g.add(at(rb(2.0, 1.6, 1.8, M.hull, 0.35), -2.2, 1.1, -1.4));
-  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 4.2, 12), M.orange); mast.position.set(-0.6, 2.4, -0.4); g.add(mast);
-  const arm = rb(4.4, 0.28, 0.28, M.orange, 0.1); arm.position.set(1.0, 4.4, -0.4); arm.rotation.z = -0.25; g.add(arm);
-  const hook = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.8, 6), M.metal); hook.position.set(2.9, 3.0, -0.4); g.add(hook);
-  g.add(at(rb(0.7, 0.5, 0.7, flat(0xd9b892), 0.12), 2.9, 1.95, -0.4));
+  const hill = [[-3.0, -3.0, 2.1], [-1.0, -3.4, 2.5], [1.4, -3.3, 2.3], [3.3, -2.6, 1.8], [-3.9, -1.4, 1.3], [0.4, -4.2, 1.9], [3.8, -0.9, 1.2]];
+  for (const [x, z, s] of hill) { const m = new THREE.Mesh(rockGeo, flat(rnd() < 0.5 ? C.rock : C.rock2)); m.scale.set(s * 1.15, s * 0.85, s); m.position.set(x, s * 0.55, z); m.rotation.y = rnd() * 6; g.add(m); }
+  const px = -0.8, pz = -0.7;
+  g.add(at(rb(1.9, 2.1, 1.2, flat(0x3a2a33), 0.25), px, 1.05, pz));
+  for (const dx of [-1.15, 1.15]) g.add(at(rb(0.34, 2.5, 0.4, M.wood, 0.08), px + dx, 1.25, pz + 0.55));
+  g.add(at(rb(2.8, 0.36, 0.5, M.wood, 0.08), px, 2.6, pz + 0.55));
+  g.add(at(rb(2.9, 0.16, 0.6, M.orange, 0.06), px, 2.86, pz + 0.55));
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 10), M.warm); lamp.position.set(px, 2.25, pz + 0.85); g.add(lamp);
+  for (const dx of [-0.42, 0.42]) g.add(at(rb(0.1, 0.1, 2.8, M.steel, 0.03), px + dx, 0.16, pz + 2.0));
+  for (let i = 0; i < 5; i++) g.add(at(rb(1.25, 0.1, 0.24, M.wood, 0.03), px, 0.08, pz + 0.8 + i * 0.62));
+  const cz = pz + 2.2;
+  g.add(at(rb(1.3, 0.75, 1.0, M.orange, 0.14), px, 0.72, cz));
+  for (const dx of [-0.5, 0.5]) for (const dz of [-0.32, 0.32]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.14, 14), M.rubber); w.rotation.z = Math.PI / 2; w.position.set(px + dx, 0.3, cz + dz); g.add(w); }
+  for (const [dx, dz, s] of [[-0.28, -0.12, 0.34], [0.22, 0.1, 0.3], [0.02, -0.02, 0.38]]) { const r = new THREE.Mesh(rockGeo, flat(0xd9b892)); r.scale.setScalar(s); r.position.set(px + dx, 1.18, cz + dz); g.add(r); }
+  for (let i = 0; i < 6; i++) g.add(at(rb(0.9, 0.7, 0.9, flat(0xd9b892), 0.15), 1.4 + (i % 3) * 1.0, 0.4 + Math.floor(i / 3) * 0.72, 1.2));
   return shadowAll(g);
 }
 function homeDome() {
@@ -209,7 +218,7 @@ if (!L3) {
   add(shadowAll(K.echoBot()), P.research.cx + 4.6, 5.4, P.research.cz + 3.0, 0.8, 1.25);
   halo(P.research.cx + 4.6, 5.4, P.research.cz + 3.0, 2.6, 0x6ff2c4, 0.45);
   // the future spots of level 2 and 3 are only outlined; the rest of the canyon is under dust
-  for (const k of ['dome', 'kitchen', 'quarry']) pad(P[k], 'future');
+  for (const k of ['dome', 'kitchen', 'mine']) pad(P[k], 'future');
   add(shadowAll(K.astronaut(1.7)), -1.5, 0.4, 12.2, 0.4);
   A('rubble', P.research.cx, 3.2, P.research.cz); A('echo', P.research.cx + 4.6, 6.6, P.research.cz + 3.0);
 } else {
@@ -219,7 +228,7 @@ if (!L3) {
   halo(P.dome.cx, 2, P.dome.cz, 9, 0xffd58a, 0.22);
   pad(P.kitchen); add(kitchen(), P.kitchen.cx + 0.4, 0.4, P.kitchen.cz, 0, 1.0);
   dust(P.kitchen.cx + 1.4, 6.8, P.kitchen.cz - 2.0, 3, 0xffffff, 0.6); dust(P.kitchen.cx + 1.8, 8.2, P.kitchen.cz - 2.6, 4.2, 0xffffff, 0.35);
-  pad(P.quarry); add(quarry(), P.quarry.cx, 0.4, P.quarry.cz, 0, 1.0);
+  pad(P.mine); add(mine(), P.mine.cx, 0.4, P.mine.cz, 0, 1.0);
   // workers by their buildings, the cook at the kitchen door, the Commander by the Ark
   const suits = [0x6fb7ff, 0x9a7cff, 0x33c5a2];
   add(colonist(0xffffff, suits[0]), P.drill.cx - 3.6, 0.4, P.drill.cz + 3.4, 0.6, 1.6);
@@ -232,7 +241,7 @@ if (!L3) {
   halo(P.proc.cx - 3.6, 6.2, P.proc.cz + 3.4, 2.6, 0x6ff2c4, 0.45);
   const ring = new THREE.Mesh(new THREE.TorusGeometry(5.0, 0.16, 10, 64), glow(0x33d1a8, 1.4)); ring.rotation.x = Math.PI / 2; ring.position.set(P.proc.cx, 0.55, P.proc.cz); scene.add(ring);
   A('w-drill', P.drill.cx, 7.4, P.drill.cz); A('w-pump', P.pump.cx, 5.6, P.pump.cz); A('w-veg', P.veg.cx, 4.4, P.veg.cz);
-  A('w-proc', P.proc.cx, 9.6, P.proc.cz); A('w-quarry', P.quarry.cx, 6.2, P.quarry.cz); A('cook', P.kitchen.cx, 6.4, P.kitchen.cz);
+  A('w-proc', P.proc.cx, 9.6, P.proc.cz); A('w-mine', P.mine.cx, 6.2, P.mine.cz); A('cook', P.kitchen.cx, 6.4, P.kitchen.cz);
   A('dome', P.dome.cx + 2.4, 4.2, P.dome.cz + 2.6); A('echo', P.proc.cx - 3.6, 7.4, P.proc.cz + 3.4);
 }
 // the locked part of the canyon lies under dust in both levels
