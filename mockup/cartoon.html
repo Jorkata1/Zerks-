@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="bg"><head><meta charset="utf-8"><meta name="viewport" content="width=390">
+<title>Zerks-X6 cartoon mockup</title>
+<script type="importmap">{ "imports": { "three": "./node_modules/three/build/three.module.js", "three/addons/": "./node_modules/three/examples/jsm/" } }</script>
+<style>
+  @font-face { font-family: 'Nunito'; font-weight: 800; src: url(fonts/nunito-cyrillic-800-normal.woff2) format('woff2'); unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+  @font-face { font-family: 'Nunito'; font-weight: 800; src: url(fonts/nunito-latin-800-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+2000-206F, U+2190-21FF; }
+  @font-face { font-family: 'Nunito'; font-weight: 900; src: url(fonts/nunito-cyrillic-900-normal.woff2) format('woff2'); unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+  @font-face { font-family: 'Nunito'; font-weight: 900; src: url(fonts/nunito-latin-900-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+2000-206F, U+2190-21FF; }
+  :root { --ink: #3b2618; --edge: #6b4226; --panel: #fffaf2; --orange: #ff8b3d; --teal: #22c19b; --blue: #4aa8ff; --purple: #8f6cff; --muted: #9a7a62; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 390px; height: 844px; overflow: hidden; background: #f3b98a; font-family: 'Nunito', system-ui, sans-serif; font-weight: 800; color: var(--ink); }
+  #view, #hud { position: absolute; inset: 0; }
+  .shade { position: absolute; left: 0; right: 0; top: 0; height: 170px; background: linear-gradient(rgba(120, 60, 30, .28), rgba(120, 60, 30, 0)); }
+  .status { position: absolute; top: 14px; left: 28px; right: 22px; display: flex; justify-content: space-between; font-size: 16px; font-weight: 900; color: #fff; text-shadow: 0 1px 2px rgba(80, 40, 20, .35); }
+  .status .r { display: flex; gap: 6px; align-items: center; }
+  .card { background: var(--panel); border: 3px solid var(--edge); box-shadow: 0 3px 0 rgba(107, 66, 38, .45); }
+  /* the Ark level badge */
+  .ark { position: absolute; top: 46px; left: 12px; width: 66px; text-align: center; }
+  .ark .c { width: 64px; height: 64px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ffb070, #ff7a2a 70%); border: 4px solid #fff; box-shadow: 0 0 0 3px var(--edge), 0 5px 0 rgba(107, 66, 38, .45); display: grid; place-items: center; color: #fff; font-size: 30px; font-weight: 900; text-shadow: 0 2px 0 rgba(150, 60, 10, .5); margin: 0 auto; }
+  .ark .t { display: inline-block; margin-top: 6px; padding: 1px 8px; border-radius: 10px; background: var(--edge); color: #fff; font-size: 11px; letter-spacing: .3px; }
+  /* atmosphere bar */
+  .atm { position: absolute; top: 50px; left: 90px; right: 12px; height: 34px; border-radius: 17px; display: flex; align-items: center; padding: 0 12px 0 6px; gap: 8px; }
+  .atm .ic { width: 24px; height: 24px; border-radius: 50%; background: var(--teal); display: grid; place-items: center; }
+  .atm .bar { flex: 1; height: 12px; border-radius: 6px; background: #f1dfcb; position: relative; overflow: visible; }
+  .atm .bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; background: linear-gradient(90deg, #22c19b, #6fe3c3); }
+  .atm .bar b { position: absolute; top: -5px; width: 4px; height: 22px; border-radius: 2px; background: var(--edge); }
+  .atm .v { font-size: 16px; font-weight: 900; } .atm .v small { font-size: 11px; color: var(--muted); }
+  /* resources */
+  .res { position: absolute; top: 92px; left: 90px; right: 12px; display: flex; gap: 6px; }
+  .pill { height: 32px; border-radius: 16px; display: flex; align-items: center; gap: 5px; padding: 0 10px 0 4px; font-size: 14px; font-weight: 900; }
+  .pill .ic { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; }
+  .pill small { font-size: 11px; color: var(--muted); font-weight: 800; }
+  .crew { position: absolute; top: 134px; left: 12px; }
+  .tut { position: absolute; top: 140px; left: 50%; transform: translateX(-50%); padding: 6px 14px; border-radius: 16px; background: var(--teal); color: #fff; font-size: 13px; border: 3px solid #fff; box-shadow: 0 0 0 2px #138a6c, 0 3px 0 rgba(19, 138, 108, .5); white-space: nowrap; }
+  /* speech bubble */
+  .bubble { position: absolute; width: 230px; border-radius: 18px; padding: 10px 12px 11px 54px; font-size: 14.5px; line-height: 1.3; }
+  .bubble .who { position: absolute; left: 8px; top: 10px; width: 38px; height: 38px; border-radius: 50%; background: #eaf7ff; border: 3px solid var(--edge); display: grid; place-items: center; }
+  .bubble .nm { font-size: 11px; color: var(--teal); letter-spacing: .6px; font-weight: 900; }
+  .bubble:after { content: ''; position: absolute; left: var(--tx, 40px); top: -11px; width: 18px; height: 18px; background: var(--panel); border-left: 3px solid var(--edge); border-top: 3px solid var(--edge); transform: rotate(45deg); }
+  .bubble { left: 12px; right: 12px; width: auto; bottom: 114px; }
+  /* pointer and badges on the map */
+  .pt { position: absolute; transform: translate(-50%, -50%); }
+  .ring { position: absolute; left: 50%; top: 50%; border-radius: 50%; border: 3px solid rgba(255, 255, 255, .95); transform: translate(-50%, -50%); box-shadow: 0 0 0 3px rgba(34, 193, 155, .7); }
+  .badge { position: absolute; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; }
+  .badge .b { width: 34px; height: 34px; border-radius: 50%; background: #fff; border: 3px solid var(--edge); display: grid; place-items: center; box-shadow: 0 3px 0 rgba(107, 66, 38, .4); position: relative; }
+  .badge .b .ok { position: absolute; right: -6px; bottom: -4px; width: 16px; height: 16px; border-radius: 50%; background: var(--teal); border: 2px solid #fff; display: grid; place-items: center; }
+  .badge .b.empty { background: rgba(255, 255, 255, .75); border: 3px dashed var(--teal); box-shadow: 0 0 0 4px rgba(34, 193, 155, .35); }
+  .badge .tag { margin-top: 3px; padding: 0 7px; border-radius: 9px; background: var(--edge); color: #fff; font-size: 10.5px; white-space: nowrap; }
+  .badge .stem { width: 3px; height: 8px; background: var(--edge); border-radius: 2px; }
+  /* dock */
+  .dock { position: absolute; left: 12px; right: 12px; bottom: 24px; height: 72px; border-radius: 26px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; }
+  .db { width: 52px; text-align: center; position: relative; }
+  .db .c { width: 46px; height: 46px; border-radius: 50%; margin: 0 auto; display: grid; place-items: center; border: 3px solid #fff; box-shadow: 0 0 0 2px var(--edge), 0 3px 0 rgba(107, 66, 38, .45); }
+  .db .l { font-size: 10.5px; margin-top: 3px; }
+  .db.off { opacity: .45; }
+  .db .lock { position: absolute; right: 2px; top: 28px; width: 18px; height: 18px; border-radius: 50%; background: var(--edge); display: grid; place-items: center; }
+  .db .dot { position: absolute; right: 0; top: -4px; min-width: 18px; height: 18px; border-radius: 9px; background: #ff5d5d; color: #fff; font-size: 11px; display: grid; place-items: center; border: 2px solid #fff; }
+  .build { width: 86px; margin-top: -34px; text-align: center; }
+  .build .c { width: 76px; height: 76px; border-radius: 50%; margin: 0 auto; background: radial-gradient(circle at 35% 30%, #ffb070, #ff7a2a 70%); border: 5px solid #fff; box-shadow: 0 0 0 3px var(--edge), 0 5px 0 rgba(107, 66, 38, .5); display: grid; place-items: center; }
+  .build .l { font-size: 14px; font-weight: 900; margin-top: 2px; }
+  .build.off { opacity: .5; }
+  .home { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 134px; height: 5px; border-radius: 3px; background: rgba(59, 38, 24, .75); }
+</style>
+</head>
+<body>
+<div id="view"></div>
+<div id="hud"></div>
+<script type="module" src="src/cartoon.js"></script>
+<script>
+const S = (d, c = '#fff', w = 2.2, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const ICON = {
+  carbon: `<svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 1.5 14 5.3v5.4L8 14.5 2 10.7V5.3z" fill="#3a3540" stroke="#fff" stroke-width="1.3"/></svg>`,
+  water: `<svg width="15" height="15" viewBox="0 0 16 16"><path d="M8 1.4s-4.8 5.6-4.8 8.6a4.8 4.8 0 0 0 9.6 0C12.8 7 8 1.4 8 1.4z" fill="#fff"/></svg>`,
+  food: `<svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 14.6c-4 0-5.4-4-4.4-7S8 4 8 4s3.4-1 4.4 3-.4 7.6-4.4 7.6z" fill="#fff"/><path d="M8 4c0-1.6 1-2.6 2.6-2.8" stroke="#fff" stroke-width="1.6" fill="none"/></svg>`,
+  stone: `<svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 11.5 4.6 4.6 10 3l4 4.6-1.4 5.4H4.6z" fill="#fff"/></svg>`,
+  leaf: S('<path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/><path d="M5 19l7-7"/>', '#fff', 2.4, 16),
+  person: (c = '#3b2618', s = 18) => S('<circle cx="12" cy="8" r="4"/><path d="M4.5 21c0-4.2 3.4-7 7.5-7s7.5 2.8 7.5 7"/>', c, 2.4, s),
+  check: S('<path d="M5 12.5l4.2 4L19 7"/>', '#fff', 3.4, 10),
+  plus: S('<path d="M12 5v14M5 12h14"/>', '#22c19b', 3.2, 18),
+  lock: `<svg width="10" height="10" viewBox="0 0 12 12"><rect x="2" y="5.2" width="8" height="6" rx="1.4" fill="#fff"/><path d="M3.8 5.2V3.8a2.2 2.2 0 0 1 4.4 0v1.4" stroke="#fff" stroke-width="1.5" fill="none"/></svg>`,
+  hammer: `<svg width="36" height="36" viewBox="0 0 36 36"><path d="M9 27 21 15" stroke="#fff" stroke-width="5" stroke-linecap="round"/><path d="M17.5 8.5l6-3 7 7-3 6-3.4-3.4-2.6 2.6-3.6-3.6 2.6-2.6z" fill="#fff"/><circle cx="27.5" cy="27.5" r="6.5" fill="#22c19b" stroke="#fff" stroke-width="2.2"/><path d="M27.5 24.3v6.4M24.3 27.5h6.4" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>`,
+  flask: S('<path d="M9 3h6M10 3v6L4.8 18.3A1.8 1.8 0 0 0 6.3 21h11.4a1.8 1.8 0 0 0 1.5-2.7L14 9V3"/><path d="M7.5 15h9"/>'),
+  map: S('<path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20z"/><path d="M9 4v13.5M15 6.5V20"/>'),
+  people: S('<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.6 2.7-5.6 6-5.6s6 2 6 5.6"/><path d="M16 4.8a3 3 0 0 1 0 6M18.5 14.6c1.6.7 2.5 2.4 2.5 5.4"/>'),
+  echo: `<svg width="28" height="28" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8.5" fill="#fff" stroke="#3b2618" stroke-width="1.6"/><rect x="6.4" y="10.6" width="11.2" height="5" rx="2.5" fill="#2f4f78"/><rect x="8.4" y="12.2" width="7.2" height="1.8" rx=".9" fill="#33d1a8"/><path d="M12 4.5V2.6" stroke="#3b2618" stroke-width="1.6"/><circle cx="12" cy="2.2" r="1.3" fill="#33d1a8"/></svg>`,
+  bed: S('<path d="M3 18V8M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5"/><circle cx="7" cy="11" r="1.8"/>', '#3b2618', 2.2, 16),
+  chef: `<svg width="20" height="20" viewBox="0 0 24 24"><path d="M7 14v5h10v-5" fill="#fff" stroke="#3b2618" stroke-width="1.8"/><path d="M7 14a4 4 0 0 1-1-7.7A4.5 4.5 0 0 1 12 4a4.5 4.5 0 0 1 6 2.3A4 4 0 0 1 17 14z" fill="#fff" stroke="#3b2618" stroke-width="1.8"/></svg>`,
+  hand: `<svg width="46" height="52" viewBox="0 0 46 52"><path d="M17 6.5c0-2.6 4.6-2.6 4.6 0v15.3l1.6-.3V16c0-2.5 4.5-2.5 4.5 0v6.3l1.4.1v-4.6c0-2.4 4.4-2.4 4.4 0v5.6l1.2.3V21c0-2.3 4.2-2.3 4.2 0v13c0 8-5.4 13.4-12.6 13.4-6.2 0-9.4-3.3-12.3-8.4l-5.7-9.9c-1.3-2.3 2.2-4.6 4-2.4l4.7 5.6z" fill="#fff" stroke="#3b2618" stroke-width="2.6" stroke-linejoin="round"/></svg>`,
+};
+const pill = (bg, ico, val, small = '') => `<div class="pill card"><span class="ic" style="background:${bg}">${ico}</span>${val}${small ? `<small>${small}</small>` : ''}</div>`;
+function bubble(a, text) {
+  // ЕХО speaks from the bottom, above the dock; the tail points up at the robot on the map
+  return `<div class="bubble card" style="--tx:${Math.min(Math.max(a.x - 21, 30), 330).toFixed(1)}px"><div class="who">${ICON.echo}</div><div class="nm">ЕХО</div>${text}</div>`;
+}
+const badge = (a, inner, tag = '', cls = '') => `<div class="badge" style="left:${a.x.toFixed(1)}px;top:${a.y.toFixed(1)}px"><div class="b ${cls}">${inner}</div>${tag ? `<div class="tag">${tag}</div>` : ''}<div class="stem"></div></div>`;
+function hud() {
+  const a = window.__anchors, l3 = window.__state.l3;
+  let h = '<div class="shade"></div>';
+  h += `<div class="status"><span>9:41</span><span class="r"><svg width="18" height="11" viewBox="0 0 18 11" fill="#fff"><rect x="0" y="7" width="3" height="4" rx=".8"/><rect x="5" y="5" width="3" height="6" rx=".8"/><rect x="10" y="2.5" width="3" height="8.5" rx=".8"/><rect x="15" y="0" width="3" height="11" rx=".8"/></svg><svg width="27" height="13" viewBox="0 0 27 13"><rect x=".7" y=".7" width="22.6" height="11.6" rx="3.4" fill="none" stroke="#fff"/><rect x="2.4" y="2.4" width="17" height="8.2" rx="1.8" fill="#fff"/></svg></span></div>`;
+  h += `<div class="ark"><div class="c">${l3 ? 3 : 1}</div><span class="t">КОВЧЕГ</span></div>`;
+  const atm = l3 ? [13, 16] : [9, 10];
+  h += `<div class="atm card"><span class="ic">${ICON.leaf}</span><div class="bar"><i style="width:${atm[0] / atm[1] * 100}%"></i><b style="right:-2px"></b></div><span class="v">${atm[0]}%<small> / ${atm[1]}%</small></span></div>`;
+  h += `<div class="res">` + (l3
+    ? pill('#3a3540', ICON.carbon, 412) + pill('#4aa8ff', ICON.water, 268) + pill('#c98b55', ICON.stone, 74) + pill('#6cc94f', ICON.food, 96)
+    : pill('#3a3540', ICON.carbon, 128, '/150') + pill('#4aa8ff', ICON.water, 84, '/100') + pill('#6cc94f', ICON.food, 22)) + `</div>`;
+  if (l3) h += `<div class="crew">${pill('#8f6cff', ICON.person('#fff', 16), '4', '/4')}</div>`;
+  if (!l3) {
+    h += `<div class="tut">Обучение · стъпка 6 от 7</div>`;
+    h += `<div class="pt" style="left:${a.rubble.x}px;top:${a.rubble.y}px"><div class="ring" style="width:64px;height:64px"></div><div class="ring" style="width:98px;height:98px;opacity:.55"></div></div>`;
+    h += `<div class="pt" style="left:${a.rubble.x + 22}px;top:${a.rubble.y + 30}px;transform:translate(-30%,-10%) rotate(-12deg)">${ICON.hand}</div>`;
+    h += bubble(a.echo, 'Тук нещо е затрупано. Натиснете отломките!');
+  } else {
+    for (const k of ['w-drill', 'w-pump', 'w-veg']) h += badge(a[k], `${ICON.person()}<span class="ok">${ICON.check}</span>`);
+    h += badge(a['w-quarry'], ICON.plus, '', 'empty');
+    h += badge(a['w-proc'], ICON.plus, 'свободно', 'empty');
+    h += badge(a.cook, ICON.chef, 'готвач');
+    h += badge(a.dome, ICON.bed, '4/4 легла');
+    h += bubble(a.echo, 'Всяка сграда може да вземе един човек. Натиснете празното място!');
+    h += `<div class="pt" style="left:${a['w-proc'].x + 18}px;top:${a['w-proc'].y - 4}px;transform:translate(-30%,-10%) rotate(-12deg)">${ICON.hand}</div>`;
+  }
+  const off = l3 ? '' : 'off', lock = l3 ? '' : `<span class="lock">${ICON.lock}</span>`;
+  h += `<div class="dock card">
+    <div class="db ${off}"><div class="c" style="background:#8f6cff">${ICON.people}</div><div class="l">Колонисти</div>${lock}${l3 ? '<span class="dot">!</span>' : ''}</div>
+    <div class="db ${off}"><div class="c" style="background:#4aa8ff">${ICON.flask}</div><div class="l">Рисърч</div>${lock}</div>
+    <div class="build ${off}"><div class="c">${ICON.hammer}</div><div class="l">Строй</div></div>
+    <div class="db off"><div class="c" style="background:#b9a38e">${ICON.map}</div><div class="l">Карта</div><span class="lock">${ICON.lock}</span></div>
+    <div class="db"><div class="c" style="background:#22c19b">${ICON.echo.replace('width="28" height="28"', 'width="30" height="30"')}</div><div class="l">Цели</div><span class="dot">3</span></div>
+  </div><div class="home"></div>`;
+  document.getElementById('hud').innerHTML = h;
+  document.fonts.ready.then(() => { window.__ready = true; });
+}
+window.addEventListener('scene-ready', hud);
+</script>
+</body>
+</html>

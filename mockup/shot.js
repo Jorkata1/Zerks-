@@ -7,6 +7,7 @@ const path = require('path');
 
 (async () => {
   const dpr = Number(process.argv[2] || 3);
+  const pageName = process.argv[4] || 'index.html';
   const states = (process.argv[3] || 'early,early-zoom,early-panel,late,late-zoom').split(',');
   const outDir = path.join(__dirname, 'out');
   fs.mkdirSync(outDir, { recursive: true });
@@ -18,7 +19,7 @@ const path = require('path');
     page.on('pageerror', e => errors.push(String(e)));
     page.on('console', m => { if (m.type() === 'error') errors.push(m.text().slice(0, 300)); });
     const t0 = Date.now();
-    await page.goto(`http://127.0.0.1:8777/index.html?dpr=${dpr}#${s}`, { waitUntil: 'commit', timeout: 120000 });
+    await page.goto(`http://127.0.0.1:8777/${pageName}?dpr=${dpr}#${s}`, { waitUntil: 'commit', timeout: 120000 });
     await page.waitForFunction(() => window.__ready === true, null, { timeout: 420000 }).catch(() => errors.push('timeout'));
     await page.screenshot({ path: path.join(outDir, `${s}.png`) });
     console.log(s, ((Date.now() - t0) / 1000).toFixed(1) + 's', errors.join(' | ') || 'ok');

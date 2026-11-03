@@ -13,6 +13,8 @@
 | `05-atmosfera-90-otblizo.jpg` | Същото, приближено |
 | `06-stroezh-menu.jpg` | Ниво 10: натиснат бутонът „Строй“, отворено е менюто за строеж; фабрикатор няма (решено на 02.11.2026) |
 | `07-izbor-na-miasto.jpg` | Избран е Жилищен модул: мястото му свети с прозрачната сграда, ЕХО го посочва, долу „Строй тук“ |
+| `cartoon-01-nivo-1.jpg` | Новата приятелска визия (cartoon.html): ниво 1, обучение; ЕХО показва затрупаната рисърч сграда |
+| `cartoon-02-nivo-3.jpg` | Новата визия: ниво 3, куполът с 4 легла, общата кухня с готвач, работниците и празно място при процесора |
 
 ## Какво е решено в макета
 
@@ -39,7 +41,7 @@ cd mockup
 npm run shots
 ```
 
-Кадрите излизат в `out/`. Едно състояние се отваря и в браузъра: `http://127.0.0.1:8777/index.html#early` (още `#early-zoom`, `#early-panel`, `#early-build`, `#early-place`, `#late`, `#late-zoom`).
+Кадрите излизат в `out/`. Новата приятелска визия е в `cartoon.html` (`src/cartoon.js`), състояния `#lvl1` и `#lvl3`: `node shot.js 3 lvl1,lvl3 cartoon.html`. Едно състояние се отваря и в браузъра: `http://127.0.0.1:8777/index.html#early` (още `#early-zoom`, `#early-panel`, `#early-build`, `#early-place`, `#late`, `#late-zoom`).
 
 ## Файлове
 
@@ -59,6 +61,7 @@ npm run shots
 - **Kenney Space Kit** (kenney.nl): модели на хангари, куполи, чинии, генератори, роувър, астронавт, ракета, скали. Лиценз CC0. Взети са от npm копието `@anabis/kenney-space-kit-mirror`.
 - **Poly Haven** (polyhaven.com): сканирани текстури (почва, трева, бетон, асфалт, чакъл, метал) и небето `kloofendal_48d_partly_cloudy_puresky`. Лиценз CC0.
 - **Exo 2** (Google Fonts): шрифтът на интерфейса. Лиценз SIL Open Font License 1.1.
+- **Nunito** (Google Fonts, чрез @fontsource/nunito): шрифтът на приятелската визия. Лиценз SIL Open Font License 1.1.
 - **three.js**: лиценз MIT.
 
 Всичко останало е направено с код за този проект.
