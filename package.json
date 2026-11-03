@@ -5,7 +5,7 @@
   "description": "Zerks-X6: визия, бележки и идеи за играта",
   "type": "module",
   "scripts": {
-    "docx": "node tools/make-docx.mjs docs/ideas.md docs/Zerks-X6-ideas.docx && node tools/make-docx.mjs docs/game-flow.md docs/Zerks-X6-game-flow.docx"
+    "docx": "node tools/make-docx.mjs docs/ideas.md docs/Zerks-X6-ideas.docx && node tools/make-docx.mjs docs/game-flow.md docs/Zerks-X6-game-flow.docx && node tools/make-docx.mjs docs/levels.md docs/Zerks-X6-levels.docx"
   },
   "devDependencies": {
     "docx": "9.5.1"
