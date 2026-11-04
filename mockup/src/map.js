@@ -40,9 +40,9 @@ document.getElementById('view').appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(LOOK.bg);
 scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
-scene.environmentIntensity = NIGHT ? 0.06 : 0.35;
-scene.add(new THREE.HemisphereLight(LOOK.sky, LOOK.bounce, NIGHT ? 0.2 : 1.05));
-const sun = new THREE.DirectionalLight(LOOK.sun, NIGHT ? 0.32 : 2.8);
+scene.environmentIntensity = NIGHT ? 0.14 : 0.35;
+scene.add(new THREE.HemisphereLight(LOOK.sky, LOOK.bounce, NIGHT ? 0.4 : 1.05));
+const sun = new THREE.DirectionalLight(LOOK.sun, NIGHT ? 0.62 : 2.8);
 sun.position.set(-30, 80, 50); sun.target.position.set(0, 0, 0); scene.add(sun, sun.target);
 sun.castShadow = true; sun.shadow.mapSize.set(4096, 4096); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04; sun.shadow.radius = 5;
 Object.assign(sun.shadow.camera, { left: -110, right: 110, top: 110, bottom: -110, near: 1, far: 300 }); sun.shadow.camera.updateProjectionMatrix();
@@ -59,6 +59,7 @@ Object.assign(K.M, {
   leaf: flat(0x6cc94f), gold: flat(0xffc65c), white: flat(0xffffff),
 });
 const M = K.M;
+if (NIGHT) for (const [m, k] of [[M.warm, 2.2], [M.teal, 2.2], [M.blueGlow, 2.4], [M.engineGlow, 2.6]]) m.emissiveIntensity = k;
 const C = { pad: 0xfff4e4, padEdge: 0xe8b285, rock: 0xcf7a52, rock2: 0xb9643f, walk: [0xf0cfa6, 0xe9e2d6, 0xeef0f2][S], lawn: 0x7fcf5c, lawn2: 0x6bc04f, soil: 0xa9714a, water: 0x58b8f0, water2: 0x8fd6ff };
 
 const add = (o, x = 0, y = 0, z = 0, ry = 0, s = 1) => { o.position.set(x, y, z); o.rotation.y = ry; o.scale.multiplyScalar(s); scene.add(o); return o; };
@@ -249,7 +250,7 @@ const base = {
 const housing = b => { for (const [x, z] of [[-3, -3], [3, -3], [-3, 3], [3, 3]]) home(b.cx + x, b.cz + z); if (S >= 1) { bush(b.cx, b.cz + 0.2, 0.8); bush(b.cx - 0.3, b.cz - 5.2, 0.6); } if (S === 2) for (let i = 0; i < 3; i++) tree(b.cx - 5 + rnd() * 10, b.cz - 5 + rnd() * 10, 0.6); };
 const park = (b, big) => {
   lawn(b.cx, b.cz, 12, 12);
-  for (let i = 0; i < (big ? 12 : 8); i++) { const a = rnd() * 6.28, r = 2.8 + rnd() * 2.2; if (big || i % 2) tree(b.cx + Math.cos(a) * r, b.cz + Math.sin(a) * r, big ? 0.9 + rnd() * 0.5 : 0.6); else bush(b.cx + Math.cos(a) * r, b.cz + Math.sin(a) * r, 0.9); }
+  for (let i = 0; i < (big ? 8 : 6); i++) { const a = rnd() * 6.28, r = 2.8 + rnd() * 2.2; if (big || i % 2) tree(b.cx + Math.cos(a) * r, b.cz + Math.sin(a) * r, big ? 0.9 + rnd() * 0.5 : 0.6); else bush(b.cx + Math.cos(a) * r, b.cz + Math.sin(a) * r, 0.9); }
   if (S > 1) { add(B.fountain(), b.cx, 0.3, b.cz); pool(b.cx, b.cz, 6, 0x8fd6ff, 0.35); } else bush(b.cx, b.cz, 1.2);
   // hedges along the edges of the lawn, with gaps for the paths
   for (const t of [-3.6, 3.6]) { add(B.hedge(3.4), b.cx + t, 0.3, b.cz + 5.6); add(B.hedge(3.4), b.cx + 5.6, 0.3, b.cz + t, Math.PI / 2); add(B.hedge(3.4), b.cx + t, 0.3, b.cz - 5.6); add(B.hedge(3.4), b.cx - 5.6, 0.3, b.cz + t, Math.PI / 2); }
@@ -292,11 +293,11 @@ for (const b of blocks) {
   if (b.built && S === 0) { plot(b); futurePlot(b); continue; }
   // outside the colony: bare rock on the dusty planet, bushes and young trees later, forest at the end
   if (S === 0) { for (let i = 0; i < 6; i++) rock(b.cx - 6 + rnd() * 12, b.cz - 6 + rnd() * 12, 0.6 + rnd() * 1.4); }
-  else if (S === 1) { for (let i = 0; i < 5; i++) rock(b.cx - 6 + rnd() * 12, b.cz - 6 + rnd() * 12, 0.5 + rnd()); for (let i = 0; i < 7; i++) tree(b.cx - 6 + rnd() * 12, b.cz - 6 + rnd() * 12, 0.45 + rnd() * 0.25); for (let i = 0; i < 4; i++) bush(b.cx - 6 + rnd() * 12, b.cz - 6 + rnd() * 12, 0.6); }
-  else { for (let i = 0; i < 20; i++) tree(b.cx - 7 + rnd() * 14, b.cz - 7 + rnd() * 14, 0.9 + rnd() * 0.6); for (let i = 0; i < 6; i++) bush(b.cx - 7 + rnd() * 14, b.cz - 7 + rnd() * 14, 0.8); }
+  else if (S === 1) { for (let i = 0; i < 5; i++) rock(b.cx - 6 + rnd() * 12, b.cz - 6 + rnd() * 12, 0.5 + rnd()); for (let i = 0; i < 4; i++) tree(b.cx - 6 + rnd() * 12, b.cz - 6 + rnd() * 12, 0.45 + rnd() * 0.25); for (let i = 0; i < 3; i++) bush(b.cx - 6 + rnd() * 12, b.cz - 6 + rnd() * 12, 0.6); }
+  else { for (let i = 0; i < 12; i++) tree(b.cx - 7 + rnd() * 14, b.cz - 7 + rnd() * 14, 0.9 + rnd() * 0.6); for (let i = 0; i < 4; i++) bush(b.cx - 7 + rnd() * 14, b.cz - 7 + rnd() * 14, 0.8); }
 }
 // colonists on the pavements: more of them wake up as the colony grows
-for (const b of builtBlocks) people(b.cx, b.cz, [1, 2, 3][S]);
+for (const b of builtBlocks) { people(b.cx, b.cz, [1, 2, 3][S]); pool(b.cx, b.cz, 13, 0xffd9a0, 0.22); }
 // benches, lamps, planters and flowers on the pavements; they get better with each stage
 const noStreet = new Set(['0,-6', '-1,-7', '2,-6']);
 for (const b of builtBlocks) {
@@ -312,10 +313,10 @@ for (const b of builtBlocks) {
       return;
     }
     // from 50%: a tree or a round bush at both ends, long hedges in between, a bench or flowers in the middle
-    for (const t of [-4.4, 4.4]) { const [x, z] = at(t); if (S > 1 && (h + side + (t > 0)) % 3) add(B.planter(2), x, y, z, 0, 0.85); else bush(x, z, 0.75); }
-    for (const t of [-2.2, 2.2]) { const [x, z] = at(t); add(B.hedge(1.9), x, y, z, ry); }
-    const [x, z] = at(0);
-    if ((h + side) % 2) add(B.bench(S), x, y, z, ax ? (ax > 0 ? Math.PI / 2 : -Math.PI / 2) : (az > 0 ? 0 : Math.PI)); else add(B.flowers(1.4, 0.55), x, y, z, ry);
+    const flip = (h + side) % 2 ? 1 : -1;
+    { const [x, z] = at(4.2 * flip); if (S > 1 && side % 2 === 0) add(B.planter(2), x, y, z, 0, 0.85); else if ((h + side) % 3) bush(x, z, 0.7); }
+    { const [x, z] = at(-2.6 * flip); add(B.hedge(2.6), x, y, z, ry); }
+    if ((h + side) % 2) { const [x, z] = at(0.6 * flip); add(B.bench(S), x, y, z, ax ? (ax > 0 ? Math.PI / 2 : -Math.PI / 2) : (az > 0 ? 0 : Math.PI)); }
   });
   // zebra crossings next to the corner the camera sees
   if (S > 0) for (let i = 0; i < 5; i++) { add(rb(0.35, 0.04, 2.3, dashMat, 0.04, 1), b.cx + 3.6 + i * 0.6, 0.1, b.cz + 8); add(rb(2.3, 0.04, 0.35, dashMat, 0.04, 1), b.cx + 8, 0.1, b.cz + 3.6 + i * 0.6); }

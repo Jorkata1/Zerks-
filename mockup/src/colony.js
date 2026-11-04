@@ -26,7 +26,7 @@ function ball(g, r, m, x, y, z, sy = 1) { const b = new THREE.Mesh(ballGeo, m); 
 function band(g, r, t, m, x, y, z) { const o = new THREE.Mesh(new THREE.TorusGeometry(r, t, 8, 40), m); o.rotation.x = Math.PI / 2; o.position.set(x, y, z); g.add(o); return o; }
 // a round window: a navy (or lit) disk with a cream rim, on the +z or the +x side
 function port(g, x, y, z, r, face = 'z', lit = false) {
-  if (NIGHT && !lit) lit = rnd() < 0.6;
+  if (NIGHT && !lit) lit = rnd() < 0.75;
   const p = new THREE.Group();
   p.add(new THREE.Mesh(new THREE.CircleGeometry(r, 24), lit ? P.warm : P.window));
   const rim = new THREE.Mesh(new THREE.TorusGeometry(r, r * 0.2, 8, 24), P.cream); p.add(rim);
@@ -54,7 +54,7 @@ const done = g => { g.traverse(m => { if (m.isMesh) { m.castShadow = !m.material
 let rnd = Math.random, NIGHT = false;
 export const useRng = f => { rnd = f; };
 // at night more windows are lit
-export const setNight = on => { NIGHT = on; };
+export const setNight = on => { NIGHT = on; if (on) for (const [m, k] of [[P.warm, 2.2], [P.teal, 2.2], [P.grow, 2.4], [P.fire, 3.2]]) m.emissiveIntensity = k; };
 
 // ---------- homes: a cream house with a pitched roof, a navy ring, round windows and a door ----------
 // modern (tier 2): a second floor with wide windows, a flat roof with solar panels, a balcony and plants
