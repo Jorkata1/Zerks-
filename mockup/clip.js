@@ -13,8 +13,9 @@ const path = require('path');
   const dpr = Number(process.argv[2] || 2), secs = Number(process.argv[3] || 3.5), fps = 30, fade = 0.8;
   const states = (process.argv[4] || 'atm20,atm50,atm85,atm85-night').split(',');
   const n = Math.round(secs * fps), hold = Math.round(0.6 * fps);
-  const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-proxy-server'] });
   for (const s of states) {
+    // a fresh browser for every stage: software WebGL can run out of memory over hundreds of frames
+    const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-proxy-server'] });
     const dir = path.join(__dirname, 'out', 'clip', s);
     fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir, { recursive: true });
     const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: dpr });
@@ -27,9 +28,8 @@ const path = require('path');
       await page.screenshot({ path: path.join(dir, `f${String(f).padStart(4, '0')}.jpg`), type: 'jpeg', quality: 90 });
     }
     console.log(s, n, 'frames', ((Date.now() - t0) / 1000).toFixed(0) + 's');
-    await page.close();
+    await browser.close();
   }
-  await browser.close();
   // one stream per stage, cross-faded into each other
   const ins = states.flatMap(s => ['-framerate', String(fps), '-i', path.join('out', 'clip', s, 'f%04d.jpg')]);
   let filter = '', last = '0';
