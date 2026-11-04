@@ -9,6 +9,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import * as T from './textures.js';
 import * as K from './models.js';
+import * as B from './colony.js';
 
 const STATE = (location.hash || '#atm20').slice(1);
 const ATM = { atm20: 20, atm50: 50, atm85: 85 }[STATE] ?? 20;
@@ -18,6 +19,7 @@ const W = 390, H = 844;
 T.seed(7 + S);
 const rnd = () => T.rng();
 const pick = a => a[Math.floor(rnd() * a.length)];
+B.useRng(rnd);
 
 // ---------- the look of each stage ----------
 const LOOK = [
@@ -96,28 +98,10 @@ function colonist(stripe) {
 const suits = [0x6fb7ff, 0x9a7cff, 0x33c5a2, 0xff8b3d, 0xff5d8a, 0xffc65c];
 function people(cx, cz, n) { for (let i = 0; i < n; i++) { const side = rnd() < 0.5, t = (rnd() - 0.5) * 12, o = (rnd() < 0.5 ? -1 : 1) * 6.7; add(colonist(pick(suits)), cx + (side ? o : t), 0.15, cz + (side ? t : o), rnd() * 6, 1.25); } }
 
-// houses, like the colony's homes: a pastel body, a coloured roof, warm windows
-const roofs = [0xff8b3d, 0x4aa8ff, 0xff5d5d, 0x33c5a2, 0x8f6cff], walls = [0xfff4e4, 0xfbe3c8, 0xe9f3ff, 0xfff0f0];
-function home(x, z, ry = 0) {
-  const g = new THREE.Group(), w = 3.6 + rnd() * 0.8, h = 2.6 + rnd() * 0.8, d = 3.4;
-  g.add(at(rb(w, h, d, flat(pick(walls)), 0.35), 0, h / 2 + 0.3, 0));
-  const roof = flat(pick(roofs));
-  g.add(at(rb(w + 0.5, 0.55, d + 0.5, roof, 0.25), 0, h + 0.55, 0));
-  g.add(at(rb(w * 0.55, 0.5, d * 0.55, roof, 0.25), 0, h + 1.0, 0));
-  g.add(at(rb(0.9, 1.4, 0.1, M.darkGlass, 0.08), -w * 0.22, 1.0, d / 2 + 0.02));
-  for (const xx of [w * 0.2, w * 0.38]) g.add(at(rb(0.55, 0.55, 0.1, M.warm, 0.06), xx, h * 0.62, d / 2 + 0.02));
-  g.add(at(rb(0.1, 0.55, 0.55, M.warm, 0.06), w / 2 + 0.02, h * 0.62, 0));
-  return add(shadowAll(g), x, 0, z, ry);
-}
-// taller blocks of flats for the green planet: window bands on the two faces the camera sees
-function flats(x, z, floors, color) {
-  const g = new THREE.Group(), w = 5.2, h = floors * 1.5 + 0.6;
-  g.add(at(rb(w, h, w, flat(color), 0.5), 0, h / 2 + 0.3, 0));
-  for (let f = 0; f < floors; f++) { const y = 1.4 + f * 1.5; g.add(at(rb(w * 0.86, 0.7, 0.1, M.darkGlass, 0.05), 0, y, w / 2 + 0.01)); g.add(at(rb(0.1, 0.7, w * 0.86, M.darkGlass, 0.05), w / 2 + 0.01, y, 0)); }
-  g.add(at(rb(w * 0.7, 0.4, w * 0.7, flat(C.lawn), 0.15), 0, h + 0.5, 0));
-  for (let i = 0; i < 3; i++) g.add(ball(pick(leafMats), -1 + i, h + 0.9, (rnd() - 0.5) * 2, 0.5));
-  return add(shadowAll(g), x, 0, z);
-}
+// houses and blocks of flats in the style of the Ark (colony.js)
+const roofMats = [B.P.orange, flat(0x33c5a2), flat(0x4aa8ff), flat(0xff5d5d), B.P.navy2];
+const home = (x, z, ry = 0) => add(B.home(pick(roofMats)), x, 0.2, z, ry);
+const flats = (x, z, floors) => add(B.flats(floors, pick(roofMats)), x, 0.2, z);
 // crops in rows on brown soil: instanced so a field of hundreds of plants stays cheap
 function field(cx, cz, color) {
   add(rb(11, 0.35, 11, flat(C.soil), 0.3, 2), cx, 0.17, cz);
@@ -151,25 +135,15 @@ function animal(kind) {
 }
 function pen(cx, cz, kind, n) {
   lawn(cx, cz, 11.5, 11.5, flat(C.lawn2)); fence(cx, cz, 5.4, 5.4);
-  add(shadowAll(rb(3.2, 2.2, 2.6, flat(0xff8b3d), 0.3)), cx - 2.6, 1.3, cz - 2.8);
-  add(shadowAll(rb(3.6, 0.5, 3.0, flat(0xfff4e4), 0.2)), cx - 2.6, 2.6, cz - 2.8);
-  for (let i = 0; i < n; i++) add(animal(kind), cx - 1 + rnd() * 5, 0.3, cz - 1 + rnd() * 5, rnd() * 6, kind === 'chicken' ? 1.4 : 1.1);
+  add(B.barn(kind), cx - 2.6, 0.25, cz - 3.0);
+  for (let i = 0; i < n; i++) add(animal(kind), cx - 1.5 + rnd() * 6, 0.3, cz + rnd() * 4.5, rnd() * 6, kind === 'chicken' ? 1.4 : 1.1);
 }
 function pond(cx, cz, rx, rz, fish = false) {
   const shape = (r, mat, y) => { const m = new THREE.Mesh(new THREE.CircleGeometry(1, 48), mat); m.rotation.x = -Math.PI / 2; m.scale.set(rx * r, rz * r, 1); m.position.set(cx, y, cz); m.receiveShadow = true; scene.add(m); };
-  shape(1.08, flat(0xf3e6d4), 0.05); shape(1.0, flat(C.water2, { roughness: 0.3 }), 0.08); shape(0.8, flat(C.water, { roughness: 0.2 }), 0.1);
-  if (fish) { add(rb(1.2, 0.2, rz * 0.9, M.wood, 0.05), cx + rx * 0.55, 0.3, cz); for (let i = 0; i < 5; i++) add(new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.08, 6, 24), M.orange), cx - rx * 0.4 + rnd() * rx * 0.6, 0.18, cz - rz * 0.4 + rnd() * rz * 0.8).rotation.x = Math.PI / 2; }
+  shape(1.08, flat(0xf3e6d4), 0.33); shape(1.0, flat(C.water2, { roughness: 0.3 }), 0.35); shape(0.8, flat(C.water, { roughness: 0.2 }), 0.37);
+  if (fish) { add(B.hatchery(), cx + rx * 0.62, 0.3, cz + rz * 0.62); add(rb(1.2, 0.2, rz * 0.9, M.wood, 0.05), cx + rx * 0.55, 0.3, cz - rz * 0.2); for (let i = 0; i < 5; i++) add(new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.08, 6, 24), M.orange), cx - rx * 0.4 + rnd() * rx * 0.6, 0.18, cz - rz * 0.4 + rnd() * rz * 0.8).rotation.x = Math.PI / 2; }
 }
 function solarField(cx, cz) { for (let r = 0; r < 3; r++) for (let i = 0; i < 3; i++) { const p = rb(3.0, 0.15, 2.0, M.solar, 0.05, 1); p.rotation.x = -0.35; add(p, cx - 3.6 + i * 3.6, 1.0, cz - 3.4 + r * 3.4); add(rb(0.15, 0.9, 0.15, M.steel, 0.04, 1), cx - 3.6 + i * 3.6, 0.45, cz - 3.4 + r * 3.4); } }
-function kitchen() {
-  const g = new THREE.Group();
-  g.add(at(rb(5.6, 3.0, 4.2, M.hull, 0.6), -0.6, 1.7, -1.2));
-  g.add(at(rb(6.2, 0.7, 4.8, M.orange, 0.35), -0.6, 3.4, -1.2));
-  g.add(at(rb(1.4, 1.9, 0.12, M.darkGlass, 0.1), -1.6, 1.35, 0.92));
-  g.add(at(rb(6.4, 0.18, 2.4, flat(0x33c5a2), 0.08), -0.6, 2.7, 2.1));
-  for (const z of [2.2, 3.5]) g.add(at(rb(3.6, 0.15, 0.8, M.wood, 0.06), -0.6, 0.95, z));
-  return shadowAll(g);
-}
 function mineHill() {
   const g = new THREE.Group();
   for (const [x, z, s] of [[-3, -3, 2.1], [-1, -3.4, 2.5], [1.4, -3.3, 2.3], [3.3, -2.6, 1.8], [-3.9, -1.4, 1.3], [3.8, -0.9, 1.2]]) { const m = new THREE.Mesh(rockGeo, flat(rnd() < 0.5 ? C.rock : C.rock2)); m.scale.set(s * 1.15, s * 0.85, s); m.position.set(x, s * 0.55, z); g.add(m); }
@@ -183,17 +157,9 @@ function homeDome() {
   return K.geoDome(3.7, g => {
     for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + Math.PI / 4; g.add(at(rb(1.5, 1.3, 1.5, i % 2 ? M.hull : flat(0xfff0d6), 0.35), Math.cos(a) * 2, 1.15, Math.sin(a) * 2)); g.add(at(rb(1.6, 0.25, 1.6, M.orange, 0.12), Math.cos(a) * 2, 1.9, Math.sin(a) * 2)); }
     g.add(ball(M.leaf, 0, 2.2, 0, 0.9));
+    g.add(at(B.airlock(), 0, 0, 4.3));
   });
 }
-function vegLab() {
-  const g = new THREE.Group();
-  g.add(at(rb(7.2, 0.4, 4.2, M.concrete, 0.2), 0, 0.2, 0));
-  for (let row = 0; row < 3; row++) for (let i = 0; i < 6; i++) g.add(ball(flat(row === 1 ? 0x8fd65a : 0x5fbf47), -2.8 + i * 1.12, 0.75, -1.2 + row * 1.2, 0.45));
-  const tun = new THREE.Mesh(new THREE.CylinderGeometry(2.1, 2.1, 7, 32, 1, true, 0, Math.PI), M.glass); tun.rotation.order = 'YXZ'; tun.rotation.y = Math.PI / 2; tun.rotation.z = Math.PI / 2; tun.position.y = 0.4; g.add(tun);
-  for (let i = 0; i <= 4; i++) { const ring = new THREE.Mesh(new THREE.TorusGeometry(2.12, 0.07, 8, 32, Math.PI), M.orange); ring.rotation.y = Math.PI / 2; ring.position.set(-3.5 + i * 1.75, 0.4, 0); g.add(ring); }
-  return shadowAll(g);
-}
-
 // ---------- the soft glow, dust and smoke sprites ----------
 const cloudT = T.cloudTex();
 const dust = (x, y, z, s, color = 0xffffff, op = 0.6) => { const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: cloudT, color, transparent: true, opacity: op, depthWrite: false, rotation: rnd() * 6 })); m.position.set(x, y, z); m.scale.set(s, s * 0.62, 1); scene.add(m); return m; };
@@ -209,18 +175,18 @@ const smooth = n => { const g = new THREE.Group(); g.add(glb[n].clone(true)); re
 
 // ---------- the street grid ----------
 // d = i - j runs across the screen, s = i + j along it (positive = towards the camera).
-const B = 16;
+const PITCH = 16;
 const REACH = [2, 5, 8][S]; // how far along the canyon the colony has grown
 const blocks = [];
 for (let i = -7; i <= 7; i++) for (let j = -7; j <= 7; j++) {
   const d = i - j, s = i + j;
   if (Math.abs(d) > 3 || Math.abs(s) > 10) continue;
-  blocks.push({ d, s, cx: i * B, cz: j * B, built: Math.abs(d) <= 2 && Math.abs(s) <= REACH });
+  blocks.push({ d, s, cx: i * PITCH, cz: j * PITCH, built: Math.abs(d) <= 2 && Math.abs(s) <= REACH });
 }
 const padMat = flat(C.pad), edgeMat = flat(C.padEdge), roadMat = flat(LOOK.road), walkMat = flat(C.walk), dashMat = flat(0xffffff);
 function plot(b) {
   // the street around the block, the pavement, and the plot itself
-  add(rb(B, 0.1, B, roadMat, 0.05, 1), b.cx, 0.03, b.cz);
+  add(rb(PITCH, 0.1, PITCH, roadMat, 0.05, 1), b.cx, 0.03, b.cz);
   if (S > 0) {
     add(rb(13.4, 0.26, 13.4, walkMat, 0.5, 2), b.cx, 0.1, b.cz);
     for (let k = -1; k <= 1; k++) { add(rb(1.4, 0.04, 0.3, dashMat, 0.05, 1), b.cx + k * 4.5, 0.1, b.cz + 8); add(rb(0.3, 0.04, 1.4, dashMat, 0.05, 1), b.cx + 8, 0.1, b.cz + k * 4.5); }
@@ -240,27 +206,27 @@ const base = {
   '1,1': b => { add(smooth('carbon-drill-v1'), b.cx, 0.4, b.cz, 0, 1.2); for (let i = 0; i < 10; i++) add(new THREE.Mesh(new THREE.DodecahedronGeometry(0.3 + rnd() * 0.25, 0), M.carbon), b.cx - 4 + rnd() * 8, 0.55, b.cz + 4 + rnd()); },
   '-1,1': b => { add(shadowAll(K.waterExtractor()), b.cx - 0.6, 0.4, b.cz - 0.6, 0, 0.82); for (let i = 0; i < 8; i++) add(new THREE.Mesh(rockGeo, M.ice), b.cx + 2 + rnd() * 2, 0.4, b.cz + 2 + rnd() * 2).scale.set(0.6, 0.3, 0.6); },
   '1,-1': b => { add(shadowAll(K.processor()), b.cx, 0.4, b.cz, 0, 0.74); dust(b.cx, 7.6, b.cz, 3.5, 0xffffff, 0.5); },
-  '-1,-1': b => add(shadowAll(K.research(true)), b.cx, 0.4, b.cz, 0, 0.82),
-  '0,2': b => add(vegLab(), b.cx, 0.4, b.cz, 0, 1.2),
+  '-1,-1': b => add(B.research(), b.cx, 0.3, b.cz, 0, 1.0),
+  '0,2': b => add(B.vegLab(), b.cx, 0.3, b.cz, 0, 1.0),
   '0,-2': b => add(shadowAll(homeDome()), b.cx, 0.4, b.cz, 0, 1.1),
-  '2,0': b => add(kitchen(), b.cx + 0.4, 0.4, b.cz, 0, 1.1),
+  '2,0': b => { add(B.kitchen(), b.cx, 0.3, b.cz, 0, 1.0); dust(b.cx - 2.6, 6.4, b.cz - 2.8, 2.6, 0xffffff, 0.55); },
   '-2,0': b => add(mineHill(), b.cx, 0.4, b.cz, 0, 1.1),
-  '2,2': b => { add(shadowAll(K.greenhouse(9)), b.cx, 0.4, b.cz - 2.6, 0, 1.0); add(shadowAll(K.greenhouse(9)), b.cx, 0.4, b.cz + 2.6, 0, 1.0); },
+  '2,2': b => { add(B.greenhouse(8), b.cx, 0.3, b.cz - 2.8, 0, 0.95); add(B.greenhouse(8), b.cx, 0.3, b.cz + 2.8, 0, 0.95); },
   '-2,2': b => { add(shadowAll(K.geolocator()), b.cx - 2, 0.4, b.cz - 2, 0, 0.7); for (let i = 0; i < 3; i++) { const p = rb(3.0, 0.15, 2.0, M.solar, 0.05, 1); p.rotation.x = -0.35; add(p, b.cx + 3, 1.0, b.cz - 3.5 + i * 3.4); } },
 };
 const housing = b => { for (const [x, z] of [[-3, -3], [3, -3], [-3, 3], [3, 3]]) home(b.cx + x, b.cz + z); if (S === 2) for (let i = 0; i < 3; i++) tree(b.cx - 5 + rnd() * 10, b.cz - 5 + rnd() * 10, 0.6); };
 const park = (b, big) => { lawn(b.cx, b.cz, 12, 12); for (let i = 0; i < (big ? 10 : 5); i++) tree(b.cx - 4.6 + rnd() * 9.2, b.cz - 4.6 + rnd() * 9.2, big ? 0.9 + rnd() * 0.5 : 0.55); };
-const towers = b => { const cols = [0xfff4e4, 0xe9f3ff, 0xfbe3c8, 0xd8f5ea]; flats(b.cx - 3, b.cz - 3, 7 + Math.floor(rnd() * 4), pick(cols)); flats(b.cx + 3, b.cz + 3, 4 + Math.floor(rnd() * 3), pick(cols)); lawn(b.cx + 3, b.cz - 3, 5, 5); tree(b.cx + 3, b.cz - 3, 0.8); lawn(b.cx - 3, b.cz + 3, 5, 5); tree(b.cx - 3, b.cz + 3, 0.8); };
+const towers = b => { flats(b.cx - 3, b.cz - 3, 7 + Math.floor(rnd() * 4)); flats(b.cx + 3, b.cz + 3, 4 + Math.floor(rnd() * 3)); lawn(b.cx + 3, b.cz - 3, 5, 5); tree(b.cx + 3, b.cz - 3, 0.8); lawn(b.cx - 3, b.cz + 3, 5, 5); tree(b.cx - 3, b.cz + 3, 0.8); };
 const grown = {
   '2,-2': b => add(shadowAll(homeDome()), b.cx, 0.4, b.cz, 0, 1.1),
   '-2,-2': b => { add(shadowAll(K.turbine(0.3)), b.cx - 3, 0.4, b.cz - 3, 0.8, 0.6); add(shadowAll(K.turbine(1.2)), b.cx + 3, 0.4, b.cz + 3, 0.8, 0.6); },
   '1,3': b => field(b.cx, b.cz, 0x8fd65a), '-1,3': housing,
   '1,-3': b => { lawn(b.cx, b.cz, 12, 12, flat(C.lawn2)); pond(b.cx, b.cz, 4.8, 4.2, true); }, '-1,-3': b => pen(b.cx, b.cz, 'chicken', 14),
-  '0,4': b => park(b, S === 2), '2,4': housing, '-2,4': b => { add(shadowAll(K.greenhouse(9)), b.cx, 0.4, b.cz - 2.6); add(shadowAll(K.greenhouse(9)), b.cx, 0.4, b.cz + 2.6); },
+  '0,4': b => park(b, S === 2), '2,4': housing, '-2,4': b => { add(B.greenhouse(8), b.cx, 0.2, b.cz - 2.8, 0, 0.95); add(B.greenhouse(8), b.cx, 0.2, b.cz + 2.8, 0, 0.95); },
   '0,-4': housing, '2,-4': b => field(b.cx, b.cz, 0xffc65c), '-2,-4': b => solarField(b.cx, b.cz),
   '1,5': housing, '-1,5': b => field(b.cx, b.cz, 0x6cc94f),
   // the silicon furnace smokes: the smoke is what pulls the atmosphere down
-  '1,-5': b => { add(shadowAll(K.smelter()), b.cx, 0.4, b.cz, 0, 0.9); for (let i = 0; i < 3; i++) dust(b.cx + 1.2, 8 + i * 2.2, b.cz - 1.2 - i, 3 + i * 1.6, 0xd8d0c8, 0.55 - i * 0.12); },
+  '1,-5': b => { add(B.smelter(), b.cx, 0.2, b.cz, 0, 1.0); for (let i = 0; i < 3; i++) dust(b.cx - 2.6 + i * 0.4, 8.8 + i * 2.2, b.cz - 2.4 - i, 3 + i * 1.6, 0xd8d0c8, 0.55 - i * 0.12); },
   '-1,-5': housing,
 };
 const green = {
@@ -283,16 +249,22 @@ for (const b of blocks) {
 }
 // colonists on the pavements: more of them wake up as the colony grows
 for (const b of builtBlocks) people(b.cx, b.cz, [1, 2, 3][S]);
-add(shadowAll(K.echoBot()), 6.5, 6.2, 9, -0.6, 1.25);
+const echo = add(shadowAll(K.echoBot()), 6.5, 6.2, 9, -0.6, 1.25);
 // the part of the canyon that is still locked lies under dust
 if (S < 2) for (const b of blocks) if (b.s < -REACH && Math.abs(b.d) <= 2) for (let k = 0; k < 2; k++) dust(b.cx - 4 + rnd() * 8, 2 + rnd() * 3, b.cz - 4 + rnd() * 8, 20 + rnd() * 8, S ? 0xf6e2cc : 0xfde6d2, 0.85);
 
 // ---------- camera: angled top-down like a city builder, looking along the diagonal of the grid ----------
-const VIEW = 56; // metres across the screen width
-const camera = new THREE.OrthographicCamera(-VIEW / 2, VIEW / 2, VIEW / 2 * H / W, -VIEW / 2 * H / W, 1, 800);
 const EL = THREE.MathUtils.degToRad(36); // angle above the ground
-camera.position.set(Math.cos(EL) * Math.SQRT1_2 * 300, Math.sin(EL) * 300, Math.cos(EL) * Math.SQRT1_2 * 300);
-camera.lookAt(0, 0, 0);
+const DIR = new THREE.Vector3(Math.cos(EL) * Math.SQRT1_2, Math.sin(EL), Math.cos(EL) * Math.SQRT1_2);
+const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 800);
+function aim(view, x, z) { // view = metres across the screen width
+  Object.assign(camera, { left: -view / 2, right: view / 2, top: view / 2 * H / W, bottom: -view / 2 * H / W }); camera.updateProjectionMatrix();
+  camera.position.set(x, 0, z).addScaledVector(DIR, 300); camera.lookAt(x, 0, z);
+}
+// the clip (clip.js): from the overview the camera glides in towards what grew at this stage
+const SHOT = [[6, -6], [-26, -26], [42, 42]][S];
+window.__frame = t => { const e = t * t * (3 - 2 * t); aim(56 - 22 * e, SHOT[0] * e, SHOT[1] * e); echo.position.y = 6.2 + Math.sin(t * 12) * 0.3; renderer.render(scene, camera); };
+aim(56, 0, 0);
 renderer.render(scene, camera);
 window.__state = { atm: ATM, stage: S };
 window.dispatchEvent(new Event('scene-ready'));
