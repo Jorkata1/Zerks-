@@ -96,11 +96,13 @@ function colonist(stripe) {
   return shadowAll(g);
 }
 const suits = [0x6fb7ff, 0x9a7cff, 0x33c5a2, 0xff8b3d, 0xff5d8a, 0xffc65c];
+function miner() { const m = colonist(0xffc65c), p = B.pickaxe(); p.position.set(0.38, 0.75, 0.15); p.rotation.set(0.3, 0, -0.9); m.add(p); return m; }
+function bush(x, z, s = 1) { const g = new THREE.Group(); for (const [dx, dz, r] of [[0, 0, 0.55], [0.45, 0.2, 0.4], [-0.35, 0.3, 0.38]]) g.add(ball(pick(leafMats), dx, r * 0.8, dz, r)); return add(shadowAll(g), x, 0.2, z, rnd() * 6, s); }
 function people(cx, cz, n) { for (let i = 0; i < n; i++) { const side = rnd() < 0.5, t = (rnd() - 0.5) * 12, o = (rnd() < 0.5 ? -1 : 1) * 6.7; add(colonist(pick(suits)), cx + (side ? o : t), 0.15, cz + (side ? t : o), rnd() * 6, 1.25); } }
 
 // houses and blocks of flats in the style of the Ark (colony.js)
 const roofMats = [B.P.orange, flat(0x33c5a2), flat(0x4aa8ff), flat(0xff5d5d), B.P.navy2];
-const home = (x, z, ry = 0) => add(B.home(pick(roofMats)), x, 0.2, z, ry);
+const home = (x, z, ry = 0) => add(B.home(pick(roofMats), S), x, 0.2, z, ry);
 const flats = (x, z, floors) => add(B.flats(floors, pick(roofMats)), x, 0.2, z);
 // crops in rows on brown soil: instanced so a field of hundreds of plants stays cheap
 function field(cx, cz, color) {
@@ -135,7 +137,7 @@ function animal(kind) {
 }
 function pen(cx, cz, kind, n) {
   lawn(cx, cz, 11.5, 11.5, flat(C.lawn2)); fence(cx, cz, 5.4, 5.4);
-  add(B.barn(kind), cx - 2.6, 0.25, cz - 3.0);
+  add(B.barn(kind, S), cx - 2.6, 0.25, cz - 3.0);
   for (let i = 0; i < n; i++) add(animal(kind), cx - 1.5 + rnd() * 6, 0.3, cz + rnd() * 4.5, rnd() * 6, kind === 'chicken' ? 1.4 : 1.1);
 }
 function pond(cx, cz, rx, rz, fish = false) {
@@ -145,20 +147,35 @@ function pond(cx, cz, rx, rz, fish = false) {
 }
 function solarField(cx, cz) { for (let r = 0; r < 3; r++) for (let i = 0; i < 3; i++) { const p = rb(3.0, 0.15, 2.0, M.solar, 0.05, 1); p.rotation.x = -0.35; add(p, cx - 3.6 + i * 3.6, 1.0, cz - 3.4 + r * 3.4); add(rb(0.15, 0.9, 0.15, M.steel, 0.04, 1), cx - 3.6 + i * 3.6, 0.45, cz - 3.4 + r * 3.4); } }
 function mineHill() {
+  // the same mine as in cartoon.js
+  // the mine: a rock hill with a timbered tunnel, rails and a cart of stone (level 2: one worker, stone only)
   const g = new THREE.Group();
-  for (const [x, z, s] of [[-3, -3, 2.1], [-1, -3.4, 2.5], [1.4, -3.3, 2.3], [3.3, -2.6, 1.8], [-3.9, -1.4, 1.3], [3.8, -0.9, 1.2]]) { const m = new THREE.Mesh(rockGeo, flat(rnd() < 0.5 ? C.rock : C.rock2)); m.scale.set(s * 1.15, s * 0.85, s); m.position.set(x, s * 0.55, z); g.add(m); }
-  g.add(at(rb(1.9, 2.1, 1.2, flat(0x3a2a33), 0.25), -0.8, 1.05, -0.7));
-  g.add(at(rb(2.9, 0.36, 0.5, M.orange, 0.08), -0.8, 2.6, -0.15));
-  g.add(at(rb(1.3, 0.75, 1.0, M.orange, 0.14), -0.8, 0.72, 1.5));
-  for (let i = 0; i < 6; i++) g.add(at(rb(0.9, 0.7, 0.9, flat(0xd9b892), 0.15), 1.4 + (i % 3), 0.4 + Math.floor(i / 3) * 0.72, 1.2));
+  const hill = [[-3.0, -3.0, 2.1], [-1.0, -3.4, 2.5], [1.4, -3.3, 2.3], [3.3, -2.6, 1.8], [-3.9, -1.4, 1.3], [0.4, -4.2, 1.9], [3.8, -0.9, 1.2]];
+  for (const [x, z, s] of hill) { const m = new THREE.Mesh(rockGeo, flat(rnd() < 0.5 ? C.rock : C.rock2)); m.scale.set(s * 1.15, s * 0.85, s); m.position.set(x, s * 0.55, z); m.rotation.y = rnd() * 6; g.add(m); }
+  const px = -0.8, pz = -0.7;
+  g.add(at(rb(1.9, 2.1, 1.2, flat(0x3a2a33), 0.25), px, 1.05, pz));
+  for (const dx of [-1.15, 1.15]) g.add(at(rb(0.34, 2.5, 0.4, M.wood, 0.08), px + dx, 1.25, pz + 0.55));
+  g.add(at(rb(2.8, 0.36, 0.5, M.wood, 0.08), px, 2.6, pz + 0.55));
+  g.add(at(rb(2.9, 0.16, 0.6, M.orange, 0.06), px, 2.86, pz + 0.55));
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 10), M.warm); lamp.position.set(px, 2.25, pz + 0.85); g.add(lamp);
+  for (const dx of [-0.42, 0.42]) g.add(at(rb(0.1, 0.1, 2.8, M.steel, 0.03), px + dx, 0.16, pz + 2.0));
+  for (let i = 0; i < 5; i++) g.add(at(rb(1.25, 0.1, 0.24, M.wood, 0.03), px, 0.08, pz + 0.8 + i * 0.62));
+  const cz = pz + 2.2;
+  g.add(at(rb(1.3, 0.75, 1.0, M.orange, 0.14), px, 0.72, cz));
+  for (const dx of [-0.5, 0.5]) for (const dz of [-0.32, 0.32]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.14, 14), M.rubber); w.rotation.z = Math.PI / 2; w.position.set(px + dx, 0.3, cz + dz); g.add(w); }
+  for (const [dx, dz, s] of [[-0.28, -0.12, 0.34], [0.22, 0.1, 0.3], [0.02, -0.02, 0.38]]) { const r = new THREE.Mesh(rockGeo, flat(0xd9b892)); r.scale.setScalar(s); r.position.set(px + dx, 1.18, cz + dz); g.add(r); }
+  for (let i = 0; i < 6; i++) g.add(at(rb(0.9, 0.7, 0.9, flat(0xd9b892), 0.15), 1.4 + (i % 3) * 1.0, 0.4 + Math.floor(i / 3) * 0.72, 1.2));
   return shadowAll(g);
 }
-function homeDome() {
-  return K.geoDome(3.7, g => {
+function homeDome(tier = 0) {
+  const dome = K.geoDome(3.7, g => {
     for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + Math.PI / 4; g.add(at(rb(1.5, 1.3, 1.5, i % 2 ? M.hull : flat(0xfff0d6), 0.35), Math.cos(a) * 2, 1.15, Math.sin(a) * 2)); g.add(at(rb(1.6, 0.25, 1.6, M.orange, 0.12), Math.cos(a) * 2, 1.9, Math.sin(a) * 2)); }
     g.add(ball(M.leaf, 0, 2.2, 0, 0.9));
     g.add(at(B.airlock(), 0, 0, 4.3));
   });
+  if (tier >= 1) dome.add(at(K.geoDome(1.6), 3.6, 0, -3.6));
+  if (tier > 1) { dome.add(at(K.geoDome(1.6), -3.6, 0, -3.6)); const ring = new THREE.Mesh(new THREE.TorusGeometry(3.98, 0.09, 8, 48), B.P.teal); ring.rotation.x = Math.PI / 2; ring.position.y = 0.55; dome.add(ring); }
+  return dome;
 }
 // ---------- the soft glow, dust and smoke sprites ----------
 const cloudT = T.cloudTex();
@@ -203,36 +220,44 @@ function futurePlot(b) {
 // what stands in each block, by (d, s); later stages keep what the earlier ones built
 const base = {
   '0,0': b => { add(smooth('ark-v1'), b.cx, 0.4, b.cz, 0, 0.72); },
-  '1,1': b => { add(smooth('carbon-drill-v1'), b.cx, 0.4, b.cz, 0, 1.2); for (let i = 0; i < 10; i++) add(new THREE.Mesh(new THREE.DodecahedronGeometry(0.3 + rnd() * 0.25, 0), M.carbon), b.cx - 4 + rnd() * 8, 0.55, b.cz + 4 + rnd()); },
-  '-1,1': b => { add(shadowAll(K.waterExtractor()), b.cx - 0.6, 0.4, b.cz - 0.6, 0, 0.82); for (let i = 0; i < 8; i++) add(new THREE.Mesh(rockGeo, M.ice), b.cx + 2 + rnd() * 2, 0.4, b.cz + 2 + rnd() * 2).scale.set(0.6, 0.3, 0.6); },
-  '1,-1': b => { add(shadowAll(K.processor()), b.cx, 0.4, b.cz, 0, 0.74); dust(b.cx, 7.6, b.cz, 3.5, 0xffffff, 0.5); },
-  '-1,-1': b => add(B.research(), b.cx, 0.3, b.cz, 0, 1.0),
-  '0,2': b => add(B.vegLab(), b.cx, 0.3, b.cz, 0, 1.0),
-  '0,-2': b => add(shadowAll(homeDome()), b.cx, 0.4, b.cz, 0, 1.1),
-  '2,0': b => { add(B.kitchen(), b.cx, 0.3, b.cz, 0, 1.0); dust(b.cx - 2.6, 6.4, b.cz - 2.8, 2.6, 0xffffff, 0.55); },
-  '-2,0': b => add(mineHill(), b.cx, 0.4, b.cz, 0, 1.1),
-  '2,2': b => { add(B.greenhouse(8), b.cx, 0.3, b.cz - 2.8, 0, 0.95); add(B.greenhouse(8), b.cx, 0.3, b.cz + 2.8, 0, 0.95); },
-  '-2,2': b => { add(shadowAll(K.geolocator()), b.cx - 2, 0.4, b.cz - 2, 0, 0.7); for (let i = 0; i < 3; i++) { const p = rb(3.0, 0.15, 2.0, M.solar, 0.05, 1); p.rotation.x = -0.35; add(p, b.cx + 3, 1.0, b.cz - 3.5 + i * 3.4); } },
+  '1,1': b => { add(smooth('carbon-drill-v1'), b.cx, 0.4, b.cz, 0, 1.2); for (let i = 0; i < 10; i++) add(new THREE.Mesh(new THREE.DodecahedronGeometry(0.3 + rnd() * 0.25, 0), M.carbon), b.cx - 4 + rnd() * 8, 0.55, b.cz + 4 + rnd()); if (S >= 1) { add(B.conveyor(5), b.cx - 1.5, 0.4, b.cz + 5.0); add(B.tank(), b.cx + 4.4, 0.4, b.cz - 4.4, 0, 0.8); } if (S > 1) { add(smooth('carbon-drill-v1'), b.cx - 4.0, 0.4, b.cz - 4.0, 0, 0.6); add(B.tank(true), b.cx + 4.4, 0.4, b.cz - 1.6, 0, 0.8); } },
+  '-1,1': b => { add(shadowAll(K.waterExtractor()), b.cx - 0.6, 0.4, b.cz - 0.6, 0, 0.82); for (let i = 0; i < 8; i++) add(new THREE.Mesh(rockGeo, M.ice), b.cx + 2 + rnd() * 2, 0.4, b.cz + 2 + rnd() * 2).scale.set(0.6, 0.3, 0.6); if (S >= 1) add(B.tank(), b.cx + 4.3, 0.4, b.cz - 4.3, 0, 0.9); if (S > 1) { add(B.tank(true), b.cx - 4.3, 0.4, b.cz + 3.9, 0, 0.9); add(B.tank(true), b.cx + 1.6, 0.4, b.cz - 4.4, 0, 0.8); } },
+  '1,-1': b => { add(shadowAll(K.processor()), b.cx, 0.4, b.cz, 0, 0.74); dust(b.cx, 7.6, b.cz, 3.5, 0xffffff, 0.5); if (S >= 1) add(shadowAll(K.processor()), b.cx + 4.0, 0.4, b.cz - 4.0, 0, 0.42); if (S > 1) { add(B.atmTower(), b.cx - 3.8, 0.4, b.cz + 3.6, 0, 0.9); dust(b.cx - 3.8, 10.8, b.cz + 3.6, 4, 0xffffff, 0.5); } },
+  '-1,-1': b => add(B.research(S), b.cx, 0.3, b.cz, 0, 1.0),
+  '0,2': b => add(B.vegLab(S), b.cx, 0.3, b.cz, 0, 1.0),
+  '0,-2': b => add(shadowAll(homeDome(S)), b.cx, 0.4, b.cz, 0, 1.1),
+  '2,0': b => { add(B.kitchen(S), b.cx, 0.3, b.cz, 0, 1.0); dust(b.cx - 2.6, 6.4, b.cz - 2.8, 2.6, 0xffffff, 0.55); },
+  '-2,0': b => { add(mineHill(), b.cx, 0.4, b.cz, 0, 1.1); if (S >= 1) add(B.conveyor(4), b.cx + 3.6, 0.4, b.cz - 3.6, Math.PI / 2, 0.9); if (S > 1) add(B.headframe(), b.cx - 4.4, 0.4, b.cz + 2.6, 0, 0.8); },
+  // the quarry beside the mine: the stone is dug here, by hand at first, then with diggers
+  '-2,-2': b => { add(B.quarry(S), b.cx, S ? 0.2 : 0.4, b.cz); for (const [x, z, ry] of [[-2.6, 1.2, 0.6], [1.6, -2.4, -0.4], [2.2, 1.6, 2.4]].slice(0, S > 1 ? 1 : 3 - S)) add(miner(), b.cx + x, 0.12, b.cz + z, ry, 1.25); },
+  // the cargo that came down with the Ark: a storage hangar and containers
+  '2,-2': b => { add(shadowAll(K.storage()), b.cx - 0.8, 0.4, b.cz - 2.2, 0, 0.85); if (S > 1) add(B.warehouse(), b.cx + 0.4, 0.4, b.cz + 3.6, 0, 0.85); else for (let i = 0; i < 4 + 2 * S; i++) add(shadowAll(K.container(i === 0, i % 2 ? M.hull2 : M.orange)), b.cx - 3 + (i % 2) * 3.8, 0.4 + Math.floor(i / 4) * 1.3, b.cz + 2.4 + Math.floor(i / 2) % 2 * 2.2, 0, 0.85); },
+  '2,2': b => { add(B.greenhouse(8, S), b.cx, 0.3, b.cz - 2.8, 0, 0.95); add(B.greenhouse(8, S), b.cx, 0.3, b.cz + 2.8, 0, 0.95); },
+  '-2,2': b => { add(shadowAll(K.geolocator()), b.cx - 2, 0.4, b.cz - 2, 0, 0.7); for (let i = 0; i < 3; i++) { const p = rb(3.0, 0.15, 2.0, M.solar, 0.05, 1); p.rotation.x = -0.35; add(p, b.cx + 3, 1.0, b.cz - 3.5 + i * 3.4); } if (S >= 1) add(B.battery(), b.cx - 3.6, 0.4, b.cz + 3.6, 0, 0.9); if (S > 1) add(B.radome(), b.cx - 0.6, 0.4, b.cz + 3.8, 0, 0.9); },
 };
-const housing = b => { for (const [x, z] of [[-3, -3], [3, -3], [-3, 3], [3, 3]]) home(b.cx + x, b.cz + z); if (S === 2) for (let i = 0; i < 3; i++) tree(b.cx - 5 + rnd() * 10, b.cz - 5 + rnd() * 10, 0.6); };
-const park = (b, big) => { lawn(b.cx, b.cz, 12, 12); for (let i = 0; i < (big ? 10 : 5); i++) tree(b.cx - 4.6 + rnd() * 9.2, b.cz - 4.6 + rnd() * 9.2, big ? 0.9 + rnd() * 0.5 : 0.55); };
+const housing = b => { for (const [x, z] of [[-3, -3], [3, -3], [-3, 3], [3, 3]]) home(b.cx + x, b.cz + z); if (S >= 1) { bush(b.cx, b.cz + 0.2, 0.8); bush(b.cx - 0.3, b.cz - 5.2, 0.6); } if (S === 2) for (let i = 0; i < 3; i++) tree(b.cx - 5 + rnd() * 10, b.cz - 5 + rnd() * 10, 0.6); };
+const park = (b, big) => {
+  lawn(b.cx, b.cz, 12, 12);
+  for (let i = 0; i < (big ? 9 : 5); i++) { const a = rnd() * 6.28, r = 3 + rnd() * 2; tree(b.cx + Math.cos(a) * r, b.cz + Math.sin(a) * r, big ? 0.9 + rnd() * 0.5 : 0.55); }
+  if (S > 1) add(B.fountain(), b.cx, 0.3, b.cz); else bush(b.cx, b.cz, 1.2);
+  add(B.bench(S), b.cx, 0.3, b.cz + 2.6, Math.PI); add(B.bench(S), b.cx + 2.6, 0.3, b.cz, -Math.PI / 2);
+  add(B.flowers(2.2, 0.7), b.cx - 2.4, 0.3, b.cz + 2.4, Math.PI / 4);
+};
 const towers = b => { flats(b.cx - 3, b.cz - 3, 7 + Math.floor(rnd() * 4)); flats(b.cx + 3, b.cz + 3, 4 + Math.floor(rnd() * 3)); lawn(b.cx + 3, b.cz - 3, 5, 5); tree(b.cx + 3, b.cz - 3, 0.8); lawn(b.cx - 3, b.cz + 3, 5, 5); tree(b.cx - 3, b.cz + 3, 0.8); };
 const grown = {
-  '2,-2': b => add(shadowAll(homeDome()), b.cx, 0.4, b.cz, 0, 1.1),
-  '-2,-2': b => { add(shadowAll(K.turbine(0.3)), b.cx - 3, 0.4, b.cz - 3, 0.8, 0.6); add(shadowAll(K.turbine(1.2)), b.cx + 3, 0.4, b.cz + 3, 0.8, 0.6); },
   '1,3': b => field(b.cx, b.cz, 0x8fd65a), '-1,3': housing,
   '1,-3': b => { lawn(b.cx, b.cz, 12, 12, flat(C.lawn2)); pond(b.cx, b.cz, 4.8, 4.2, true); }, '-1,-3': b => pen(b.cx, b.cz, 'chicken', 14),
-  '0,4': b => park(b, S === 2), '2,4': housing, '-2,4': b => { add(B.greenhouse(8), b.cx, 0.2, b.cz - 2.8, 0, 0.95); add(B.greenhouse(8), b.cx, 0.2, b.cz + 2.8, 0, 0.95); },
-  '0,-4': housing, '2,-4': b => field(b.cx, b.cz, 0xffc65c), '-2,-4': b => solarField(b.cx, b.cz),
+  '0,4': b => park(b, S === 2), '2,4': housing, '-2,4': b => { add(B.greenhouse(8, S), b.cx, 0.2, b.cz - 2.8, 0, 0.95); add(B.greenhouse(8, S), b.cx, 0.2, b.cz + 2.8, 0, 0.95); },
+  '0,-4': b => add(shadowAll(homeDome(S)), b.cx, 0.2, b.cz, 0, 1.1), '2,-4': b => field(b.cx, b.cz, 0xffc65c), '-2,-4': b => { for (let i = 0; i < 3; i++) for (let r = 0; r < 2; r++) { const p = rb(3.0, 0.15, 2.0, M.solar, 0.05, 1); p.rotation.x = -0.35; add(p, b.cx - 3.6 + i * 3.6, 1.0, b.cz - 3.6 + r * 3.0); add(rb(0.15, 0.9, 0.15, M.steel, 0.04, 1), b.cx - 3.6 + i * 3.6, 0.45, b.cz - 3.6 + r * 3.0); } add(B.battery(), b.cx - 3.4, 0.2, b.cz + 3.0); add(B.battery(), b.cx - 0.6, 0.2, b.cz + 3.0); add(shadowAll(K.turbine(0.6)), b.cx + 3.6, 0.2, b.cz + 3.4, 0.8, 0.6); },
   '1,5': housing, '-1,5': b => field(b.cx, b.cz, 0x6cc94f),
   // the silicon furnace smokes: the smoke is what pulls the atmosphere down
-  '1,-5': b => { add(B.smelter(), b.cx, 0.2, b.cz, 0, 1.0); for (let i = 0; i < 3; i++) dust(b.cx - 2.6 + i * 0.4, 8.8 + i * 2.2, b.cz - 2.4 - i, 3 + i * 1.6, 0xd8d0c8, 0.55 - i * 0.12); },
+  '1,-5': b => { add(B.smelter(S), b.cx, 0.2, b.cz, 0, 1.0); for (let i = 0; i < 3; i++) dust(b.cx - 2.6 + i * 0.4, 8.8 + i * 2.2 + (S > 1 ? 1 : 0), b.cz - 2.4 - i, 3 + i * 1.6, S > 1 ? 0xffffff : 0xd8d0c8, (0.55 - i * 0.12) * (S > 1 ? 0.45 : 1)); },
   '-1,-5': housing,
 };
 const green = {
   '0,6': towers, '2,6': b => park(b, true), '-2,6': b => pen(b.cx, b.cz, 'cow', 5),
-  '0,-6': b => { lawn(b.cx, b.cz, 14, 14, flat(C.lawn2)); pond(b.cx, b.cz, 7.5, 6.5); }, '2,-6': towers, '-2,-6': b => park(b, true),
-  '1,7': housing, '-1,7': b => pen(b.cx, b.cz, 'pig', 6), '1,-7': b => field(b.cx, b.cz, 0xffc65c), '-1,-7': towers,
+  '0,-6': b => {}, '2,-6': b => { lawn(b.cx, b.cz, 14, 14, flat(C.lawn2)); pond(b.cx, b.cz, 7.5, 6.5); }, '-2,-6': b => park(b, true),
+  '1,7': housing, '-1,7': b => pen(b.cx, b.cz, 'pig', 6), '1,-7': b => field(b.cx, b.cz, 0xffc65c), '-1,-7': b => add(shadowAll(K.warshipDock()), b.cx + 8, 0.25, b.cz, 0, 0.85),
   '0,8': b => park(b, true), '2,8': housing, '-2,8': housing, '0,-8': b => park(b, true), '2,-8': housing, '-2,-8': towers,
 };
 
@@ -249,6 +274,20 @@ for (const b of blocks) {
 }
 // colonists on the pavements: more of them wake up as the colony grows
 for (const b of builtBlocks) people(b.cx, b.cz, [1, 2, 3][S]);
+// benches, lamps, planters and flowers on the pavements; they get better with each stage
+const noStreet = new Set(['0,-6', '-1,-7', '2,-6']);
+for (const b of builtBlocks) {
+  if (noStreet.has(`${b.d},${b.s}`)) continue;
+  const e = S ? 6.35 : 5.95, y = S ? 0.23 : 0.4;
+  add(B.lamp(S), b.cx + e, y, b.cz + e);
+  [[-3.5, e, 0], [1.5, e, 0], [e, -3.5, Math.PI / 2], [e, 1.5, Math.PI / 2]].forEach(([x, z, ry], i) => {
+    const k = (i + Math.abs(b.d * 3 + b.s)) % 4;
+    if (k === 0) add(B.bench(S), b.cx + x, y, b.cz + z, ry);
+    else if (k === 1 || (k === 3 && S)) add(B.planter(S), b.cx + x, y, b.cz + z);
+    else if (k === 2 && S) add(B.flowers(2.2, 0.7), b.cx + x, y, b.cz + z, ry);
+    else add(B.lamp(S), b.cx + x, y, b.cz + z);
+  });
+}
 const echo = add(shadowAll(K.echoBot()), 6.5, 6.2, 9, -0.6, 1.25);
 // the part of the canyon that is still locked lies under dust
 if (S < 2) for (const b of blocks) if (b.s < -REACH && Math.abs(b.d) <= 2) for (let k = 0; k < 2; k++) dust(b.cx - 4 + rnd() * 8, 2 + rnd() * 3, b.cz - 4 + rnd() * 8, 20 + rnd() * 8, S ? 0xf6e2cc : 0xfde6d2, 0.85);
@@ -262,8 +301,9 @@ function aim(view, x, z) { // view = metres across the screen width
   camera.position.set(x, 0, z).addScaledVector(DIR, 300); camera.lookAt(x, 0, z);
 }
 // the clip (clip.js): from the overview the camera glides in towards what grew at this stage
-const SHOT = [[6, -6], [-26, -26], [42, 42]][S];
+const SHOT = [[-14, 2], [-26, -26], [-46, -42]][S];
 window.__frame = t => { const e = t * t * (3 - 2 * t); aim(56 - 22 * e, SHOT[0] * e, SHOT[1] * e); echo.position.y = 6.2 + Math.sin(t * 12) * 0.3; renderer.render(scene, camera); };
+window.__aim = (view, x, z) => { aim(view, x, z); renderer.render(scene, camera); };
 aim(56, 0, 0);
 renderer.render(scene, camera);
 window.__state = { atm: ATM, stage: S };
