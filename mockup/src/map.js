@@ -12,14 +12,15 @@ import * as K from './models.js';
 import * as B from './colony.js';
 
 const STATE = (location.hash || '#atm20').slice(1);
-const ATM = { atm20: 20, atm50: 50, atm85: 85 }[STATE] ?? 20;
+const NIGHT = STATE.endsWith('-night'); // the same map at night: #atm20-night, #atm50-night, #atm85-night
+const ATM = { atm20: 20, atm50: 50, atm85: 85 }[STATE.replace('-night', '')] ?? 20;
 const S = ATM >= 85 ? 2 : ATM >= 50 ? 1 : 0; // stage: 0 dust, 1 first green, 2 green planet
 const DPR = Number(new URLSearchParams(location.search).get('dpr') || 1);
 const W = 390, H = 844;
 T.seed(7 + S);
 const rnd = () => T.rng();
 const pick = a => a[Math.floor(rnd() * a.length)];
-B.useRng(rnd);
+B.useRng(rnd); B.setNight(NIGHT);
 
 // ---------- the look of each stage ----------
 const LOOK = [
@@ -27,6 +28,8 @@ const LOOK = [
   { bg: 0xe2b98a, ground: '#e3ad78', tones: ['150,190,100', '240,182,128'], sky: 0xfff6ea, bounce: 0xc9a070, sun: 0xfff6e8, road: 0x8a8f9c },
   { bg: 0x9fd8ff, ground: '#8fcf6a', tones: ['110,186,84', '168,216,112'], sky: 0xf2fbff, bounce: 0x8fbf70, sun: 0xfffaf0, road: 0x7d8494 },
 ][S];
+// at night the sun is a pale moon; lamps, windows and the teal strips give the light
+if (NIGHT) Object.assign(LOOK, { bg: 0x1d2442, sky: 0x7d8cc4, bounce: 0x2a2f4a, sun: 0xa8b8ff });
 
 // ---------- renderer and soft, bright light ----------
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
@@ -37,9 +40,9 @@ document.getElementById('view').appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(LOOK.bg);
 scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
-scene.environmentIntensity = 0.35;
-scene.add(new THREE.HemisphereLight(LOOK.sky, LOOK.bounce, 1.05));
-const sun = new THREE.DirectionalLight(LOOK.sun, 2.8);
+scene.environmentIntensity = NIGHT ? 0.06 : 0.35;
+scene.add(new THREE.HemisphereLight(LOOK.sky, LOOK.bounce, NIGHT ? 0.2 : 1.05));
+const sun = new THREE.DirectionalLight(LOOK.sun, NIGHT ? 0.32 : 2.8);
 sun.position.set(-30, 80, 50); sun.target.position.set(0, 0, 0); scene.add(sun, sun.target);
 sun.castShadow = true; sun.shadow.mapSize.set(4096, 4096); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04; sun.shadow.radius = 5;
 Object.assign(sun.shadow.camera, { left: -110, right: 110, top: 110, bottom: -110, near: 1, far: 300 }); sun.shadow.camera.updateProjectionMatrix();
@@ -179,7 +182,15 @@ function homeDome(tier = 0) {
 }
 // ---------- the soft glow, dust and smoke sprites ----------
 const cloudT = T.cloudTex();
-const dust = (x, y, z, s, color = 0xffffff, op = 0.6) => { const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: cloudT, color, transparent: true, opacity: op, depthWrite: false, rotation: rnd() * 6 })); m.position.set(x, y, z); m.scale.set(s, s * 0.62, 1); scene.add(m); return m; };
+const dust = (x, y, z, s, color = 0xffffff, op = 0.6) => { if (NIGHT) color = new THREE.Color(color).multiplyScalar(0.32); const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: cloudT, color, transparent: true, opacity: op, depthWrite: false, rotation: rnd() * 6 })); m.position.set(x, y, z); m.scale.set(s, s * 0.62, 1); scene.add(m); return m; };
+
+// a pool of light on the ground under a lamp or a lit building: only at night
+const glowT = T.glowTex();
+function pool(x, z, size, color = 0xffc77a, op = 0.5) {
+  if (!NIGHT) return;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(size, size), new THREE.MeshBasicMaterial({ map: glowT, color, transparent: true, opacity: op, blending: THREE.AdditiveBlending, depthWrite: false }));
+  m.rotation.x = -Math.PI / 2; m.position.set(x, 0.45, z); scene.add(m);
+}
 
 // ---------- load the CellCog models ----------
 const gltf = new GLTFLoader(), glb = {};
@@ -206,7 +217,7 @@ function plot(b) {
   add(rb(PITCH, 0.1, PITCH, roadMat, 0.05, 1), b.cx, 0.03, b.cz);
   if (S > 0) {
     add(rb(13.4, 0.26, 13.4, walkMat, 0.5, 2), b.cx, 0.1, b.cz);
-    for (let k = -1; k <= 1; k++) { add(rb(1.4, 0.04, 0.3, dashMat, 0.05, 1), b.cx + k * 4.5, 0.1, b.cz + 8); add(rb(0.3, 0.04, 1.4, dashMat, 0.05, 1), b.cx + 8, 0.1, b.cz + k * 4.5); }
+    for (const k of [-1, 0]) { add(rb(1.4, 0.04, 0.3, dashMat, 0.05, 1), b.cx + k * 4.5, 0.1, b.cz + 8); add(rb(0.3, 0.04, 1.4, dashMat, 0.05, 1), b.cx + 8, 0.1, b.cz + k * 4.5); }
   } else {
     add(rb(12.4, 0.36, 12.4, edgeMat, 0.5), b.cx, 0.12, b.cz);
     add(rb(11.6, 0.36, 11.6, padMat, 0.45), b.cx, 0.22, b.cz);
@@ -238,16 +249,28 @@ const base = {
 const housing = b => { for (const [x, z] of [[-3, -3], [3, -3], [-3, 3], [3, 3]]) home(b.cx + x, b.cz + z); if (S >= 1) { bush(b.cx, b.cz + 0.2, 0.8); bush(b.cx - 0.3, b.cz - 5.2, 0.6); } if (S === 2) for (let i = 0; i < 3; i++) tree(b.cx - 5 + rnd() * 10, b.cz - 5 + rnd() * 10, 0.6); };
 const park = (b, big) => {
   lawn(b.cx, b.cz, 12, 12);
-  for (let i = 0; i < (big ? 9 : 5); i++) { const a = rnd() * 6.28, r = 3 + rnd() * 2; tree(b.cx + Math.cos(a) * r, b.cz + Math.sin(a) * r, big ? 0.9 + rnd() * 0.5 : 0.55); }
-  if (S > 1) add(B.fountain(), b.cx, 0.3, b.cz); else bush(b.cx, b.cz, 1.2);
+  for (let i = 0; i < (big ? 12 : 8); i++) { const a = rnd() * 6.28, r = 2.8 + rnd() * 2.2; if (big || i % 2) tree(b.cx + Math.cos(a) * r, b.cz + Math.sin(a) * r, big ? 0.9 + rnd() * 0.5 : 0.6); else bush(b.cx + Math.cos(a) * r, b.cz + Math.sin(a) * r, 0.9); }
+  if (S > 1) { add(B.fountain(), b.cx, 0.3, b.cz); pool(b.cx, b.cz, 6, 0x8fd6ff, 0.35); } else bush(b.cx, b.cz, 1.2);
+  // hedges along the edges of the lawn, with gaps for the paths
+  for (const t of [-3.6, 3.6]) { add(B.hedge(3.4), b.cx + t, 0.3, b.cz + 5.6); add(B.hedge(3.4), b.cx + 5.6, 0.3, b.cz + t, Math.PI / 2); add(B.hedge(3.4), b.cx + t, 0.3, b.cz - 5.6); add(B.hedge(3.4), b.cx - 5.6, 0.3, b.cz + t, Math.PI / 2); }
   add(B.bench(S), b.cx, 0.3, b.cz + 2.6, Math.PI); add(B.bench(S), b.cx + 2.6, 0.3, b.cz, -Math.PI / 2);
   add(B.flowers(2.2, 0.7), b.cx - 2.4, 0.3, b.cz + 2.4, Math.PI / 4);
+};
+// the plaza of the landing: a small Ark on a pedestal, flower rings, hedges and benches around it
+const plaza = b => {
+  const disc = (r, m, y) => { const d = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.12, 48), m); d.position.set(b.cx, y, b.cz); d.receiveShadow = true; scene.add(d); };
+  disc(5.9, flat(0xf3e6d4), 0.3); disc(4.2, flat(0xe9d6bd), 0.33); disc(2.2, flat(C.lawn), 0.36);
+  add(rb(1.6, 1.2, 1.6, flat(0xfbf3e6), 0.25), b.cx, 1.0, b.cz); add(rb(1.8, 0.2, 1.8, flat(0xff7a2e), 0.08), b.cx, 1.65, b.cz);
+  add(smooth('ark-v1'), b.cx, 1.75, b.cz, 0.6, 0.11);
+  for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; if (i % 3 === 0) add(B.lamp(S), b.cx + Math.cos(a) * 4.6, 0.3, b.cz + Math.sin(a) * 4.6); else if (i % 3 === 1) bush(b.cx + Math.cos(a) * 4.9, b.cz + Math.sin(a) * 4.9, 0.7); else add(B.bench(S), b.cx + Math.cos(a) * 3.6, 0.33, b.cz + Math.sin(a) * 3.6, Math.PI / 2 - a); }
+  for (let i = 0; i < 4; i++) { const a = i / 4 * Math.PI * 2 + Math.PI / 4; add(B.flowers(1.6, 0.6), b.cx + Math.cos(a) * 1.8, 0.33, b.cz + Math.sin(a) * 1.8, Math.PI / 2 - a); }
+  pool(b.cx, b.cz, 9, 0xffd58a, 0.45);
 };
 const towers = b => { flats(b.cx - 3, b.cz - 3, 7 + Math.floor(rnd() * 4)); flats(b.cx + 3, b.cz + 3, 4 + Math.floor(rnd() * 3)); lawn(b.cx + 3, b.cz - 3, 5, 5); tree(b.cx + 3, b.cz - 3, 0.8); lawn(b.cx - 3, b.cz + 3, 5, 5); tree(b.cx - 3, b.cz + 3, 0.8); };
 const grown = {
   '1,3': b => field(b.cx, b.cz, 0x8fd65a), '-1,3': housing,
   '1,-3': b => { lawn(b.cx, b.cz, 12, 12, flat(C.lawn2)); pond(b.cx, b.cz, 4.8, 4.2, true); }, '-1,-3': b => pen(b.cx, b.cz, 'chicken', 14),
-  '0,4': b => park(b, S === 2), '2,4': housing, '-2,4': b => { add(B.greenhouse(8, S), b.cx, 0.2, b.cz - 2.8, 0, 0.95); add(B.greenhouse(8, S), b.cx, 0.2, b.cz + 2.8, 0, 0.95); },
+  '0,4': b => plaza(b), '2,4': housing, '-2,4': b => { add(B.greenhouse(8, S), b.cx, 0.2, b.cz - 2.8, 0, 0.95); add(B.greenhouse(8, S), b.cx, 0.2, b.cz + 2.8, 0, 0.95); },
   '0,-4': b => add(shadowAll(homeDome(S)), b.cx, 0.2, b.cz, 0, 1.1), '2,-4': b => field(b.cx, b.cz, 0xffc65c), '-2,-4': b => { for (let i = 0; i < 3; i++) for (let r = 0; r < 2; r++) { const p = rb(3.0, 0.15, 2.0, M.solar, 0.05, 1); p.rotation.x = -0.35; add(p, b.cx - 3.6 + i * 3.6, 1.0, b.cz - 3.6 + r * 3.0); add(rb(0.15, 0.9, 0.15, M.steel, 0.04, 1), b.cx - 3.6 + i * 3.6, 0.45, b.cz - 3.6 + r * 3.0); } add(B.battery(), b.cx - 3.4, 0.2, b.cz + 3.0); add(B.battery(), b.cx - 0.6, 0.2, b.cz + 3.0); add(shadowAll(K.turbine(0.6)), b.cx + 3.6, 0.2, b.cz + 3.4, 0.8, 0.6); },
   '1,5': housing, '-1,5': b => field(b.cx, b.cz, 0x6cc94f),
   // the silicon furnace smokes: the smoke is what pulls the atmosphere down
@@ -269,8 +292,8 @@ for (const b of blocks) {
   if (b.built && S === 0) { plot(b); futurePlot(b); continue; }
   // outside the colony: bare rock on the dusty planet, bushes and young trees later, forest at the end
   if (S === 0) { for (let i = 0; i < 6; i++) rock(b.cx - 6 + rnd() * 12, b.cz - 6 + rnd() * 12, 0.6 + rnd() * 1.4); }
-  else if (S === 1) { for (let i = 0; i < 5; i++) rock(b.cx - 6 + rnd() * 12, b.cz - 6 + rnd() * 12, 0.5 + rnd()); for (let i = 0; i < 4; i++) tree(b.cx - 6 + rnd() * 12, b.cz - 6 + rnd() * 12, 0.45 + rnd() * 0.2); }
-  else { for (let i = 0; i < 14; i++) tree(b.cx - 7 + rnd() * 14, b.cz - 7 + rnd() * 14, 0.9 + rnd() * 0.6); }
+  else if (S === 1) { for (let i = 0; i < 5; i++) rock(b.cx - 6 + rnd() * 12, b.cz - 6 + rnd() * 12, 0.5 + rnd()); for (let i = 0; i < 7; i++) tree(b.cx - 6 + rnd() * 12, b.cz - 6 + rnd() * 12, 0.45 + rnd() * 0.25); for (let i = 0; i < 4; i++) bush(b.cx - 6 + rnd() * 12, b.cz - 6 + rnd() * 12, 0.6); }
+  else { for (let i = 0; i < 20; i++) tree(b.cx - 7 + rnd() * 14, b.cz - 7 + rnd() * 14, 0.9 + rnd() * 0.6); for (let i = 0; i < 6; i++) bush(b.cx - 7 + rnd() * 14, b.cz - 7 + rnd() * 14, 0.8); }
 }
 // colonists on the pavements: more of them wake up as the colony grows
 for (const b of builtBlocks) people(b.cx, b.cz, [1, 2, 3][S]);
@@ -278,15 +301,32 @@ for (const b of builtBlocks) people(b.cx, b.cz, [1, 2, 3][S]);
 const noStreet = new Set(['0,-6', '-1,-7', '2,-6']);
 for (const b of builtBlocks) {
   if (noStreet.has(`${b.d},${b.s}`)) continue;
-  const e = S ? 6.35 : 5.95, y = S ? 0.23 : 0.4;
-  add(B.lamp(S), b.cx + e, y, b.cz + e);
-  [[-3.5, e, 0], [1.5, e, 0], [e, -3.5, Math.PI / 2], [e, 1.5, Math.PI / 2]].forEach(([x, z, ry], i) => {
-    const k = (i + Math.abs(b.d * 3 + b.s)) % 4;
-    if (k === 0) add(B.bench(S), b.cx + x, y, b.cz + z, ry);
-    else if (k === 1 || (k === 3 && S)) add(B.planter(S), b.cx + x, y, b.cz + z);
-    else if (k === 2 && S) add(B.flowers(2.2, 0.7), b.cx + x, y, b.cz + z, ry);
-    else add(B.lamp(S), b.cx + x, y, b.cz + z);
+  const e = S ? 6.35 : 5.95, y = S ? 0.23 : 0.4, h = Math.abs(b.d * 3 + b.s);
+  for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) { add(B.lamp(S), b.cx + sx * e, y, b.cz + sz * e); pool(b.cx + sx * e, b.cz + sz * e, 7); }
+  [[0, 1], [1, 0], [0, -1], [-1, 0]].forEach(([ax, az], side) => {
+    const ry = ax ? Math.PI / 2 : 0, at = t => [b.cx + (ax ? ax * e : t), b.cz + (az ? az * e : t)];
+    if (S === 0) {
+      // the dusty planet: plants only under glass, a bench in the middle of the side
+      for (const t of [-3.4, 3.4]) if ((h + side) % 2 === 0) { const [x, z] = at(t); add(B.planter(0), x, y, z); }
+      if ((h + side) % 3 === 0) { const [x, z] = at(0); add(B.bench(0), x, y, z, ax ? (ax > 0 ? Math.PI / 2 : -Math.PI / 2) : (az > 0 ? 0 : Math.PI)); }
+      return;
+    }
+    // from 50%: a tree or a round bush at both ends, long hedges in between, a bench or flowers in the middle
+    for (const t of [-4.4, 4.4]) { const [x, z] = at(t); if (S > 1 && (h + side + (t > 0)) % 3) add(B.planter(2), x, y, z, 0, 0.85); else bush(x, z, 0.75); }
+    for (const t of [-2.2, 2.2]) { const [x, z] = at(t); add(B.hedge(1.9), x, y, z, ry); }
+    const [x, z] = at(0);
+    if ((h + side) % 2) add(B.bench(S), x, y, z, ax ? (ax > 0 ? Math.PI / 2 : -Math.PI / 2) : (az > 0 ? 0 : Math.PI)); else add(B.flowers(1.4, 0.55), x, y, z, ry);
   });
+  // zebra crossings next to the corner the camera sees
+  if (S > 0) for (let i = 0; i < 5; i++) { add(rb(0.35, 0.04, 2.3, dashMat, 0.04, 1), b.cx + 3.6 + i * 0.6, 0.1, b.cz + 8); add(rb(2.3, 0.04, 0.35, dashMat, 0.04, 1), b.cx + 8, 0.1, b.cz + 3.6 + i * 0.6); }
+}
+// electric cars on the streets from 50%; their headlights light the road at night
+const carCols = [B.P.orange, flat(0x4aa8ff), flat(0xffc65c), flat(0x33c5a2), flat(0xff5d5d), B.P.cream];
+for (let i = 0; i < [0, 6, 14][S]; i++) {
+  const b = builtBlocks[Math.floor(rnd() * builtBlocks.length)], alongX = rnd() < 0.5, t = (rnd() - 0.5) * 9, dir = rnd() < 0.5 ? 1 : -1;
+  const x = alongX ? b.cx + t : b.cx + 8 + dir * 0.6, z = alongX ? b.cz + 8 + dir * 0.6 : b.cz + t;
+  add(B.car(pick(carCols)), x, 0.08, z, alongX ? (dir > 0 ? 0 : Math.PI) : (dir > 0 ? -Math.PI / 2 : Math.PI / 2), 0.9);
+  pool(alongX ? x + dir * 2 : x, alongX ? z : z - dir * 2, 3.5, 0xfff0c0, 0.4);
 }
 const echo = add(shadowAll(K.echoBot()), 6.5, 6.2, 9, -0.6, 1.25);
 // the part of the canyon that is still locked lies under dust
@@ -302,9 +342,10 @@ function aim(view, x, z) { // view = metres across the screen width
 }
 // the clip (clip.js): from the overview the camera glides in towards what grew at this stage
 const SHOT = [[-14, 2], [-26, -26], [-46, -42]][S];
-window.__frame = t => { const e = t * t * (3 - 2 * t); aim(56 - 22 * e, SHOT[0] * e, SHOT[1] * e); echo.position.y = 6.2 + Math.sin(t * 12) * 0.3; renderer.render(scene, camera); };
+window.__frame = t => { const e = NIGHT ? 1 - t * t * (3 - 2 * t) : t * t * (3 - 2 * t); aim(56 - 22 * e, SHOT[0] * e, SHOT[1] * e); echo.position.y = 6.2 + Math.sin(t * 12) * 0.3; renderer.render(scene, camera); };
 window.__aim = (view, x, z) => { aim(view, x, z); renderer.render(scene, camera); };
 aim(56, 0, 0);
 renderer.render(scene, camera);
-window.__state = { atm: ATM, stage: S };
+for (const [x, z, s, c] of [[-16, 0, 8, 0x5fe3d0], [16, -16, 9, 0xffc77a], [16, 16, 8, 0xd38cff], [0, -16, 8, 0x5fe3d0], [-16, -16, 9, 0xffd58a], [0, 0, 12, 0xffd58a]]) pool(x, z, s, c, 0.35);
+window.__state = { atm: ATM, stage: S, night: NIGHT };
 window.dispatchEvent(new Event('scene-ready'));

@@ -1,6 +1,7 @@
 // Renders the example map as a clip: for each atmosphere level the camera holds on the overview,
-// then glides in towards what grew at that stage; the stages cross-fade into each other.
-//   node clip.js [scale=2] [seconds per stage=3.5]
+// then glides in towards what grew at that stage; the stages cross-fade into each other. At the end the
+// 85% map turns to night where the camera stopped, and the camera pulls out over the lit colony.
+//   node clip.js [scale=2] [seconds per stage=3.5] [states=atm20,atm50,atm85,atm85-night]
 // Start the local server first: npm run serve (port 8777). Needs Playwright with Chromium and ffmpeg.
 // Writes out/clip/<state>/f0000.jpg ... and out/map-clip.mp4.
 const { chromium } = require('playwright');
@@ -10,7 +11,7 @@ const path = require('path');
 
 (async () => {
   const dpr = Number(process.argv[2] || 2), secs = Number(process.argv[3] || 3.5), fps = 30, fade = 0.8;
-  const states = ['atm20', 'atm50', 'atm85'];
+  const states = (process.argv[4] || 'atm20,atm50,atm85,atm85-night').split(',');
   const n = Math.round(secs * fps), hold = Math.round(0.6 * fps);
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-proxy-server'] });
   for (const s of states) {
@@ -31,8 +32,9 @@ const path = require('path');
   await browser.close();
   // one stream per stage, cross-faded into each other
   const ins = states.flatMap(s => ['-framerate', String(fps), '-i', path.join('out', 'clip', s, 'f%04d.jpg')]);
-  const off1 = (secs - fade).toFixed(2), off2 = (2 * secs - 2 * fade).toFixed(2);
-  const filter = `[0][1]xfade=transition=fade:duration=${fade}:offset=${off1}[a];[a][2]xfade=transition=fade:duration=${fade}:offset=${off2},format=yuv420p[v]`;
+  let filter = '', last = '0';
+  for (let i = 1; i < states.length; i++) { filter += `[${last}][${i}]xfade=transition=fade:duration=${fade}:offset=${(i * (secs - fade)).toFixed(2)}[x${i}];`; last = `x${i}`; }
+  filter += `[${last}]format=yuv420p[v]`;
   execFileSync('ffmpeg', ['-nostdin', '-loglevel', 'error', '-y', ...ins, '-filter_complex', filter, '-map', '[v]', '-c:v', 'libx264', '-crf', '21', '-movflags', '+faststart', path.join('out', 'map-clip.mp4')], { cwd: __dirname, stdio: 'inherit' });
   console.log('out/map-clip.mp4');
 })();

@@ -26,6 +26,7 @@ function ball(g, r, m, x, y, z, sy = 1) { const b = new THREE.Mesh(ballGeo, m); 
 function band(g, r, t, m, x, y, z) { const o = new THREE.Mesh(new THREE.TorusGeometry(r, t, 8, 40), m); o.rotation.x = Math.PI / 2; o.position.set(x, y, z); g.add(o); return o; }
 // a round window: a navy (or lit) disk with a cream rim, on the +z or the +x side
 function port(g, x, y, z, r, face = 'z', lit = false) {
+  if (NIGHT && !lit) lit = rnd() < 0.6;
   const p = new THREE.Group();
   p.add(new THREE.Mesh(new THREE.CircleGeometry(r, 24), lit ? P.warm : P.window));
   const rim = new THREE.Mesh(new THREE.TorusGeometry(r, r * 0.2, 8, 24), P.cream); p.add(rim);
@@ -50,8 +51,10 @@ function glassRoom(g, w, h, d, x, y, z) {
   for (const sy of [0, h]) { for (const sz of [-1, 1]) box(g, w, 0.16, 0.16, P.navy, x, y + sy, z + sz * d / 2, 0.05); for (const sx of [-1, 1]) box(g, 0.16, 0.16, d, P.navy, x + sx * w / 2, y + sy, z, 0.05); }
 }
 const done = g => { g.traverse(m => { if (m.isMesh) { m.castShadow = !m.material.transparent; m.receiveShadow = true; } }); return g; };
-let rnd = Math.random;
+let rnd = Math.random, NIGHT = false;
 export const useRng = f => { rnd = f; };
+// at night more windows are lit
+export const setNight = on => { NIGHT = on; };
 
 // ---------- homes: a cream house with a pitched roof, a navy ring, round windows and a door ----------
 // modern (tier 2): a second floor with wide windows, a flat roof with solar panels, a balcony and plants
@@ -400,6 +403,22 @@ export function flowers(w = 2.2, d = 0.8, r = rnd) {
   const g = new THREE.Group();
   box(g, w, 0.3, d, P.cream, 0, 0.15, 0, 0.1); box(g, w - 0.2, 0.06, d - 0.2, P.soil, 0, 0.31, 0, 0.03);
   for (let i = 0; i < Math.round(w * 4); i++) { ball(g, 0.14, P.leaf[r() * 3 | 0], -w / 2 + 0.2 + r() * (w - 0.4), 0.42, -d / 2 + 0.2 + r() * (d - 0.4)); ball(g, 0.09, blooms[r() * 4 | 0], -w / 2 + 0.2 + r() * (w - 0.4), 0.55, -d / 2 + 0.2 + r() * (d - 0.4)); }
+  return done(g);
+}
+// a long trimmed hedge, like the ones along the pavements in the reference picture
+export function hedge(len = 2, r = rnd) {
+  const g = new THREE.Group(), m = P.leaf[r() * 3 | 0];
+  box(g, len, 0.7, 0.55, m, 0, 0.4, 0, 0.26);
+  for (let i = 0; i < Math.round(len / 0.55); i++) ball(g, 0.2, m, -len / 2 + 0.28 + i * 0.55, 0.72, (r() - 0.5) * 0.15, 0.7);
+  return done(g);
+}
+// a small electric car of the colony: rounded body, glass cabin, headlights that light up at night
+export function car(color = P.orange) {
+  const g = new THREE.Group();
+  box(g, 2.0, 0.6, 1.05, color, 0, 0.55, 0, 0.28);
+  box(g, 1.1, 0.5, 0.95, P.cream, -0.15, 1.05, 0, 0.22); box(g, 1.12, 0.3, 0.97, P.window, -0.15, 1.08, 0, 0.12);
+  for (const [x, z] of [[-0.62, -0.5], [0.62, -0.5], [-0.62, 0.5], [0.62, 0.5]]) { const w = cyl(g, 0.22, 0.22, 0.16, P.navy, x, 0.24, z, { seg: 14 }); w.rotation.x = Math.PI / 2; }
+  for (const z of [-0.3, 0.3]) box(g, 0.08, 0.14, 0.22, P.warm, 1.0, 0.62, z, 0.04);
   return done(g);
 }
 export function fountain() {
