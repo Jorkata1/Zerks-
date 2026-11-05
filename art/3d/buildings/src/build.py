@@ -327,30 +327,135 @@ def b_furnace(p):
     rbox(0.32, 0.3, 0.18, 0.06, p['orange'], (1.42, -0.62, 0.0), (0, 0, math.radians(-30)))
     for k in range(3): cyl(0.015, 0.25 + k * 0.08, p['char'], (1.1 - k * 0.12, -0.45 + k * 0.07, 0.0), bev=0.005)
 
+def cart(p, at, s=1.0):
+    x, y, z = at
+    rbox(0.5 * s, 0.62 * s, 0.26 * s, 0.09 * s, p['orange'], (x, y, z + 0.08 * s))
+    rbox(0.52 * s, 0.64 * s, 0.04 * s, 0.02 * s, p['char'], (x, y, z + 0.32 * s))
+    for (dx, dy, m) in ((-0.1, -0.14, 'ore'), (0.1, -0.08, 'ore'), (0.0, 0.1, 'ore'), (-0.12, 0.14, 'ore'), (0.12, 0.16, 'ore')):
+        ball(0.1 * s, p[m], (x + dx * s, y + dy * s, z + 0.38 * s), seg=12)
+    ball(0.065 * s, p['crystal'], (x + 0.03 * s, y + 0.02 * s, z + 0.47 * s), seg=10)
+    for sx in (-0.2, 0.2):
+        for sy in (-0.2, 0.2): cyl(0.07 * s, 0.05 * s, p['char'], (x + sx * s, y + sy * s, z + 0.08 * s), (0, math.pi / 2, 0), bev=0.02 * s)
+
+
+def seg_tube(a, b, r, m):
+    return tube([a, b], r, m)
+
 def b_mine(p):
-    for (x, y, z, r, sz, m) in [(0.15, 0.35, 0.0, 0.95, 0.75, 'rock'), (-0.55, 0.45, 0.0, 0.6, 0.85, 'rock2'), (0.75, 0.15, 0.0, 0.62, 0.8, 'rock'),
-                                (0.45, 0.55, 0.45, 0.6, 0.75, 'rock2'), (-0.1, 0.6, 0.5, 0.55, 0.8, 'rock'), (0.85, -0.25, 0.0, 0.45, 0.8, 'rock2')]:
-        ball(r, p[m], (x, y, z), (1, 0.9, sz), seg=28)
-    # charcoal portal with an orange lintel and a hanging lamp
-    ex, ey = -0.1, -0.45
-    rbox(0.66, 0.5, 0.72, 0.06, p['char'], (ex, ey + 0.1, 0.0))
-    rbox(0.54, 0.1, 0.62, 0.03, mat('dark', '#151313', 0.9), (ex, ey - 0.15, 0.0))
-    rbox(0.82, 0.18, 0.12, 0.04, p['orange'], (ex, ey - 0.17, 0.72))
-    tube([(ex, ey - 0.22, 0.72), (ex, ey - 0.3, 0.62)], 0.01, p['char']); ball(0.04, p['lampw'], (ex, ey - 0.3, 0.6), seg=10)
-    # rails with sleepers coming out, a small cart with ore and a crystal
-    for s in (-0.12, 0.12): rbox(0.03, 0.95, 0.03, 0.01, p['grey'], (ex + s, ey - 0.7, 0.02))
-    for k in range(7): rbox(0.36, 0.05, 0.025, 0.01, p['char'], (ex, ey - 0.28 - k * 0.12, 0.0))
-    cx, cy = ex, ey - 0.62
-    rbox(0.3, 0.36, 0.18, 0.05, p['orange'], (cx, cy, 0.07))
-    for (dx, dy) in ((-0.06, -0.06), (0.06, 0.02), (-0.02, 0.08), (0.05, -0.08)): ball(0.06, p['ore'], (cx + dx, cy + dy, 0.27), seg=10)
-    ball(0.04, p['crystal'], (cx + 0.02, cy, 0.33), seg=8)
-    for sx in (-0.13, 0.13):
-        for sy in (-0.11, 0.11): cyl(0.04, 0.03, p['char'], (cx + sx, cy + sy, 0.06), (0, math.pi / 2, 0), bev=0.01)
-    # a little lamp post and loose rocks
-    lx, ly = ex + 0.45, ey - 0.2
-    cyl(0.015, 0.45, p['char'], (lx, ly, 0.0), bev=0.005); rbox(0.08, 0.06, 0.12, 0.02, p['cream'], (lx, ly, 0.45)); light(p, (lx, ly - 0.04, 0.52), 0.025)
-    for (x, y, r) in ((-1.0, -0.4, 0.1), (-0.8, -0.75, 0.08), (0.7, -0.75, 0.09), (-1.05, 0.2, 0.07)):
-        ball(r, p['rock2'], (x, y, 0.0), (1, 1, 0.7), seg=12)
+    """the mine as one machine: cage -> rails -> tipping cart -> bunker -> conveyor -> silo; rope from the wheel to the hoist"""
+    dark = mat('dark', '#1b1817', 0.9)
+    S = Vector((-0.7, 0.15, 0.0))                 # shaft centre
+    RAIL_Y0, RAIL_Y1 = S.y, -1.15                   # the rails run from the cage straight to the front
+    GROUND = 0.0
+
+    # ---------- the shaft collar: a flush cream ring around a dark opening ----------
+    cyl(0.5, 0.04, p['cream2'], (S.x, S.y, GROUND), bev=0.015)
+    cyl(0.3, 0.045, dark, (S.x, S.y + 0.02, GROUND), bev=0.0)
+    torus(0.5, 0.022, p['orange'], (S.x, S.y, 0.04))
+
+    # ---------- headframe: four soft legs from the collar corners to a head deck ----------
+    TOP = 1.45
+    feet = [(S.x - 0.45, S.y - 0.32), (S.x + 0.45, S.y - 0.32), (S.x - 0.45, S.y + 0.38), (S.x + 0.45, S.y + 0.38)]
+    heads = [(S.x - 0.24, S.y - 0.16), (S.x + 0.24, S.y - 0.16), (S.x - 0.24, S.y + 0.2), (S.x + 0.24, S.y + 0.2)]
+    for (fx, fy), (hx, hy) in zip(feet, heads):
+        cyl(0.075, 0.06, p['char'], (fx, fy, GROUND), bev=0.025)
+        seg_tube((fx, fy, 0.05), (hx, hy, TOP), 0.05, p['orange'])
+    for z, k in ((0.7, 0.62), (1.1, 0.35)):           # cross braces on the left and right sides only (the front stays open for the rails)
+        for sx in (-1, 1):
+            x = S.x + sx * (0.45 - (0.45 - 0.24) * (z / TOP))
+            seg_tube((x, S.y - 0.32 + 0.16 * z / TOP, z), (x, S.y + 0.38 - 0.18 * z / TOP, z), 0.022, p['char'])
+    rbox(0.56, 0.44, 0.08, 0.035, p['char'], (S.x, S.y + 0.02, TOP - 0.02))
+
+    # the wheel: plane x-z (axle along y); its left edge sits right above the shaft centre, so the cage rope hangs straight
+    WR = 0.3
+    W = Vector((S.x + WR, S.y + 0.02, TOP + 0.08 + WR + 0.02))
+    for dy in (-0.12, 0.12):
+        seg_tube((W.x - 0.1, W.y + dy, TOP + 0.08), (W.x, W.y + dy, W.z), 0.025, p['char'])
+        seg_tube((W.x + 0.1, W.y + dy, TOP + 0.08), (W.x, W.y + dy, W.z), 0.025, p['char'])
+    torus(WR, 0.045, p['char'], tuple(W), (math.pi / 2, 0, 0))
+    for k in range(6):
+        a = k * math.pi / 3; seg_tube(tuple(W), (W.x + math.cos(a) * WR * 0.95, W.y, W.z + math.sin(a) * WR * 0.95), 0.016, p['char'])
+    bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=0.06, depth=0.3, location=tuple(W), rotation=(math.pi / 2, 0, 0)); _done(bpy.context.object, p['orange'])
+    light(p, (W.x, W.y, W.z + WR + 0.06))
+
+    # ---------- the cage at the bottom of the frame, open to the front, with a full cart inside on a short rail ----------
+    CW, CD, CH = 0.42, 0.5, 0.48
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            cyl(0.018, CH, p['orange'], (S.x + sx * CW / 2, S.y + sy * CD / 2, 0.045), bev=0.006)
+    rbox(CW + 0.06, CD + 0.06, 0.05, 0.02, p['orange'], (S.x, S.y, 0.045 + CH))
+    rbox(CW, CD, 0.03, 0.01, p['grey'], (S.x, S.y, 0.045))
+    rbox(CW + 0.04, 0.03, 0.18, 0.012, p['char'], (S.x, S.y + CD / 2, 0.2))         # back gate
+    seg_tube((S.x, S.y, 0.045 + CH + 0.05), (S.x, S.y, W.z), 0.009, p['char'])     # cage rope up to the wheel's left edge
+    cart(p, (S.x, S.y - 0.02, 0.075), 0.62)
+
+    # ---------- rails: from inside the cage straight to the front; sleepers flush on the ground ----------
+    L = RAIL_Y0 - RAIL_Y1; yc = (RAIL_Y0 + RAIL_Y1) / 2
+    for s in (-0.11, 0.11): rbox(0.03, L, 0.03, 0.01, p['grey'], (S.x + s, yc, 0.045))
+    for k in range(9):
+        y = RAIL_Y1 + 0.06 + k * (L - 0.5) / 8
+        if y > S.y - CD / 2 - 0.02: break
+        rbox(0.34, 0.05, 0.025, 0.01, p['char'], (S.x, y, 0.02))
+    rbox(0.3, 0.06, 0.08, 0.03, p['orange'], (S.x, RAIL_Y1 - 0.02, 0.03))          # buffer stop
+
+    # ---------- the bunker beside the end of the rails; the cart tips into it ----------
+    B = Vector((S.x + 0.72, RAIL_Y1 + 0.3, 0.0))
+    rbox(0.5, 0.56, 0.36, 0.08, p['cream'], tuple(B))
+    rbox(0.52, 0.58, 0.04, 0.08, p['orange'], (B.x, B.y, 0.36))
+    rbox(0.42, 0.48, 0.02, 0.02, dark, (B.x, B.y, 0.355))
+    for (dx, dy) in ((-0.1, -0.1), (0.08, -0.06), (0.0, 0.1), (-0.08, 0.14), (0.1, 0.12)):
+        ball(0.075, p['ore'], (B.x + dx, B.y + dy, 0.37), seg=10)
+    ball(0.05, p['crystal'], (B.x + 0.02, B.y - 0.02, 0.42), seg=8)
+    # the tipping cart at the end of the rails, leaning towards the bunker, ore falling out
+    tip = Vector((S.x, RAIL_Y1 + 0.3, 0.075))
+    before = set(bpy.data.objects)
+    cart(p, tuple(tip), 0.62)
+    parts = [o for o in bpy.data.objects if o not in before]
+    bpy.ops.object.select_all(action='DESELECT')
+    for o in parts: o.select_set(True)
+    bpy.context.view_layer.objects.active = parts[0]
+    bpy.ops.transform.rotate(value=math.radians(-28), orient_axis='Y', center_override=(tip.x + 0.16, tip.y, tip.z))
+    for k, (dx, dz) in enumerate(((0.3, 0.32), (0.36, 0.25))):
+        ball(0.05, p['ore'], (tip.x + dx, tip.y + (k - 0.5) * 0.08, dz), seg=10)
+
+    # ---------- covered conveyor from the bunker up into the silo ----------
+    SI = Vector((B.x + 1.0, B.y + 0.1, 0.0)); SR = 0.34; SH = 0.95
+    cyl(SR + 0.04, 0.06, p['char'], tuple(SI), bev=0.025)
+    cyl(SR, SH, p['cream'], (SI.x, SI.y, 0.05), bev=0.24)
+    torus(SR, 0.025, p['orange'], (SI.x, SI.y, 0.55)); vent(p, (SI.x, SI.y - 0.08, SH + 0.05), 0.1)
+    for k in range(3): rbox(0.05, 0.03, 0.06, 0.015, p['teal'] if k < 2 else p['char'], (SI.x - SR + 0.01, SI.y - 0.05 + k * 0.07, 0.3), (0, 0, math.pi / 2))
+    a = Vector((B.x + 0.18, B.y + 0.05, 0.3)); b = Vector((SI.x - 0.12, SI.y - 0.02, SH - 0.05))
+    d = b - a; Lc = d.length; mid = (a + b) / 2
+    ang_y = -math.atan2(d.z, math.hypot(d.x, d.y)); ang_z = math.atan2(d.y, d.x)
+    o = rbox(Lc, 0.16, 0.12, 0.05, p['cream2'], (0, 0, -0.06))
+    o.rotation_euler = (0, ang_y, ang_z); o.location = tuple(mid)
+    bpy.context.view_layer.objects.active = o; bpy.ops.object.select_all(action='DESELECT'); o.select_set(True)
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    o2 = rbox(Lc + 0.02, 0.17, 0.03, 0.015, p['orange'], (0, 0, 0.05))
+    o2.rotation_euler = (0, ang_y, ang_z); o2.location = tuple(mid)
+    bpy.context.view_layer.objects.active = o2; bpy.ops.object.select_all(action='DESELECT'); o2.select_set(True)
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    for t in (0.35, 0.7):
+        q = a + d * t; cyl(0.025, q.z - 0.08, p['char'], (q.x, q.y, 0.0), bev=0.008)
+
+    # ---------- hoist house behind the frame, in line with the wheel; the rope runs down to its drum ----------
+    H = Vector((W.x + 1.15, W.y + 0.3, 0.0))
+    rbox(0.86, 0.8, 0.1, 0.2, p['char'], tuple(H))
+    rbox(0.8, 0.74, 0.62, 0.22, p['cream'], (H.x, H.y, 0.08), seg=6)
+    rbox(0.825, 0.765, 0.04, 0.22, p['orange'], (H.x, H.y, 0.48))
+    door(p, H.x + 0.05, H.y - 0.39, 0.0, 0.24, 0.42, 0.08)
+    porthole(p, (H.x - 0.401, H.y + 0.12, 0.42), (-1, 0), 0.06)
+    vent(p, (H.x + 0.15, H.y + 0.15, 0.72), 0.11)
+    drum = Vector((H.x - 0.34, W.y, 0.74))
+    bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=0.1, depth=0.26, location=tuple(drum), rotation=(math.pi / 2, 0, 0)); _done(bpy.context.object, p['char'])
+    torus(0.1, 0.02, p['orange'], tuple(drum), (math.pi / 2, 0, 0))
+    seg_tube((drum.x, drum.y, drum.z + 0.1), (W.x + WR * 0.7, W.y, W.z + WR * 0.7), 0.009, p['char'])   # hoist rope: drum -> top right of the wheel
+
+    # ---------- a lamp post at the rails and a few loose rocks off the paths ----------
+    lp = (S.x - 0.4, RAIL_Y1 + 0.35)
+    cyl(0.02, 0.55, p['char'], (lp[0], lp[1], 0.0), bev=0.006); rbox(0.09, 0.07, 0.13, 0.02, p['cream'], (lp[0], lp[1], 0.55)); light(p, (lp[0], lp[1] - 0.045, 0.62), 0.028)
+    for (x, y, r) in ((S.x - 0.75, S.y + 0.65, 0.12), (SI.x + 0.2, SI.y + 0.6, 0.1), (H.x + 0.55, H.y - 0.55, 0.09)):
+        ball(r, p['rock2'], (x, y, 0.0), (1, 1, 0.7), seg=14)
 
 # ---------- the 4 that were missing, in the same style ----------
 def b_pump(p):
