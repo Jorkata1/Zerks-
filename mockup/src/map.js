@@ -336,8 +336,9 @@ if (LVL10) Object.assign(base, {
   '-2,0': b => add(kk('mine', 10), b.cx, 0.4, b.cz, 0),
   '-2,-2': b => add(noSmoke(kk('furnace', 8.8)), b.cx, 0.4, b.cz, 0),
   '1,3': b => { add(kk('solar', 6.0), b.cx, 0.4, b.cz - 2.7, 0); add(kk('solar', 6.0), b.cx, 0.4, b.cz + 2.7, 0); },
-  // the batteries have a plot of their own, next to the panels by the geolocator (Joro, 05.11.2026)
-  '-2,2': b => { add(kk('geolocator', 6.4), b.cx, 0.4, b.cz - 2.7, 0); add(kk('solar', 6.0), b.cx, 0.4, b.cz + 2.9, 0); },
+  // each on a plot of its own (Joro, 05.11.2026): the geolocator alone at the size of the other buildings, the panels
+  // only on their plot by the greenhouse (the ones from level 5 and from level 6), the batteries on the plot next to them
+  '-2,2': b => add(kk('geolocator', 9.4), b.cx, 0.4, b.cz, 0),
   '-1,3': b => add(kk('batteries', 6.0), b.cx, 0.4, b.cz, 0),
 });
 const builtBlocks = [];
