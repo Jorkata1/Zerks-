@@ -15,8 +15,11 @@ import * as B from './colony.js';
 const STATE = (location.hash || '#atm20').slice(1);
 const NIGHT = STATE.endsWith('-night'); // the same map at night: #atm20-night, #atm50-night, #atm85-night
 // #kk20, #kk50, #kk85 (and -night): the same map with the round, detailed buildings from art/3d/buildings
-const KIT = STATE.startsWith('kk');
-const ATM = { atm20: 20, atm50: 50, atm85: 85, kk20: 20, kk50: 50, kk85: 85 }[STATE.replace('-night', '')] ?? 20;
+// #lvl10 (and -night): the colony when the Ark becomes level 10, the end of chapter 1. Only the buildings that
+// docs/levels.md has by then, one of each (the panels are the exception), in the round style; atmosphere 28%.
+const LVL10 = STATE.startsWith('lvl10');
+const KIT = STATE.startsWith('kk') || LVL10;
+const ATM = { atm20: 20, atm50: 50, atm85: 85, kk20: 20, kk50: 50, kk85: 85, lvl10: 28 }[STATE.replace('-night', '')] ?? 20;
 const S = ATM >= 85 ? 2 : ATM >= 50 ? 1 : 0; // stage: 0 dust, 1 first green, 2 green planet
 const DPR = Number(new URLSearchParams(location.search).get('dpr') || 1);
 const W = 390, H = 844;
@@ -221,7 +224,7 @@ const kk = (n, size = 9.6) => { const g = new THREE.Group(), m = kkGlb[n].clone(
 // ---------- the street grid ----------
 // d = i - j runs across the screen, s = i + j along it (positive = towards the camera).
 const PITCH = 16;
-const REACH = [2, 5, 8][S]; // how far along the canyon the colony has grown
+const REACH = LVL10 ? 3 : [2, 5, 8][S]; // how far along the canyon the colony has grown; at level 10 zone I has one more row of plots
 const blocks = [];
 for (let i = -7; i <= 7; i++) for (let j = -7; j <= 7; j++) {
   const d = i - j, s = i + j;
@@ -324,6 +327,16 @@ const green = {
 };
 
 if (KIT) { Object.assign(base, kkBase); Object.assign(grown, kkGrown); }
+// level 10 (docs/levels.md): the mine is level 10 and has become the shaft (the level of the change is a proposal);
+// the quarry is gone (the mine replaced it) and the silicon furnace (level 5) stands next to the mine, with the filter
+// from level 6, so no smoke; the panels from level 5 and 6 fill the plot next to the greenhouse. The plots still empty
+// in zone I show their outlines; zone II (the research at level 10) is still under dust.
+const noSmoke = g => { g.traverse(o => { if (o.isMesh && o.material?.name === 'steam') o.visible = false; }); return g; };
+if (LVL10) Object.assign(base, {
+  '-2,0': b => add(kk('mine', 10), b.cx, 0.4, b.cz, 0),
+  '-2,-2': b => add(noSmoke(kk('furnace', 8.8)), b.cx, 0.4, b.cz, 0),
+  '1,3': b => { add(kk('solar', 6.0), b.cx, 0.4, b.cz - 2.7, 0); add(kk('solar', 6.0), b.cx, 0.4, b.cz + 2.7, 0); },
+});
 const builtBlocks = [];
 for (const b of blocks) {
   const key = `${b.d},${b.s}`;
@@ -336,7 +349,9 @@ for (const b of blocks) {
   else { for (let i = 0; i < 12; i++) tree(b.cx - 7 + rnd() * 14, b.cz - 7 + rnd() * 14, 0.9 + rnd() * 0.6); for (let i = 0; i < 4; i++) bush(b.cx - 7 + rnd() * 14, b.cz - 7 + rnd() * 14, 0.8); }
 }
 // colonists on the pavements: more of them wake up as the colony grows
-for (const b of builtBlocks) { people(b.cx, b.cz, [1, 2, 3][S]); pool(b.cx, b.cz, 13, 0xffd9a0, 0.22); }
+// at level 10 there are ten awake and most of them work inside, so only a few walk outside
+let outside = LVL10 ? 5 : Infinity;
+for (const b of builtBlocks) { people(b.cx, b.cz, outside-- > 0 ? [1, 2, 3][S] : 0); pool(b.cx, b.cz, 13, 0xffd9a0, 0.22); }
 // benches, lamps, planters and flowers on the pavements; they get better with each stage
 const noStreet = new Set(['0,-6', '-1,-7', '2,-6']);
 for (const b of builtBlocks) {
@@ -384,8 +399,8 @@ function aim(view, x, z) { // view = metres across the screen width
 const SHOT = [[-14, 2], [-26, -26], [-46, -42]][S];
 window.__frame = t => { const e = NIGHT ? 1 - t * t * (3 - 2 * t) : t * t * (3 - 2 * t); aim(56 - 22 * e, SHOT[0] * e, SHOT[1] * e); echo.position.y = 6.2 + Math.sin(t * 12) * 0.3; renderer.render(scene, camera); };
 window.__aim = (view, x, z) => { aim(view, x, z); renderer.render(scene, camera); };
-aim(56, 0, 0);
+aim(LVL10 ? 68 : 56, 0, 0); // level 10 has one more row of plots, so the overview steps back a little
 renderer.render(scene, camera);
 for (const [x, z, s, c] of [[-16, 0, 8, 0x5fe3d0], [16, -16, 9, 0xffc77a], [16, 16, 8, 0xd38cff], [0, -16, 8, 0x5fe3d0], [-16, -16, 9, 0xffd58a], [0, 0, 12, 0xffd58a]]) pool(x, z, s, c, 0.35);
-window.__state = { atm: ATM, stage: S, night: NIGHT };
+window.__state = { atm: ATM, stage: S, night: NIGHT, lvl10: LVL10 };
 window.dispatchEvent(new Event('scene-ready'));

@@ -97,8 +97,9 @@ function bubble(a, text) {
 const badge = (a, inner, tag = '', cls = '') => `<div class="badge" style="left:${a.x.toFixed(1)}px;top:${a.y.toFixed(1)}px"><div class="b ${cls}">${inner}</div>${tag ? `<div class="tag">${tag}</div>` : ''}<div class="stem"></div></div>`;
 function hud() {
   // the example map at three atmosphere levels; the level and the numbers are examples
-  const { atm, stage, night } = window.__state;
-  const v = [{ lvl: 6, next: 22, res: [640, 410, 220, 180], crew: '8', haze: 'rgba(120, 60, 30, .28)' },
+  const { atm, stage, night, lvl10 } = window.__state;
+  // level 10: the Ark is level 10, ten awake, the next level wants 30%; the stock fits the warehouse at level 10 (examples)
+  const v = lvl10 ? { lvl: 10, next: 30, res: ['15k', '9.6k', '4.1k', '2.7k'], crew: '10', haze: 'rgba(120, 60, 30, .28)' } : [{ lvl: 6, next: 22, res: [640, 410, 220, 180], crew: '8', haze: 'rgba(120, 60, 30, .28)' },
              { lvl: 21, next: 52, res: ['4.2k', '2.8k', '1.9k', '3.1k'], crew: '36', haze: 'rgba(110, 80, 50, .22)' },
              { lvl: 38, next: 87, res: ['18k', '12k', '9.4k', '21k'], crew: '112', haze: 'rgba(40, 80, 110, .22)' }][stage];
   let h = `<div class="shade" style="background:linear-gradient(${night ? 'rgba(10, 14, 40, .55)' : v.haze}, rgba(0,0,0,0))"></div>`;
