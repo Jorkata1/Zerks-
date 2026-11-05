@@ -205,7 +205,7 @@ await Promise.all(['ark-v1', 'carbon-drill-v1'].map(async n => {
 }));
 const smooth = n => { const g = new THREE.Group(); g.add(glb[n].clone(true)); return g; };
 // the soft buildings: Draco-compressed, glass stays see-through
-const KK = ['dome', 'kitchen', 'veglab', 'research', 'warehouse', 'solar', 'batteries', 'pump', 'greenhouse', 'processor', 'furnace', 'mine', 'geolocator'];
+const KK = ['dome', 'kitchen', 'veglab', 'research', 'warehouse', 'solar', 'batteries', 'pump', 'greenhouse', 'processor', 'furnace', 'mine', 'mine-portal', 'geolocator'];
 const kkGlb = {};
 if (KIT) {
   const draco = new DRACOLoader(); draco.setDecoderPath('node_modules/three/examples/jsm/libs/draco/'); gltf.setDRACOLoader(draco);
@@ -272,7 +272,8 @@ const kkBase = {
   '0,2': b => add(kk('veglab', 9.6), b.cx, 0.4, b.cz, 0),
   '0,-2': b => add(kk('dome', 9.8), b.cx, 0.4, b.cz, 0),
   '2,0': b => { add(kk('kitchen', 10.2), b.cx, 0.4, b.cz, 0); dust(b.cx - 1.4, 7.4, b.cz - 1.6, 2.4, 0xffffff, 0.45); },
-  '-2,0': b => { add(kk('mine', 10), b.cx, 0.4, b.cz, 0); },
+  // the mine starts as a tunnel in the cliff and later becomes a shaft with a headframe (Joro, 05.11.2026)
+  '-2,0': b => { if (S === 0) add(kk('mine-portal', 10.4), b.cx, 0.4, b.cz, 0); else add(kk('mine', 10), b.cx, 0.4, b.cz, 0); },
   '2,-2': b => add(kk('warehouse', 10), b.cx, 0.4, b.cz, 0),
   '2,2': b => add(kk('greenhouse', 10.4), b.cx, 0.4, b.cz, 0),
   '-2,2': b => { add(kk('solar', 6.4), b.cx + 2.4, 0.4, b.cz - 2.4, 0); add(kk('batteries', 5.2), b.cx - 3.0, 0.4, b.cz + 3.0, 0); add(kk('geolocator', 3.4), b.cx - 3.4, 0.4, b.cz - 3.4, 0); },
