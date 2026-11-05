@@ -263,24 +263,25 @@ const base = {
   '2,2': b => { add(B.greenhouse(8, S), b.cx, 0.3, b.cz - 2.8, 0, 0.95); add(B.greenhouse(8, S), b.cx, 0.3, b.cz + 2.8, 0, 0.95); },
   '-2,2': b => { add(shadowAll(K.geolocator()), b.cx - 2, 0.4, b.cz - 2, 0, 0.7); for (let i = 0; i < 3; i++) { const p = rb(3.0, 0.15, 2.0, M.solar, 0.05, 1); p.rotation.x = -0.35; add(p, b.cx + 3, 1.0, b.cz - 3.5 + i * 3.4); } if (S >= 1) add(B.battery(), b.cx - 3.6, 0.4, b.cz + 3.6, 0, 0.9); if (S > 1) add(B.radome(), b.cx - 0.6, 0.4, b.cz + 3.8, 0, 0.9); },
 };
-// with #kk… the plots of chapter 1 get the round buildings; the Ark and the carbon drill stay the CellCog models
+// with #kk… the plots of chapter 1 get the round buildings, square to the street grid like the plots, so the camera
+// sees each one from its corner with the door on the left face; the Ark and the carbon drill stay the CellCog models
 const kkBase = {
-  '-1,1': b => { add(kk('pump', 8.2), b.cx, 0.4, b.cz, Math.PI / 4); },
+  '-1,1': b => { add(kk('pump', 8.2), b.cx, 0.4, b.cz, 0); },
   '1,-1': b => { add(kk('processor', 7.6), b.cx, 0.4, b.cz); if (S >= 1) add(kk('processor', 4.2), b.cx + 4.0, 0.4, b.cz - 4.0); },
-  '-1,-1': b => add(kk('research', 8.2), b.cx, 0.4, b.cz, Math.PI / 4),
-  '0,2': b => add(kk('veglab', 9.6), b.cx, 0.4, b.cz, Math.PI / 4),
-  '0,-2': b => add(kk('dome', 9.8), b.cx, 0.4, b.cz, Math.PI / 4),
-  '2,0': b => { add(kk('kitchen', 10.2), b.cx, 0.4, b.cz, Math.PI / 4); dust(b.cx - 1.4, 7.4, b.cz - 1.6, 2.4, 0xffffff, 0.45); },
-  '-2,0': b => { add(kk('mine', 10), b.cx, 0.4, b.cz, Math.PI / 4); },
-  '2,-2': b => add(kk('warehouse', 10), b.cx, 0.4, b.cz, Math.PI / 4),
-  '2,2': b => add(kk('greenhouse', 10.4), b.cx, 0.4, b.cz, Math.PI / 4),
-  '-2,2': b => { add(kk('solar', 6.4), b.cx + 2.4, 0.4, b.cz - 2.4, Math.PI / 4); add(kk('batteries', 5.2), b.cx - 3.0, 0.4, b.cz + 3.0, Math.PI / 4); add(kk('geolocator', 3.4), b.cx - 3.4, 0.4, b.cz - 3.4, Math.PI / 4); },
+  '-1,-1': b => add(kk('research', 8.2), b.cx, 0.4, b.cz, 0),
+  '0,2': b => add(kk('veglab', 9.6), b.cx, 0.4, b.cz, 0),
+  '0,-2': b => add(kk('dome', 9.8), b.cx, 0.4, b.cz, 0),
+  '2,0': b => { add(kk('kitchen', 10.2), b.cx, 0.4, b.cz, 0); dust(b.cx - 1.4, 7.4, b.cz - 1.6, 2.4, 0xffffff, 0.45); },
+  '-2,0': b => { add(kk('mine', 10), b.cx, 0.4, b.cz, 0); },
+  '2,-2': b => add(kk('warehouse', 10), b.cx, 0.4, b.cz, 0),
+  '2,2': b => add(kk('greenhouse', 10.4), b.cx, 0.4, b.cz, 0),
+  '-2,2': b => { add(kk('solar', 6.4), b.cx + 2.4, 0.4, b.cz - 2.4, 0); add(kk('batteries', 5.2), b.cx - 3.0, 0.4, b.cz + 3.0, 0); add(kk('geolocator', 3.4), b.cx - 3.4, 0.4, b.cz - 3.4, 0); },
 };
 const kkGrown = {
-  '0,-4': b => add(kk('dome', 9.8), b.cx, 0.2, b.cz, Math.PI / 4),
-  '-2,4': b => add(kk('greenhouse', 10.4), b.cx, 0.2, b.cz, Math.PI / 4),
-  '1,-5': b => { add(kk('furnace', 8.8), b.cx, 0.2, b.cz, Math.PI / 4); for (let i = 0; i < 2; i++) dust(b.cx - 1.2 + i * 0.4, 12.5 + i * 2.2, b.cz - 1.2 - i, 3 + i * 1.6, S > 1 ? 0xffffff : 0xe8e0d8, (0.5 - i * 0.15) * (S > 1 ? 0.45 : 1)); },
-  '-2,-4': b => { add(kk('solar', 6.4), b.cx - 2.6, 0.2, b.cz - 2.6, Math.PI / 4); add(kk('solar', 6.4), b.cx + 2.6, 0.2, b.cz - 2.6, Math.PI / 4); add(kk('batteries', 5.2), b.cx - 2.6, 0.2, b.cz + 2.8, Math.PI / 4); add(shadowAll(K.turbine(0.6)), b.cx + 3.6, 0.2, b.cz + 3.4, 0.8, 0.6); },
+  '0,-4': b => add(kk('dome', 9.8), b.cx, 0.2, b.cz, 0),
+  '-2,4': b => add(kk('greenhouse', 10.4), b.cx, 0.2, b.cz, 0),
+  '1,-5': b => { add(kk('furnace', 8.8), b.cx, 0.2, b.cz, 0); for (let i = 0; i < 2; i++) dust(b.cx - 1.2 + i * 0.4, 12.5 + i * 2.2, b.cz - 1.2 - i, 3 + i * 1.6, S > 1 ? 0xffffff : 0xe8e0d8, (0.5 - i * 0.15) * (S > 1 ? 0.45 : 1)); },
+  '-2,-4': b => { add(kk('solar', 6.4), b.cx - 2.6, 0.2, b.cz - 2.6, 0); add(kk('solar', 6.4), b.cx + 2.6, 0.2, b.cz - 2.6, 0); add(kk('batteries', 5.2), b.cx - 2.6, 0.2, b.cz + 2.8, 0); add(shadowAll(K.turbine(0.6)), b.cx + 3.6, 0.2, b.cz + 3.4, 0.8, 0.6); },
 };
 const housing = b => { for (const [x, z] of [[-3, -3], [3, -3], [-3, 3], [3, 3]]) home(b.cx + x, b.cz + z); if (S >= 1) { bush(b.cx, b.cz + 0.2, 0.8); bush(b.cx - 0.3, b.cz - 5.2, 0.6); } if (S === 2) for (let i = 0; i < 3; i++) tree(b.cx - 5 + rnd() * 10, b.cz - 5 + rnd() * 10, 0.6); };
 const park = (b, big) => {
