@@ -529,9 +529,123 @@ def b_geolocator(p):
     light(p, (-0.3 * math.cos(0.5), -0.3 * math.sin(0.5), 0.92), 0.035)
     light(p, (0, 0, 0.95), 0.03)
 
+def apply_all(objs):
+    bpy.ops.object.select_all(action='DESELECT')
+    for o in objs: o.select_set(True)
+    bpy.context.view_layer.objects.active = objs[0]
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+
+def locomotive(p, at, s=1.0):
+    """a small soft electric locomotive facing -y: cream body, orange stripe, cab window, headlight, wheels"""
+    x, y, z = at
+    rbox(0.42 * s, 0.62 * s, 0.08 * s, 0.03 * s, p['char'], (x, y, z + 0.07 * s))
+    rbox(0.38 * s, 0.36 * s, 0.26 * s, 0.1 * s, p['cream'], (x, y - 0.1 * s, z + 0.14 * s))
+    rbox(0.38 * s, 0.24 * s, 0.38 * s, 0.1 * s, p['cream'], (x, y + 0.17 * s, z + 0.14 * s))
+    rbox(0.39 * s, 0.62 * s, 0.035 * s, 0.1 * s, p['orange'], (x, y, z + 0.27 * s))
+    rbox(0.3 * s, 0.03 * s, 0.12 * s, 0.03 * s, p['win'], (x, y + 0.045 * s, z + 0.36 * s))
+    rbox(0.42 * s, 0.28 * s, 0.04 * s, 0.03 * s, p['orange'], (x, y + 0.17 * s, z + 0.52 * s))
+    ball(0.045 * s, p['lampw'], (x, y - 0.29 * s, z + 0.3 * s), seg=12)
+    ball(0.03 * s, p['teal'], (x, y + 0.17 * s, z + 0.58 * s), seg=10)
+    for sy in (-0.18, 0.18):
+        for sx in (-0.2, 0.2): cyl(0.07 * s, 0.05 * s, p['char'], (x + sx * s, y + sy * s, z + 0.08 * s), (0, math.pi / 2, 0), bev=0.02 * s)
+
+def b_mine_portal(p):
+    """mine idea A: a tunnel in the canyon wall; locomotive -> rails -> tipping cart -> bunker -> conveyor -> silo; a fan blows air into the tunnel"""
+    dark = mat('dark', '#1b1817', 0.9)
+    X0 = -0.55                                   # the line of the rails
+    TUNNEL_Y = -0.12                             # the face of the portal
+    RAIL_Y1 = -1.25                              # the end of the rails (buffer stop)
+
+    # ---------- the canyon wall: stepped soft rock behind the portal ----------
+    for i, (w, d, z, h, m) in enumerate(((2.7, 1.1, 0.0, 0.5, 'rock2'), (2.5, 0.95, 0.48, 0.44, 'rock'), (2.2, 0.8, 0.9, 0.36, 'rock2'), (1.6, 0.62, 1.24, 0.28, 'rock'))):
+        rbox(w, d, h, 0.1, p[m], (0.0, 0.62 + i * 0.08, z), seg=4)
+    for (x, y, z) in ((0.85, 0.06, 0.62), (0.35, 0.2, 1.0), (-1.1, 0.08, 0.3), (1.15, 0.06, 0.25)):
+        ball(0.06, p['crystal'], (x, y, z), seg=10)
+
+    # ---------- the portal: a cream block set into the rock, a dark arched tunnel, orange trim ----------
+    PW, PD, PH = 0.95, 0.5, 0.9
+    py = TUNNEL_Y + PD / 2
+    rbox(PW + 0.1, PD + 0.1, 0.1, 0.2, p['char'], (X0, py, 0.0))
+    rbox(PW, PD, PH, 0.22, p['cream'], (X0, py, 0.08), seg=6)
+    rbox(PW + 0.025, PD + 0.025, 0.04, 0.22, p['orange'], (X0, py, 0.78))
+    fy = TUNNEL_Y - 0.005
+    rbox(0.54, 0.04, 0.32, 0.02, dark, (X0, fy, 0.08))
+    bpy.ops.mesh.primitive_cylinder_add(vertices=40, radius=0.27, depth=0.04, location=(X0, fy, 0.4), rotation=(math.pi / 2, 0, 0)); _done(bpy.context.object, dark)
+    t = torus(0.31, 0.05, p['orange'], (X0, fy - 0.02, 0.4), (math.pi / 2, 0, 0)); cut_half(t, 0.39)
+    for sx in (-0.31, 0.31): rbox(0.1, 0.1, 0.34, 0.03, p['orange'], (X0 + sx, fy - 0.02, 0.06))
+    ball(0.05, p['lampw'], (X0, fy - 0.08, 0.82), seg=12); cyl(0.015, 0.1, p['char'], (X0, fy - 0.06, 0.86), bev=0.004)
+    light(p, (X0 + 0.42, fy - 0.01, 0.62))
+    # a little sign with a pick on the portal side
+    rbox(0.24, 0.03, 0.16, 0.04, p['cream2'], (X0 + 0.62, TUNNEL_Y + 0.02, 0.5))
+    rbox(0.14, 0.035, 0.035, 0.015, p['orange'], (X0 + 0.62, TUNNEL_Y + 0.0, 0.6), (0, 0.5, 0)); rbox(0.03, 0.035, 0.1, 0.012, p['char'], (X0 + 0.64, TUNNEL_Y + 0.0, 0.54), (0, 0.5, 0))
+
+    # ---------- fresh air: a fan on top of the cliff, a duct down to the portal roof ----------
+    F = Vector((X0 + 0.15, 0.85, 1.52))
+    cyl(0.24, 0.24, p['cream'], tuple(F), bev=0.08); torus(0.24, 0.025, p['orange'], (F.x, F.y, F.z + 0.12))
+    cyl(0.2, 0.03, p['char'], (F.x, F.y, F.z + 0.23), bev=0.01)
+    for k in range(3):
+        a = k * 2.094; rbox(0.16, 0.05, 0.015, 0.008, p['grey'], (F.x + math.cos(a) * 0.08, F.y + math.sin(a) * 0.08, F.z + 0.26), (0, 0, a))
+    ball(0.035, p['orange'], (F.x, F.y, F.z + 0.27), seg=10)
+    # the duct leaves the fan forwards, through the air above the lower steps, then straight down onto the portal roof
+    tube([(F.x, F.y - 0.22, F.z + 0.12), (F.x, 0.3, F.z + 0.12), (F.x, 0.3, PH + 0.1)], 0.05, p['cream2'])
+    cyl(0.08, 0.04, p['orange'], (F.x, 0.3, PH + 0.08), bev=0.015)
+    light(p, (F.x + 0.2, F.y - 0.12, F.z + 0.2), 0.03)
+
+    # ---------- rails: from inside the tunnel straight to the front ----------
+    y0 = TUNNEL_Y + 0.05; L = y0 - RAIL_Y1; yc = (y0 + RAIL_Y1) / 2
+    for s in (-0.11, 0.11): rbox(0.03, L, 0.03, 0.01, p['grey'], (X0 + s, yc, 0.025))
+    n = 11
+    for k in range(n): rbox(0.34, 0.05, 0.025, 0.01, p['char'], (X0, RAIL_Y1 + 0.08 + k * (L - 0.2) / (n - 1), 0.0))
+    rbox(0.3, 0.06, 0.08, 0.03, p['orange'], (X0, RAIL_Y1 - 0.02, 0.0))
+
+    # ---------- the train coming out: locomotive in front, a full cart behind it, coupled ----------
+    locomotive(p, (X0, -0.52, 0.025), 0.62)
+    cart(p, (X0, -0.12 + 0.03, 0.025), 0.6)
+    tube([(X0, -0.33, 0.12), (X0, -0.27, 0.12)], 0.012, p['char'])
+
+    # ---------- the tipping cart at the end of the rails and the bunker beside it ----------
+    B = Vector((X0 + 0.72, RAIL_Y1 + 0.3, 0.0))
+    rbox(0.5, 0.56, 0.36, 0.08, p['cream'], tuple(B))
+    rbox(0.52, 0.58, 0.04, 0.08, p['orange'], (B.x, B.y, 0.36))
+    rbox(0.42, 0.48, 0.02, 0.02, dark, (B.x, B.y, 0.355))
+    for (dx, dy) in ((-0.1, -0.1), (0.08, -0.06), (0.0, 0.1), (-0.08, 0.14), (0.1, 0.12)):
+        ball(0.075, p['ore'], (B.x + dx, B.y + dy, 0.37), seg=10)
+    ball(0.05, p['crystal'], (B.x + 0.02, B.y - 0.02, 0.42), seg=8)
+    tip = Vector((X0, RAIL_Y1 + 0.3, 0.05))
+    before = set(bpy.data.objects)
+    cart(p, tuple(tip), 0.6)
+    parts = [o for o in bpy.data.objects if o not in before]
+    bpy.ops.object.select_all(action='DESELECT')
+    for o in parts: o.select_set(True)
+    bpy.context.view_layer.objects.active = parts[0]
+    bpy.ops.transform.rotate(value=math.radians(-28), orient_axis='Y', center_override=(tip.x + 0.16, tip.y, tip.z))
+    for k, (dx, dz) in enumerate(((0.3, 0.32), (0.36, 0.25))):
+        ball(0.05, p['ore'], (tip.x + dx, tip.y + (k - 0.5) * 0.08, dz), seg=10)
+
+    # ---------- covered conveyor from the bunker up into the silo ----------
+    SI = Vector((B.x + 1.0, B.y + 0.15, 0.0)); SR = 0.34; SH = 0.95
+    cyl(SR + 0.04, 0.06, p['char'], tuple(SI), bev=0.025)
+    cyl(SR, SH, p['cream'], (SI.x, SI.y, 0.05), bev=0.24)
+    torus(SR, 0.025, p['orange'], (SI.x, SI.y, 0.55)); vent(p, (SI.x, SI.y - 0.08, SH + 0.05), 0.1)
+    for k in range(3): rbox(0.05, 0.03, 0.06, 0.015, p['teal'] if k < 2 else p['char'], (SI.x - SR + 0.01, SI.y - 0.05 + k * 0.07, 0.3), (0, 0, math.pi / 2))
+    a = Vector((B.x + 0.18, B.y + 0.05, 0.3)); b = Vector((SI.x - 0.12, SI.y - 0.02, SH - 0.05))
+    d = b - a; Lc = d.length; mid = (a + b) / 2
+    ang_y = -math.atan2(d.z, math.hypot(d.x, d.y)); ang_z = math.atan2(d.y, d.x)
+    for (w, h, zoff, m) in ((0.16, 0.12, -0.06, 'cream2'), (0.17, 0.03, 0.05, 'orange')):
+        o = rbox(Lc, w, h, 0.05 if m == 'cream2' else 0.015, p[m], (0, 0, zoff))
+        o.rotation_euler = (0, ang_y, ang_z); o.location = tuple(mid); apply_all([o])
+    for tt in (0.35, 0.7):
+        q = a + d * tt; cyl(0.025, q.z - 0.08, p['char'], (q.x, q.y, 0.0), bev=0.008)
+
+    # ---------- a lamp post by the rails and a few loose rocks off the paths ----------
+    lp = (X0 - 0.42, RAIL_Y1 + 0.4)
+    cyl(0.02, 0.55, p['char'], (lp[0], lp[1], 0.0), bev=0.006); rbox(0.09, 0.07, 0.13, 0.02, p['cream'], (lp[0], lp[1], 0.55)); light(p, (lp[0], lp[1] - 0.045, 0.62), 0.028)
+    for (x, y, r) in ((-1.2, -0.5, 0.11), (SI.x + 0.35, SI.y + 0.45, 0.1), (0.95, -0.05, 0.12)):
+        ball(r, p['rock2'], (x, y, 0.0), (1, 1, 0.7), seg=14)
+
 BUILD = {'dome': b_dome, 'kitchen': b_kitchen, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': b_greenhouse,
          'research': b_research, 'warehouse': b_warehouse, 'furnace': b_furnace, 'mine': b_mine,
-         'pump': b_pump, 'solar': b_solar, 'batteries': b_batteries, 'geolocator': b_geolocator}
+         'pump': b_pump, 'solar': b_solar, 'batteries': b_batteries, 'geolocator': b_geolocator, 'mine-portal': b_mine_portal}
 for name, fn in BUILD.items():
     if ONLY and name not in ONLY: continue
     reset(); p = pal(); fn(p); export(f'{OUT}/{name}.glb'); print('built', name)
