@@ -5,6 +5,7 @@
 // Same cartoon look as cartoon.html: flat colours, the CellCog Ark and carbon drill, the code-built models.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import * as T from './textures.js';
@@ -13,7 +14,9 @@ import * as B from './colony.js';
 
 const STATE = (location.hash || '#atm20').slice(1);
 const NIGHT = STATE.endsWith('-night'); // the same map at night: #atm20-night, #atm50-night, #atm85-night
-const ATM = { atm20: 20, atm50: 50, atm85: 85 }[STATE.replace('-night', '')] ?? 20;
+// #kk20, #kk50, #kk85 (and -night): the same map with the round, detailed buildings from art/3d/buildings
+const KIT = STATE.startsWith('kk');
+const ATM = { atm20: 20, atm50: 50, atm85: 85, kk20: 20, kk50: 50, kk85: 85 }[STATE.replace('-night', '')] ?? 20;
 const S = ATM >= 85 ? 2 : ATM >= 50 ? 1 : 0; // stage: 0 dust, 1 first green, 2 green planet
 const DPR = Number(new URLSearchParams(location.search).get('dpr') || 1);
 const W = 390, H = 844;
@@ -201,6 +204,19 @@ await Promise.all(['ark-v1', 'carbon-drill-v1'].map(async n => {
   glb[n] = root;
 }));
 const smooth = n => { const g = new THREE.Group(); g.add(glb[n].clone(true)); return g; };
+// the soft buildings: Draco-compressed, glass stays see-through
+const KK = ['dome', 'kitchen', 'veglab', 'research', 'warehouse', 'solar', 'batteries', 'pump', 'greenhouse', 'processor', 'furnace', 'mine'];
+const kkGlb = {};
+if (KIT) {
+  const draco = new DRACOLoader(); draco.setDecoderPath('node_modules/three/examples/jsm/libs/draco/'); gltf.setDRACOLoader(draco);
+  await Promise.all(KK.map(async n => {
+    const root = (await gltf.loadAsync('models/kk/' + n + '.glb')).scene;
+    root.traverse(o => { if (o.isMesh) { const ms = Array.isArray(o.material) ? o.material : [o.material]; const clear = ms.some(m => m.transparent); o.castShadow = !clear; o.receiveShadow = true; for (const m of ms) { m.metalness = 0; if (m.transparent) { m.depthWrite = false; m.side = THREE.DoubleSide; } else m.roughness = Math.max(0.5, m.roughness ?? 0.6); } if (clear) o.renderOrder = 2; } });
+    kkGlb[n] = root;
+  }));
+}
+// a soft building scaled so its footprint is `size` metres wide, standing on the plot
+const kk = (n, size = 9.6) => { const g = new THREE.Group(), m = kkGlb[n].clone(true); const b = new THREE.Box3().setFromObject(m), s = b.getSize(new THREE.Vector3()), k = size / Math.max(s.x, s.z), c = b.getCenter(new THREE.Vector3()); m.scale.setScalar(k); m.position.set(-c.x * k, -b.min.y * k, -c.z * k); g.add(m); return g; };
 
 // ---------- the street grid ----------
 // d = i - j runs across the screen, s = i + j along it (positive = towards the camera).
@@ -247,6 +263,25 @@ const base = {
   '2,2': b => { add(B.greenhouse(8, S), b.cx, 0.3, b.cz - 2.8, 0, 0.95); add(B.greenhouse(8, S), b.cx, 0.3, b.cz + 2.8, 0, 0.95); },
   '-2,2': b => { add(shadowAll(K.geolocator()), b.cx - 2, 0.4, b.cz - 2, 0, 0.7); for (let i = 0; i < 3; i++) { const p = rb(3.0, 0.15, 2.0, M.solar, 0.05, 1); p.rotation.x = -0.35; add(p, b.cx + 3, 1.0, b.cz - 3.5 + i * 3.4); } if (S >= 1) add(B.battery(), b.cx - 3.6, 0.4, b.cz + 3.6, 0, 0.9); if (S > 1) add(B.radome(), b.cx - 0.6, 0.4, b.cz + 3.8, 0, 0.9); },
 };
+// with #kk… the plots of chapter 1 get the round buildings; the Ark and the carbon drill stay the CellCog models
+const kkBase = {
+  '-1,1': b => { add(kk('pump', 8.2), b.cx, 0.4, b.cz, Math.PI / 4); },
+  '1,-1': b => { add(kk('processor', 7.6), b.cx, 0.4, b.cz); if (S >= 1) add(kk('processor', 4.2), b.cx + 4.0, 0.4, b.cz - 4.0); },
+  '-1,-1': b => add(kk('research', 10), b.cx, 0.4, b.cz, Math.PI / 4),
+  '0,2': b => add(kk('veglab', 9.6), b.cx, 0.4, b.cz, Math.PI / 4),
+  '0,-2': b => add(kk('dome', 9.8), b.cx, 0.4, b.cz, Math.PI / 4),
+  '2,0': b => { add(kk('kitchen', 10.2), b.cx, 0.4, b.cz, Math.PI / 4); dust(b.cx - 1.4, 7.4, b.cz - 1.6, 2.4, 0xffffff, 0.45); },
+  '-2,0': b => { add(kk('mine', 10), b.cx, 0.4, b.cz, Math.PI / 4); },
+  '2,-2': b => add(kk('warehouse', 10), b.cx, 0.4, b.cz, Math.PI / 4),
+  '2,2': b => add(kk('greenhouse', 10.4), b.cx, 0.4, b.cz, Math.PI / 4),
+  '-2,2': b => { add(kk('solar', 6.4), b.cx + 2.4, 0.4, b.cz - 2.4, Math.PI / 4); add(kk('batteries', 5.2), b.cx - 3.0, 0.4, b.cz + 3.0, Math.PI / 4); add(shadowAll(K.geolocator()), b.cx - 3.2, 0.4, b.cz - 3.2, 0, 0.55); },
+};
+const kkGrown = {
+  '0,-4': b => add(kk('dome', 9.8), b.cx, 0.2, b.cz, Math.PI / 4),
+  '-2,4': b => add(kk('greenhouse', 10.4), b.cx, 0.2, b.cz, Math.PI / 4),
+  '1,-5': b => { add(kk('furnace', 8.8), b.cx, 0.2, b.cz, Math.PI / 4); for (let i = 0; i < 2; i++) dust(b.cx - 1.2 + i * 0.4, 12.5 + i * 2.2, b.cz - 1.2 - i, 3 + i * 1.6, S > 1 ? 0xffffff : 0xe8e0d8, (0.5 - i * 0.15) * (S > 1 ? 0.45 : 1)); },
+  '-2,-4': b => { add(kk('solar', 6.4), b.cx - 2.6, 0.2, b.cz - 2.6, Math.PI / 4); add(kk('solar', 6.4), b.cx + 2.6, 0.2, b.cz - 2.6, Math.PI / 4); add(kk('batteries', 5.2), b.cx - 2.6, 0.2, b.cz + 2.8, Math.PI / 4); add(shadowAll(K.turbine(0.6)), b.cx + 3.6, 0.2, b.cz + 3.4, 0.8, 0.6); },
+};
 const housing = b => { for (const [x, z] of [[-3, -3], [3, -3], [-3, 3], [3, 3]]) home(b.cx + x, b.cz + z); if (S >= 1) { bush(b.cx, b.cz + 0.2, 0.8); bush(b.cx - 0.3, b.cz - 5.2, 0.6); } if (S === 2) for (let i = 0; i < 3; i++) tree(b.cx - 5 + rnd() * 10, b.cz - 5 + rnd() * 10, 0.6); };
 const park = (b, big) => {
   lawn(b.cx, b.cz, 12, 12);
@@ -285,6 +320,7 @@ const green = {
   '0,8': b => park(b, true), '2,8': housing, '-2,8': housing, '0,-8': b => park(b, true), '2,-8': housing, '-2,-8': towers,
 };
 
+if (KIT) { Object.assign(base, kkBase); Object.assign(grown, kkGrown); }
 const builtBlocks = [];
 for (const b of blocks) {
   const key = `${b.d},${b.s}`;
