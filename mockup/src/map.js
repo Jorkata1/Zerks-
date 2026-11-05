@@ -205,7 +205,7 @@ await Promise.all(['ark-v1', 'carbon-drill-v1'].map(async n => {
 }));
 const smooth = n => { const g = new THREE.Group(); g.add(glb[n].clone(true)); return g; };
 // the soft buildings: Draco-compressed, glass stays see-through
-const KK = ['dome', 'kitchen', 'veglab', 'research', 'warehouse', 'solar', 'batteries', 'pump', 'greenhouse', 'processor', 'furnace', 'mine'];
+const KK = ['dome', 'kitchen', 'veglab', 'research', 'warehouse', 'solar', 'batteries', 'pump', 'greenhouse', 'processor', 'furnace', 'mine', 'geolocator'];
 const kkGlb = {};
 if (KIT) {
   const draco = new DRACOLoader(); draco.setDecoderPath('node_modules/three/examples/jsm/libs/draco/'); gltf.setDRACOLoader(draco);
@@ -267,14 +267,14 @@ const base = {
 const kkBase = {
   '-1,1': b => { add(kk('pump', 8.2), b.cx, 0.4, b.cz, Math.PI / 4); },
   '1,-1': b => { add(kk('processor', 7.6), b.cx, 0.4, b.cz); if (S >= 1) add(kk('processor', 4.2), b.cx + 4.0, 0.4, b.cz - 4.0); },
-  '-1,-1': b => add(kk('research', 10), b.cx, 0.4, b.cz, Math.PI / 4),
+  '-1,-1': b => add(kk('research', 8.2), b.cx, 0.4, b.cz, Math.PI / 4),
   '0,2': b => add(kk('veglab', 9.6), b.cx, 0.4, b.cz, Math.PI / 4),
   '0,-2': b => add(kk('dome', 9.8), b.cx, 0.4, b.cz, Math.PI / 4),
   '2,0': b => { add(kk('kitchen', 10.2), b.cx, 0.4, b.cz, Math.PI / 4); dust(b.cx - 1.4, 7.4, b.cz - 1.6, 2.4, 0xffffff, 0.45); },
   '-2,0': b => { add(kk('mine', 10), b.cx, 0.4, b.cz, Math.PI / 4); },
   '2,-2': b => add(kk('warehouse', 10), b.cx, 0.4, b.cz, Math.PI / 4),
   '2,2': b => add(kk('greenhouse', 10.4), b.cx, 0.4, b.cz, Math.PI / 4),
-  '-2,2': b => { add(kk('solar', 6.4), b.cx + 2.4, 0.4, b.cz - 2.4, Math.PI / 4); add(kk('batteries', 5.2), b.cx - 3.0, 0.4, b.cz + 3.0, Math.PI / 4); add(shadowAll(K.geolocator()), b.cx - 3.2, 0.4, b.cz - 3.2, 0, 0.55); },
+  '-2,2': b => { add(kk('solar', 6.4), b.cx + 2.4, 0.4, b.cz - 2.4, Math.PI / 4); add(kk('batteries', 5.2), b.cx - 3.0, 0.4, b.cz + 3.0, Math.PI / 4); add(kk('geolocator', 3.4), b.cx - 3.4, 0.4, b.cz - 3.4, Math.PI / 4); },
 };
 const kkGrown = {
   '0,-4': b => add(kk('dome', 9.8), b.cx, 0.2, b.cz, Math.PI / 4),
