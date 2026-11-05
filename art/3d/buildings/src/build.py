@@ -514,8 +514,8 @@ def b_batteries(p):
     rbox(0.5, 0.26, 0.3, 0.09, p['cream'], (bx, by, 0.06)); rbox(0.52, 0.28, 0.035, 0.09, p['orange'], (bx, by, 0.24))
     rbox(0.26, 0.03, 0.08, 0.02, p['teal'], (bx, by - 0.13, 0.13)); vent(p, (bx + 0.15, by, 0.36), 0.06)
 
-def b_geolocator(p):
-    # a small round station with a rotating scanner arm and a glowing screen
+def b_geolocator_round(p):
+    # the first geolocator, until 05.11.2026 (too bare; replaced by the seismic station below): a small round station with a rotating scanner arm and a glowing screen
     cyl(0.52, 0.08, p['char'], (0, 0, 0), bev=0.03)
     cyl(0.48, 0.42, p['cream'], (0, 0, 0.06), bev=0.12)
     torus(0.48, 0.025, p['orange'], (0, 0, 0.3))
@@ -642,6 +642,86 @@ def b_mine_portal(p):
     cyl(0.02, 0.55, p['char'], (lp[0], lp[1], 0.0), bev=0.006); rbox(0.09, 0.07, 0.13, 0.02, p['cream'], (lp[0], lp[1], 0.55)); light(p, (lp[0], lp[1] - 0.045, 0.62), 0.028)
     for (x, y, r) in ((-1.2, -0.5, 0.11), (SI.x + 0.35, SI.y + 0.45, 0.1), (0.95, -0.05, 0.12)):
         ball(r, p['rock2'], (x, y, 0.0), (1, 1, 0.7), seg=14)
+
+# ---------- shared bits of the survey buildings ----------
+def flag(p, at, h=0.32):
+    cyl(0.012, h, p['char'], at, bev=0.004)
+    rbox(0.1, 0.012, 0.06, 0.01, p['orange'], (at[0] + 0.05, at[1], at[2] + h - 0.07))
+    ball(0.02, p['teal'], (at[0], at[1], at[2] + h + 0.015), seg=8)
+
+def hcyl(r, length, m, center, axis='x', bev=None):
+    """a lying cylinder centred on `center`, its axis along x or y"""
+    rot = (0, math.pi / 2, 0) if axis == 'x' else (math.pi / 2, 0, 0)
+    return cyl(r, length, m, (center[0], center[1], center[2] - length / 2), rot, bev=bev)
+
+def anemometer(p, at, h=0.5):
+    """the weather mast that measures the air: three cups, a vane, a light"""
+    x, y, z = at
+    cyl(0.05, 0.06, p['char'], (x, y, z), bev=0.02); cyl(0.016, h, p['grey'], (x, y, z), bev=0.005)
+    top = z + h
+    for k in range(3):
+        a = k * 2.094
+        tube([(x, y, top), (x + math.cos(a) * 0.11, y + math.sin(a) * 0.11, top)], 0.008, p['char'])
+        ball(0.032, p['orange'], (x + math.cos(a) * 0.11, y + math.sin(a) * 0.11, top), (1, 1, 0.8), seg=10)
+    rbox(0.22, 0.015, 0.012, 0.005, p['char'], (x, y, top - 0.12), (0, 0, 0.6))
+    rbox(0.07, 0.012, 0.065, 0.01, p['orange'], (x - 0.1 * math.cos(0.6), y - 0.1 * math.sin(0.6), top - 0.15), (0, 0, 0.6))
+    light(p, (x, y, top + 0.045), 0.028)
+
+# ---------- the geolocator (Joro picked idea G5, 05.11.2026): the seismic station: a weight drops on a plate, the stakes in a line hear the echo from the layers ----------
+def b_geolocator(p):
+    C = Vector((-0.45, 0.35, 0.0)); W, D, H, R = 1.0, 0.8, 0.62, 0.22
+    rbox(W + 0.1, D + 0.1, 0.1, R + 0.05, p['char'], (C.x, C.y, 0.0))
+    body = rbox(W, D, H, R, p['cream'], (C.x, C.y, 0.08), seg=5)
+    rbox(W + 0.025, D + 0.025, 0.045, R, p['orange'], (C.x, C.y, 0.08 + H * 0.68))
+    # inside the window: a screen with the wave the stakes heard
+    def wave(cx, cy, fz):
+        rbox(0.36, 0.14, 0.1, 0.03, p['cream2'], (cx, cy + 0.04, fz))
+        rbox(0.3, 0.03, 0.16, 0.02, p['char'], (cx, cy + 0.11, fz + 0.1))
+        pts = [(cx - 0.12 + k * 0.012, cy + 0.093, fz + 0.18 + 0.05 * math.sin(k * 0.9) * math.exp(-abs(k - 8) * 0.15)) for k in range(21)]
+        tube(pts, 0.006, p['teal'])
+    lit_room(p, body, 0.46, 0.3, 0.3, C.x - 0.18, C.y - D / 2 + 0.01, 0.28, 0.0, wave)
+    door(p, C.x + 0.27, C.y - D / 2 - 0.02, 0.0, 0.24, 0.44, 0.08)
+    # on the roof: a small antenna dish and the weather mast that measures the air
+    RZ = 0.08 + H
+    cyl(0.12, 0.06, p['cream2'], (C.x - 0.22, C.y + 0.05, RZ), bev=0.03)
+    d = dome(0.16, p['cream'], (0, 0, 0), seg=28, sz=0.35); d.rotation_euler = (math.radians(130), 0, math.radians(-30)); d.location = (C.x - 0.22, C.y + 0.05, RZ + 0.2)
+    t = torus(0.16, 0.018, p['orange'], (C.x - 0.22, C.y + 0.05, RZ + 0.2), (math.radians(130), 0, math.radians(-30)))
+    cyl(0.025, 0.14, p['char'], (C.x - 0.22, C.y + 0.05, RZ + 0.05), bev=0.008)
+    anemometer(p, (C.x + 0.25, C.y + 0.15, RZ), 0.45)
+
+    # the thumper: a heavy weight between two posts, lifted by a cable, drops onto the steel plate on the ground
+    T = Vector((0.6, 0.38, 0.0))
+    rbox(0.86, 0.5, 0.06, 0.05, p['char'], (T.x, T.y, 0.0))
+    cyl(0.2, 0.05, p['grey'], (T.x, T.y, 0.06), bev=0.015)
+    torus(0.2, 0.012, p['orange'], (T.x, T.y, 0.1))
+    PH = 1.12
+    for sx in (-1, 1):
+        cyl(0.06, 0.05, p['char'], (T.x + sx * 0.28, T.y, 0.06), bev=0.02)
+        cyl(0.032, PH, p['orange'], (T.x + sx * 0.28, T.y, 0.06), bev=0.01)
+    rbox(0.66, 0.1, 0.08, 0.03, p['cream'], (T.x, T.y, 0.06 + PH))
+    rbox(0.2, 0.16, 0.12, 0.04, p['orange'], (T.x, T.y, 0.06 + PH + 0.08))
+    light(p, (T.x + 0.06, T.y - 0.085, 0.06 + PH + 0.16), 0.022)
+    vent(p, (T.x - 0.03, T.y + 0.02, 0.06 + PH + 0.2), 0.06)
+    WZ = 0.52
+    cyl(0.17, 0.2, p['cream'], (T.x, T.y, WZ), bev=0.06)
+    torus(0.17, 0.02, p['orange'], (T.x, T.y, WZ + 0.1))
+    for sx in (-1, 1):
+        torus(0.05, 0.014, p['char'], (T.x + sx * 0.28, T.y, WZ + 0.1))
+        hcyl(0.025, 0.08, p['char'], (T.x + sx * 0.215, T.y, WZ + 0.1), 'x', bev=0.008)
+    cyl(0.03, 0.04, p['char'], (T.x, T.y, WZ + 0.2), bev=0.01)
+    tube([(T.x, T.y, WZ + 0.24), (T.x, T.y, 0.06 + PH)], 0.008, p['char'])
+    # the cable from the thumper to the station
+    tube([(T.x - 0.28, T.y + 0.18, 0.075), (T.x - 0.44, T.y + 0.18, 0.075), (C.x + W / 2 + 0.085, T.y + 0.18, 0.04), (C.x + W / 2 + 0.085, T.y + 0.18, 0.25), (C.x + W / 2 - 0.02, T.y + 0.18, 0.25)], 0.014, p['char'])
+
+    # the line of stakes (geophones) in front, joined by one cable that runs back to the station
+    stakes = [(-1.0 + k * 0.4, -0.55) for k in range(6)]
+    for (x, y) in stakes:
+        cyl(0.028, 0.1, p['char'], (x, y, 0.0), bev=0.008)
+        cyl(0.045, 0.05, p['orange'], (x, y, 0.1), bev=0.015)
+        ball(0.022, p['teal'], (x, y, 0.165), seg=8)
+    tube([(x, y, 0.015) for (x, y) in stakes], 0.01, p['char'])
+    tube([(stakes[0][0], stakes[0][1], 0.015), (C.x - W / 2 - 0.12, stakes[0][1] + 0.1, 0.015), (C.x - W / 2 - 0.12, C.y - 0.1, 0.02), (C.x - W / 2 - 0.12, C.y - 0.1, 0.25), (C.x - W / 2 + 0.02, C.y - 0.1, 0.25)], 0.012, p['char'])
+    for (x, y) in ((0.85, -0.95), (0.5, -1.1)): flag(p, (x, y, 0.0))
 
 BUILD = {'dome': b_dome, 'kitchen': b_kitchen, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': b_greenhouse,
          'research': b_research, 'warehouse': b_warehouse, 'furnace': b_furnace, 'mine': b_mine,

@@ -276,7 +276,8 @@ const kkBase = {
   '-2,0': b => { if (S === 0) add(kk('mine-portal', 10.4), b.cx, 0.4, b.cz, 0); else add(kk('mine', 10), b.cx, 0.4, b.cz, 0); },
   '2,-2': b => add(kk('warehouse', 10), b.cx, 0.4, b.cz, 0),
   '2,2': b => add(kk('greenhouse', 10.4), b.cx, 0.4, b.cz, 0),
-  '-2,2': b => { add(kk('solar', 6.4), b.cx + 2.4, 0.4, b.cz - 2.4, 0); add(kk('batteries', 5.2), b.cx - 3.0, 0.4, b.cz + 3.0, 0); add(kk('geolocator', 3.4), b.cx - 3.4, 0.4, b.cz - 3.4, 0); },
+  // the geolocator is the seismic station (Joro, 05.11.2026): it takes the back half of the plot, the panels and batteries the front
+  '-2,2': b => { add(kk('geolocator', 6.4), b.cx, 0.4, b.cz - 2.7, 0); add(kk('solar', 6.0), b.cx + 2.8, 0.4, b.cz + 2.9, 0); add(kk('batteries', 5.0), b.cx - 3.2, 0.4, b.cz + 3.0, 0); },
 };
 const kkGrown = {
   '0,-4': b => add(kk('dome', 9.8), b.cx, 0.2, b.cz, 0),
