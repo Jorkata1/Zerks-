@@ -336,6 +336,9 @@ if (LVL10) Object.assign(base, {
   '-2,0': b => add(kk('mine', 10), b.cx, 0.4, b.cz, 0),
   '-2,-2': b => add(noSmoke(kk('furnace', 8.8)), b.cx, 0.4, b.cz, 0),
   '1,3': b => { add(kk('solar', 6.0), b.cx, 0.4, b.cz - 2.7, 0); add(kk('solar', 6.0), b.cx, 0.4, b.cz + 2.7, 0); },
+  // the batteries have a plot of their own, next to the panels by the geolocator (Joro, 05.11.2026)
+  '-2,2': b => { add(kk('geolocator', 6.4), b.cx, 0.4, b.cz - 2.7, 0); add(kk('solar', 6.0), b.cx, 0.4, b.cz + 2.9, 0); },
+  '-1,3': b => add(kk('batteries', 6.0), b.cx, 0.4, b.cz, 0),
 });
 const builtBlocks = [];
 for (const b of blocks) {
