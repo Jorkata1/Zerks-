@@ -1016,8 +1016,50 @@ def b_research(p, lvl):
             rbox(0.1, 0.012, 0.008, 0.004, p['grey'], (x + s * 0.09, AY + 0.08, RZ + 0.12), (0, 0, D2R(30 * s)))
         light(p, (x, AY - 0.03, RZ + 0.12), 0.02)
 
+# ---------- the build drone (06.11.2026, proposal; docs/build-sequence.md): it flies out of the Ark, surveys the plot with a
+# line laser, marks the footprint on the ground and prints the building layer by layer from a paste of crushed stone and a
+# carbon binder, the way drones printed with cement in the lab (Aerial-AM, Imperial College and Empa, 2022). Big ducted
+# rotors, because the air is thin. A camera at the front (no scanner: docs/levels.md rule 8); under the body the nozzle on a
+# gimbal with the small survey laser beside it; on top the orange cartridge with the paste.
+def b_drone(p):
+    import mathutils
+    BW, BD = 0.26, 0.2
+    rbox(BW, BD, 0.1, 0.05, p['cream'], (0, 0, 0.06), seg=4)
+    rbox(BW + 0.006, BD + 0.006, 0.018, 0.05, p['orange'], (0, 0, 0.095))
+    # the cartridge with the paste, and its cap
+    cyl(0.055, 0.065, p['orange'], (0, 0.03, 0.155), bev=0.02)
+    cyl(0.058, 0.014, p['char'], (0, 0.03, 0.218), bev=0.006)
+    # the camera at the front: a dark glass eye in a teal ring
+    ball(0.032, p['char'], (0, -BD / 2 + 0.012, 0.11), seg=16)
+    torus(0.034, 0.006, p['teal'], (0, -BD / 2 + 0.006, 0.11), (math.pi / 2, 0, 0))
+    # four ducted rotors on short arms
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            c = Vector((sx * 0.215, sy * 0.19, 0.13)); R = 0.075
+            root = Vector((sx * (BW / 2 - 0.02), sy * (BD / 2 - 0.02), 0.13))
+            d = (c - root); d.z = 0; d.normalize()
+            tube([tuple(root), tuple(c - d * (R + 0.012))], 0.013, p['char'])
+            torus(R, 0.014, p['cream'], tuple(c))
+            torus(R + 0.004, 0.006, p['orange'], (c.x, c.y, c.z + 0.012))
+            # the hub hangs on a cross strut inside the duct, below the blades
+            rbox(2 * R, 0.01, 0.008, 0.003, p['char'], (c.x, c.y, c.z - 0.012), (0, 0, math.atan2(d.y, d.x)))
+            cyl(0.014, 0.022, p['char'], (c.x, c.y, c.z - 0.006), bev=0.005)
+            for a in (0.4, 0.4 + math.pi / 2):
+                rbox(0.118, 0.016, 0.004, 0.003, p['grey'], (c.x, c.y, c.z + 0.012), (0, 0, a + (0.3 if sx * sy > 0 else -0.3)))
+            light(p, (c.x + d.x * (R + 0.012), c.y + d.y * (R + 0.012), c.z + 0.016), 0.012)
+    # the print head on a gimbal under the body: the nozzle and the survey laser beside it
+    cyl(0.032, 0.02, p['char'], (0, 0, 0.04), bev=0.008)
+    ball(0.026, p['char'], (0, 0, 0.038), seg=14)
+    cyl(0.012, 0.03, p['orange'], (0, 0, 0.012), bev=0.004)
+    cyl(0.006, 0.012, p['char'], (0, 0, 0.002), bev=0.002)
+    ball(0.01, p['teal'], (0.026, -0.012, 0.024), seg=10)
+    # landing skids
+    for sx in (-1, 1):
+        rbox(0.016, 0.22, 0.012, 0.006, p['char'], (sx * 0.085, 0, 0.0))
+        for sy in (-1, 1): cyl(0.006, 0.05, p['char'], (sx * 0.085, sy * 0.07, 0.012), bev=0.002)
+
 BUILD = {'dome': b_dome, 'kitchen': b_kitchen, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': b_greenhouse,
-         'research-old': b_research_old, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': b_warehouse, 'furnace': b_furnace, 'mine': b_mine,
+         'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': b_warehouse, 'furnace': b_furnace, 'mine': b_mine,
          'pump': b_pump, 'solar': b_solar, 'batteries': b_batteries, 'geolocator': b_geolocator, 'mine-portal': b_mine_portal,
          'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20)}
 for name, fn in BUILD.items():

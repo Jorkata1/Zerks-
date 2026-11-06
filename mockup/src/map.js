@@ -14,7 +14,7 @@ import * as T from './textures.js';
 import * as K from './models.js';
 import * as B from './colony.js';
 
-const NIGHT = (location.hash || '#lvl10').endsWith('-night'); // #lvl10-night: the same map at night
+const NIGHT = (location.hash || '#lvl10').includes('-night'); // #lvl10-night: the same map at night
 const ATM = 28;
 const DPR = Number(new URLSearchParams(location.search).get('dpr') || 1);
 const W = 390, H = 844;
@@ -153,7 +153,7 @@ function futurePlot(b) {
 // (Joro, 05.11.2026), square to the street grid, so the camera sees it from its corner with the door on the left face.
 // No quarry: the mine replaced it (docs/levels.md, 03.11.2026).
 const built = {
-  '0,0': b => { add(smooth('ark-v1'), b.cx, 0.4, b.cz, 0, 0.72); },
+  '0,0': b => { add(smooth('ark-v1'), b.cx, 0.4, b.cz, 0, 0.72).name = 'ark'; },
   '1,1': b => { add(smooth('carbon-drill-v1'), b.cx, 0.4, b.cz, 0, 1.2); for (let i = 0; i < 10; i++) add(new THREE.Mesh(new THREE.DodecahedronGeometry(0.3 + rnd() * 0.25, 0), M.carbon), b.cx - 4 + rnd() * 8, 0.55, b.cz + 4 + rnd()); },
   '-1,1': b => { add(kk('pump', 8.2), b.cx, 0.4, b.cz, 0); },
   '1,-1': b => { add(kk('processor', 7.6), b.cx, 0.4, b.cz); },
@@ -168,7 +168,7 @@ const built = {
   // the silicon furnace (level 5) next to the mine, with the filter from level 6, so no smoke
   '-2,-2': b => add(noSmoke(kk('furnace', 8.8)), b.cx, 0.4, b.cz, 0),
   '2,-2': b => add(kk('warehouse', 10), b.cx, 0.4, b.cz, 0),
-  '2,2': b => add(kk('greenhouse', 10.4), b.cx, 0.4, b.cz, 0),
+  '2,2': b => { add(kk('greenhouse', 10.4), b.cx, 0.4, b.cz, 0).name = 'greenhouse'; },
   // the geolocator, the seismic station (Joro, 05.11.2026), alone at the size of the other buildings
   '-2,2': b => add(kk('geolocator', 9.4), b.cx, 0.4, b.cz, 0),
   // the panels from level 5 and 6 on their plot by the greenhouse, the batteries (level 7) on the plot next to them
@@ -197,7 +197,7 @@ for (const b of builtBlocks) {
     if ((h + side) % 3 === 0) { const [x, z] = at(0); add(B.bench(0), x, y, z, ax ? (ax > 0 ? Math.PI / 2 : -Math.PI / 2) : (az > 0 ? 0 : Math.PI)); }
   });
 }
-const echo = add(shadowAll(K.echoBot()), 6.5, 6.2, 9, -0.6, 1.25);
+const echo = add(shadowAll(K.echoBot()), 6.5, 6.2, 9, -0.6, 1.25); echo.name = 'echo';
 // zone II, which the research opens at level 10, still lies under dust
 for (const b of blocks) if (b.s < -REACH && Math.abs(b.d) <= 2) for (let k = 0; k < 2; k++) dust(b.cx - 4 + rnd() * 8, 2 + rnd() * 3, b.cz - 4 + rnd() * 8, 20 + rnd() * 8, 0xfde6d2, 0.85);
 
@@ -215,4 +215,6 @@ aim(68, 0, 0);
 renderer.render(scene, camera);
 for (const [x, z, s, c] of [[-16, 0, 8, 0x5fe3d0], [16, -16, 9, 0xffc77a], [16, 16, 8, 0xd38cff], [0, -16, 8, 0x5fe3d0], [-16, -16, 9, 0xffd58a], [0, 0, 12, 0xffd58a]]) pool(x, z, s, c, 0.35);
 window.__state = { atm: ATM, night: NIGHT };
+// #lvl10-build: the build sequence (build-seq.js, proposal 06.11.2026) on top of the same map
+if (location.hash.includes('build')) await (await import('./build-seq.js')).setup({ scene, renderer, camera, aim, gltf, NIGHT });
 window.dispatchEvent(new Event('scene-ready'));
