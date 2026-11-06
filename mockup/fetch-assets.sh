@@ -24,6 +24,9 @@ cp ../art/3d/*.glb models/
 # the round buildings of chapter 1 (Draco-compressed), used by map.html#kk20 and the other #kk states
 mkdir -p models/kk
 cp ../art/3d/buildings/*.glb models/kk/
+# the ideas, for the comparison sheets in catalog.html#set=…
+mkdir -p models/kk/ideas
+cp ../art/3d/buildings/ideas/*.glb models/kk/ideas/
 
 # Poly Haven: colour, normal and roughness maps, plus one sky
 UA='Mozilla/5.0'

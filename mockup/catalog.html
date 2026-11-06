@@ -3,7 +3,7 @@
 <title>Zerks-X6: каталог на сградите</title>
 <!-- The catalogue of the chapter-1 buildings (art/3d/buildings/catalog.jpg): every model on its plot, seen by the map camera.
      node shot-catalog.js (server on 8777) saves it to out/catalog.jpg and the phone-width #phone version to out/buildings-kk.jpg.
-     #tile=<name> shows a single tile. -->
+     #tile=<name> shows a single tile; #set=research the ideas for the research station (node shot-catalog.js research). -->
 <script type="importmap">{ "imports": { "three": "./node_modules/three/build/three.module.js", "three/addons/": "./node_modules/three/examples/jsm/" } }</script>
 <style>
   @font-face { font-family: Nunito; font-weight: 800; src: url(fonts/nunito-cyrillic-800-normal.woff2) format('woff2'); unicode-range: U+0400-045F; }
@@ -16,6 +16,7 @@
   .card div { font-size: 5.6px; padding: 3px 4px 4px; }
   body.phone { width: 390px; } body.phone h1 { font-size: 7px; padding: 6px 5px 5px; }
   body.phone #grid { grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 0 2px 4px; } body.phone .card div { font-size: 3.6px; padding: 2px 3px 3px; }
+  body.pair #grid { grid-template-columns: repeat(2, 1fr); } body.pair .card div { font-size: 5px; }
 </style></head>
 <body><h1>Zerks-X6: сградите на глава 1 (стилът, в който работим)</h1><div id="grid"></div>
 <script type="module" src="src/catalog.js"></script></body></html>

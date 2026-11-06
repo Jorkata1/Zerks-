@@ -18,8 +18,19 @@ const PHONE_TILES = [
   ['kk/warehouse', 'Склад'], ['kk/furnace', 'Силициева пещ'], ['kk/mine', 'Мина'],
   ['kk/pump', 'Помпа за вода'], ['kk/solar', 'Слънчеви панели'], ['kk/batteries', 'Батерии'], ['kk/geolocator', 'Геолокатор'],
 ];
-const PHONE = location.hash.includes('phone');
-if (PHONE) { document.body.classList.add('phone'); document.querySelector('h1').textContent = 'Сградите на глава 1 в избрания стил'; }
+// #set=<name>: ideas side by side, level 1 on the left and level 10 on the right (art/3d/buildings/ideas)
+const SETS = {
+  // k: one scale for the whole sheet (metres per Blender unit), so the level-10 building stands bigger than level 1
+  research: { title: 'Рисърч станцията: три идеи, на ниво 1 и на ниво 10', k: 3.7, tiles: [
+    ['kk/ideas/research-a-1', 'А, лаборатория с проби: ниво 1'], ['kk/ideas/research-a-10', 'А: ниво 10, втори слот и учен'],
+    ['kk/ideas/research-b-1', 'Б, обсерватория и компютри: ниво 1'], ['kk/ideas/research-b-10', 'Б: ниво 10, втори слот и учен'],
+    ['kk/ideas/research-c-1', 'В, работилница за прототипи: ниво 1'], ['kk/ideas/research-c-10', 'В: ниво 10, втори слот и учен'],
+  ] },
+};
+const SET = SETS[(location.hash.match(/set=(\w+)/) || [])[1]];
+const PHONE = location.hash.includes('phone') || !!SET;
+if (SET) document.body.classList.add('pair');
+if (PHONE) { document.body.classList.add('phone'); document.querySelector('h1').textContent = SET ? SET.title : 'Сградите на глава 1 в избрания стил'; }
 const ONE = (location.hash.match(/tile=([\w/-]+)/) || [])[1];
 const PX = 788; // one tile, drawn at twice the size it is shown
 
@@ -36,7 +47,7 @@ const EL = THREE.MathUtils.degToRad(36);
 const DIR = new THREE.Vector3(Math.cos(EL) * Math.SQRT1_2, Math.sin(EL), Math.cos(EL) * Math.SQRT1_2);
 const FOOT = 9.6, PLOT = 14, VIEW = 16; // metres: the building's footprint, the plot, the width of the picture
 
-async function tile(name) {
+async function tile(name, fixedK) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0xe9d39a);
   scene.environment = env; scene.environmentIntensity = 0.35;
@@ -58,7 +69,7 @@ async function tile(name) {
     if (clear) o.renderOrder = 2;
   });
   const b = new THREE.Box3().setFromObject(root), s = b.getSize(new THREE.Vector3()), c = b.getCenter(new THREE.Vector3());
-  const k = FOOT / Math.max(s.x, s.z);
+  const k = fixedK || FOOT / Math.max(s.x, s.z);
   root.scale.setScalar(k); root.position.set(-c.x * k, -b.min.y * k, -c.z * k); scene.add(root);
 
   const h = s.y * k, cam = new THREE.OrthographicCamera(-VIEW / 2, VIEW / 2, VIEW / 2, -VIEW / 2, 1, 600);
@@ -75,9 +86,9 @@ async function tile(name) {
 }
 
 const grid = document.getElementById('grid');
-for (const [name, label] of ONE ? TILES.filter(t => t[0] === ONE) : PHONE ? PHONE_TILES : TILES) {
+for (const [name, label] of ONE ? TILES.filter(t => t[0] === ONE) : SET ? SET.tiles : PHONE ? PHONE_TILES : TILES) {
   const card = document.createElement('div'); card.className = 'card';
-  const img = new Image(); img.src = await tile(name); await img.decode();
+  const img = new Image(); img.src = await tile(name, SET && SET.k); await img.decode();
   const cap = document.createElement('div'); cap.textContent = label;
   card.append(img, cap); grid.append(card);
 }

@@ -11,7 +11,10 @@ const path = require('path');
   fs.mkdirSync(outDir, { recursive: true });
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-proxy-server'] });
   // the catalogue at 1600 px, and the phone version (three to a row) at iPhone width
-  for (const [file, hash, width, dpr] of [['catalog.jpg', '', 800, 2], ['buildings-kk.jpg', '#phone', 390, 3]]) {
+  // node shot-catalog.js research: only the sheet of ideas for that building, out/research-ideas.jpg
+  const set = process.argv[2];
+  const jobs = set ? [[`${set}-ideas.jpg`, `#set=${set}`, 390, 3]] : [['catalog.jpg', '', 800, 2], ['buildings-kk.jpg', '#phone', 390, 3]];
+  for (const [file, hash, width, dpr] of jobs) {
     const page = await browser.newPage({ viewport: { width, height: 600 }, deviceScaleFactor: dpr });
     const errors = [];
     page.on('pageerror', e => errors.push(String(e)));
