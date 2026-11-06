@@ -109,6 +109,17 @@ def cut_half(o, zmin):
     bm.to_mesh(o.data); bm.free()
     return o
 
+def cut_below(o, z):
+    """cut a solid along the plane z and keep the top, with the caps cut in half rather than deleted
+    (cut_half drops every face that has a vertex below zmin, so a cylinder lost its end walls)"""
+    bpy.context.view_layer.update()
+    bm = bmesh.new(); bm.from_mesh(o.data)
+    mw = o.matrix_world.copy(); bm.transform(mw)
+    bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=(0, 0, z), plane_no=(0, 0, 1), clear_inner=True)
+    bm.transform(mw.inverted())
+    bm.to_mesh(o.data); bm.free()
+    return o
+
 # ---------- the 9 from the picture ----------
 def b_dome(p):
     R = 1.05
@@ -219,9 +230,9 @@ def b_greenhouse(p):
     L, R = 1.9, 0.62
     rbox(L + 0.15, 2 * R + 0.15, 0.08, 0.04, p['cream2'], (-0.35, 0, 0))
     bpy.ops.mesh.primitive_cylinder_add(vertices=56, radius=R, depth=L, location=(-0.35, 0, 0.08), rotation=(0, math.pi / 2, 0))
-    g = bpy.context.object; cut_half(g, 0.08); _done(g, p['glass'])
+    g = bpy.context.object; cut_below(g, 0.08); _done(g, p['glass'])
     for x in (-0.35 - L / 2, -0.35 + L / 2):
-        e = cyl(R, 0.015, p['glass'], (x, 0, 0.08), (0, math.pi / 2, 0), bev=0.0); cut_half(e, 0.08)
+        e = cyl(R, 0.015, p['glass'], (x, 0, 0.08 - 0.0075), (0, math.pi / 2, 0), bev=0.0); cut_below(e, 0.08)
     for k in range(8):
         x = -0.35 - L / 2 + 0.02 + k * (L - 0.04) / 7
         t = torus(R + 0.005, 0.025, p['cream'], (x, 0, 0.08), (0, math.pi / 2, 0)); cut_half(t, 0.07)
@@ -275,23 +286,27 @@ def b_warehouse(p):
     L, R = 1.7, 0.85
     rbox(L + 0.15, 2 * R + 0.15, 0.1, 0.08, p['cream2'], (0, 0, 0))
     bpy.ops.mesh.primitive_cylinder_add(vertices=56, radius=R, depth=L, location=(0, 0, 0.1), rotation=(math.pi / 2, 0, 0))
-    h = bpy.context.object; cut_half(h, 0.1); _done(h, p['cream'])
+    h = bpy.context.object; cut_below(h, 0.1); _done(h, p['cream'])
     for y, m in ((-L / 2 + 0.03, 'char'), (-0.25, 'orange'), (0.3, 'char'), (L / 2 - 0.03, 'char')):
         t = torus(R + 0.01, 0.04, p[m], (0, y, 0.1), (math.pi / 2, 0, 0)); cut_half(t, 0.09)
     # the front wall with a charcoal roll-up door in an orange frame
-    fw = cyl(R, 0.04, p['cream2'], (0, -L / 2, 0.1), (math.pi / 2, 0, 0), bev=0.0); cut_half(fw, 0.1)
+    # (cyl lifts its centre by half the depth, which a lying cylinder does not want: 0.08 + 0.02 puts it on the axis)
+    fw = cyl(R, 0.04, p['cream2'], (0, -L / 2, 0.08), (math.pi / 2, 0, 0), bev=0.0); cut_below(fw, 0.1)
     rbox(0.84, 0.06, 0.72, 0.05, p['orange'], (0, -L / 2 - 0.03, 0.1))
     rbox(0.74, 0.07, 0.66, 0.03, p['char'], (0, -L / 2 - 0.05, 0.1))
     for k in range(7): rbox(0.72, 0.02, 0.02, 0.008, p['grey'], (0, -L / 2 - 0.09, 0.16 + k * 0.08))
     light(p, (0, -L / 2 - 0.06, 0.88))
-    for y in (-0.55, -0.25): ball(0.1, p['char'], (0.0, y, R + 0.09), (1, 1, 0.55), seg=16)
-    # the crane and the container hanging from it
-    cx, cy = R + 0.35, 0.5
+    # the roof vents sit between the ribs, not under the orange one
+    for y in (-0.55, 0.025): ball(0.1, p['char'], (0.0, y, R + 0.09), (1, 1, 0.55), seg=16)
+    # the crane and the container hanging from it; the crane stands far enough out that the container
+    # clears the ribs, and the rope reaches a lifting eye on the container's lid
+    cx, cy = R + 0.4, 0.5
     cyl(0.12, 0.06, p['char'], (cx, cy, 0.0), bev=0.03)
     cyl(0.055, 1.2, p['orange'], (cx, cy, 0.05), bev=0.02)
     rbox(0.16, 0.16, 0.16, 0.04, p['char'], (cx, cy, 1.2))
     tube([(cx, cy, 1.15), (cx - 0.1, cy - 0.65, 0.95)], 0.04, p['orange'])
-    tube([(cx - 0.1, cy - 0.65, 0.95), (cx - 0.1, cy - 0.65, 0.68)], 0.008, p['char'])
+    tube([(cx - 0.1, cy - 0.65, 0.95), (cx - 0.1, cy - 0.65, 0.635)], 0.008, p['char'])
+    rbox(0.06, 0.06, 0.025, 0.01, p['char'], (cx - 0.1, cy - 0.65, 0.615))
     ox, oy = cx - 0.1, cy - 0.65
     rbox(0.42, 0.38, 0.5, 0.05, p['cream'], (ox, oy, 0.12))
     rbox(0.43, 0.39, 0.22, 0.05, p['orange'], (ox, oy, 0.12))
