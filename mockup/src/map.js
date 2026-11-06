@@ -208,7 +208,7 @@ await Promise.all(['ark-v1', 'carbon-drill-v1'].map(async n => {
 }));
 const smooth = n => { const g = new THREE.Group(); g.add(glb[n].clone(true)); return g; };
 // the soft buildings: Draco-compressed, glass stays see-through
-const KK = ['dome', 'kitchen', 'veglab', 'research', 'warehouse', 'solar', 'batteries', 'pump', 'greenhouse', 'processor', 'furnace', 'mine', 'mine-portal', 'geolocator'];
+const KK = ['home-1', 'home-10', 'home-20', 'kitchen', 'veglab', 'research', 'warehouse', 'solar', 'batteries', 'pump', 'greenhouse', 'processor', 'furnace', 'mine', 'mine-portal', 'geolocator'];
 const kkGlb = {};
 if (KIT) {
   const draco = new DRACOLoader(); draco.setDecoderPath('node_modules/three/examples/jsm/libs/draco/'); gltf.setDRACOLoader(draco);
@@ -220,6 +220,10 @@ if (KIT) {
 }
 // a soft building scaled so its footprint is `size` metres wide, standing on the plot
 const kk = (n, size = 9.6) => { const g = new THREE.Group(), m = kkGlb[n].clone(true); const b = new THREE.Box3().setFromObject(m), s = b.getSize(new THREE.Vector3()), k = size / Math.max(s.x, s.z), c = b.getCenter(new THREE.Vector3()); m.scale.setScalar(k); m.position.set(-c.x * k, -b.min.y * k, -c.z * k); g.add(m); return g; };
+// the colonists' home (idea C, Joro 06.11.2026) at one scale for all its levels, so a higher level stands bigger;
+// home-1 is the first block (4 places), home-10 the U around the winter garden, home-20 the same with the second floor
+const HOME_K = 4.3;
+const colonyHome = lvl => { const n = lvl >= 11 ? 'home-20' : lvl >= 5 ? 'home-10' : 'home-1', g = new THREE.Group(), m = kkGlb[n].clone(true); const b = new THREE.Box3().setFromObject(m), c = b.getCenter(new THREE.Vector3()); m.scale.setScalar(HOME_K); m.position.set(-c.x * HOME_K, -b.min.y * HOME_K, -c.z * HOME_K); g.add(m); return g; };
 
 // ---------- the street grid ----------
 // d = i - j runs across the screen, s = i + j along it (positive = towards the camera).
@@ -273,7 +277,7 @@ const kkBase = {
   '1,-1': b => { add(kk('processor', 7.6), b.cx, 0.4, b.cz); if (S >= 1) add(kk('processor', 4.2), b.cx + 4.0, 0.4, b.cz - 4.0); },
   '-1,-1': b => add(kk('research', 8.2), b.cx, 0.4, b.cz, 0),
   '0,2': b => add(kk('veglab', 9.6), b.cx, 0.4, b.cz, 0),
-  '0,-2': b => add(kk('dome', 9.8), b.cx, 0.4, b.cz, 0),
+  '0,-2': b => add(colonyHome(LVL10 ? 10 : S === 0 ? 6 : 20), b.cx, 0.4, b.cz, 0),
   '2,0': b => { add(kk('kitchen', 10.2), b.cx, 0.4, b.cz, 0); dust(b.cx - 1.4, 7.4, b.cz - 1.6, 2.4, 0xffffff, 0.45); },
   // the mine starts as a tunnel in the cliff and later becomes a shaft with a headframe (Joro, 05.11.2026)
   '-2,0': b => { if (S === 0) add(kk('mine-portal', 10.4), b.cx, 0.4, b.cz, 0); else add(kk('mine', 10), b.cx, 0.4, b.cz, 0); },
@@ -283,7 +287,7 @@ const kkBase = {
   '-2,2': b => { add(kk('geolocator', 6.4), b.cx, 0.4, b.cz - 2.7, 0); add(kk('solar', 6.0), b.cx + 2.8, 0.4, b.cz + 2.9, 0); add(kk('batteries', 5.0), b.cx - 3.2, 0.4, b.cz + 3.0, 0); },
 };
 const kkGrown = {
-  '0,-4': b => add(kk('dome', 9.8), b.cx, 0.2, b.cz, 0),
+  '0,-4': b => add(colonyHome(S === 1 ? 1 : 20), b.cx, 0.2, b.cz, 0),
   '-2,4': b => add(kk('greenhouse', 10.4), b.cx, 0.2, b.cz, 0),
   '1,-5': b => { add(kk('furnace', 8.8), b.cx, 0.2, b.cz, 0); for (let i = 0; i < 2; i++) dust(b.cx - 1.2 + i * 0.4, 12.5 + i * 2.2, b.cz - 1.2 - i, 3 + i * 1.6, S > 1 ? 0xffffff : 0xe8e0d8, (0.5 - i * 0.15) * (S > 1 ? 0.45 : 1)); },
   '-2,-4': b => { add(kk('solar', 6.4), b.cx - 2.6, 0.2, b.cz - 2.6, 0); add(kk('solar', 6.4), b.cx + 2.6, 0.2, b.cz - 2.6, 0); add(kk('batteries', 5.2), b.cx - 2.6, 0.2, b.cz + 2.8, 0); add(shadowAll(K.turbine(0.6)), b.cx + 3.6, 0.2, b.cz + 3.4, 0.8, 0.6); },
