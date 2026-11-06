@@ -26,6 +26,13 @@ const SETS = {
     ['kk/research-1', 'Б, обсерватория и компютри: ниво 1 (избрана)'], ['kk/research-10', 'Б: ниво 10, втори слот и учен'],
     ['kk/ideas/research-c-1', 'В, работилница за прототипи: ниво 1'], ['kk/ideas/research-c-10', 'В: ниво 10, втори слот и учен'],
   ] },
+  // the Ark (Joro, 06.11.2026): two new ideas, each from the map's corner and from the back corner, then the one we have;
+  // [name, label, metres per unit, turn]: the ideas at the scale they stand on the map, the CellCog Ark at its map scale
+  ark: { title: 'Ковчегът: две идеи, отпред и отзад, и сегашният', tiles: [
+    ['kk/ideas/ark-a', 'А, изправеният кораб: откъм камерата', 4.15, 0], ['kk/ideas/ark-a', 'А: отзад', 4.15, Math.PI],
+    ['kk/ideas/ark-b', 'Б, корабът на корема: откъм камерата', 4.15, 0], ['kk/ideas/ark-b', 'Б: отзад', 4.15, Math.PI],
+    ['ark-v1', 'Сегашният (CellCog): откъм камерата', 0.72, 0], ['ark-v1', 'Сегашният: отзад', 0.72, Math.PI],
+  ] },
 };
 const SET = SETS[(location.hash.match(/set=(\w+)/) || [])[1]];
 const PHONE = location.hash.includes('phone') || !!SET;
@@ -47,7 +54,7 @@ const EL = THREE.MathUtils.degToRad(36);
 const DIR = new THREE.Vector3(Math.cos(EL) * Math.SQRT1_2, Math.sin(EL), Math.cos(EL) * Math.SQRT1_2);
 const FOOT = 9.6, PLOT = 14, VIEW = 16; // metres: the building's footprint, the plot, the width of the picture
 
-async function tile(name, fixedK) {
+async function tile(name, fixedK, turn = 0) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0xe9d39a);
   scene.environment = env; scene.environmentIntensity = 0.35;
@@ -68,6 +75,7 @@ async function tile(name, fixedK) {
     for (const m of ms) { m.metalness = 0; if (m.transparent) { m.depthWrite = false; m.side = THREE.DoubleSide; } else m.roughness = Math.max(0.5, m.roughness ?? 0.6); }
     if (clear) o.renderOrder = 2;
   });
+  root.rotation.y = turn; root.updateMatrixWorld(true);
   const b = new THREE.Box3().setFromObject(root), s = b.getSize(new THREE.Vector3()), c = b.getCenter(new THREE.Vector3());
   const k = fixedK || FOOT / Math.max(s.x, s.z);
   root.scale.setScalar(k); root.position.set(-c.x * k, -b.min.y * k, -c.z * k); scene.add(root);
@@ -86,9 +94,9 @@ async function tile(name, fixedK) {
 }
 
 const grid = document.getElementById('grid');
-for (const [name, label] of ONE ? TILES.filter(t => t[0] === ONE) : SET ? SET.tiles : PHONE ? PHONE_TILES : TILES) {
+for (const [name, label, k, turn] of ONE ? TILES.filter(t => t[0] === ONE) : SET ? SET.tiles : PHONE ? PHONE_TILES : TILES) {
   const card = document.createElement('div'); card.className = 'card';
-  const img = new Image(); img.src = await tile(name, SET && SET.k); await img.decode();
+  const img = new Image(); img.src = await tile(name, k || (SET && SET.k), turn || 0); await img.decode();
   const cap = document.createElement('div'); cap.textContent = label;
   card.append(img, cap); grid.append(card);
 }

@@ -15,6 +15,8 @@ import * as K from './models.js';
 import * as B from './colony.js';
 
 const NIGHT = (location.hash || '#lvl10').includes('-night'); // #lvl10-night: the same map at night
+// #lvl10-ark-a, #lvl10-ark-b (also with -night): one of the two new ideas for the Ark (Joro, 06.11.2026) in place of the CellCog one
+const ARK = (location.hash.match(/ark-([ab])/) || [])[1];
 const ATM = 28;
 const DPR = Number(new URLSearchParams(location.search).get('dpr') || 1);
 const W = 390, H = 844;
@@ -112,6 +114,7 @@ await Promise.all(['ark-v1', 'carbon-drill-v1'].map(async n => {
 const smooth = n => { const g = new THREE.Group(); g.add(glb[n].clone(true)); return g; };
 // the soft buildings: Draco-compressed, glass stays see-through
 const KK = ['home-10', 'kitchen', 'veglab', 'research-1', 'warehouse', 'solar', 'batteries', 'pump', 'greenhouse', 'processor', 'furnace', 'mine', 'geolocator'];
+if (ARK) KK.push('ideas/ark-' + ARK);
 const kkGlb = {};
 const draco = new DRACOLoader(); draco.setDecoderPath('node_modules/three/examples/jsm/libs/draco/'); gltf.setDRACOLoader(draco);
 await Promise.all(KK.map(async n => {
@@ -153,7 +156,7 @@ function futurePlot(b) {
 // (Joro, 05.11.2026), square to the street grid, so the camera sees it from its corner with the door on the left face.
 // No quarry: the mine replaced it (docs/levels.md, 03.11.2026).
 const built = {
-  '0,0': b => { add(smooth('ark-v1'), b.cx, 0.4, b.cz, 0, 0.72).name = 'ark'; },
+  '0,0': b => { (ARK ? add(place('ideas/ark-' + ARK, () => 4.15), b.cx, 0.4, b.cz, 0) : add(smooth('ark-v1'), b.cx, 0.4, b.cz, 0, 0.72)).name = 'ark'; },
   '1,1': b => { add(smooth('carbon-drill-v1'), b.cx, 0.4, b.cz, 0, 1.2); for (let i = 0; i < 10; i++) add(new THREE.Mesh(new THREE.DodecahedronGeometry(0.3 + rnd() * 0.25, 0), M.carbon), b.cx - 4 + rnd() * 8, 0.55, b.cz + 4 + rnd()); },
   '-1,1': b => { add(kk('pump', 8.2), b.cx, 0.4, b.cz, 0); },
   '1,-1': b => { add(kk('processor', 7.6), b.cx, 0.4, b.cz); },
