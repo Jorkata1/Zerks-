@@ -8,13 +8,13 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 export const TILES = [
   ['ark-v1', 'Ковчегът (CellCog)'], ['carbon-drill-v1', 'Карбонова сонда (CellCog)'], ['kk/geolocator', 'Геолокатор'], ['kk/pump', 'Помпа за вода'],
   ['kk/processor', 'Атмосферен процесор'], ['kk/veglab', 'Лаборатория за зеленчуци'], ['kk/home-10', 'Дом на колонистите'], ['kk/kitchen', 'Обща кухня'],
-  ['kk/research', 'Рисърч станция'], ['kk/mine-portal', 'Мина: в началото тунел'], ['kk/mine', 'Мина: по-късно шахта'], ['kk/warehouse', 'Склад'],
+  ['kk/research-10', 'Рисърч станция'], ['kk/mine-portal', 'Мина: в началото тунел'], ['kk/mine', 'Мина: по-късно шахта'], ['kk/warehouse', 'Склад'],
   ['kk/furnace', 'Силициева пещ'], ['kk/solar', 'Слънчеви панели'], ['kk/batteries', 'Батерии'], ['kk/greenhouse', 'Оранжерия'],
 ];
 // #phone: the same tiles three to a row at phone width (mockup/screens/buildings-kk.jpg), only the buildings we made
 const PHONE_TILES = [
   ['kk/home-10', 'Дом на колонистите'], ['kk/kitchen', 'Обща кухня'], ['kk/processor', 'Атмосферен процесор'],
-  ['kk/veglab', 'Лаборатория за зеленчуци'], ['kk/greenhouse', 'Оранжерия'], ['kk/research', 'Рисърч станция'],
+  ['kk/veglab', 'Лаборатория за зеленчуци'], ['kk/greenhouse', 'Оранжерия'], ['kk/research-10', 'Рисърч станция'],
   ['kk/warehouse', 'Склад'], ['kk/furnace', 'Силициева пещ'], ['kk/mine', 'Мина'],
   ['kk/pump', 'Помпа за вода'], ['kk/solar', 'Слънчеви панели'], ['kk/batteries', 'Батерии'], ['kk/geolocator', 'Геолокатор'],
 ];
@@ -23,7 +23,7 @@ const SETS = {
   // k: one scale for the whole sheet (metres per Blender unit), so the level-10 building stands bigger than level 1
   research: { title: 'Рисърч станцията: три идеи, на ниво 1 и на ниво 10', k: 3.7, tiles: [
     ['kk/ideas/research-a-1', 'А, лаборатория с проби: ниво 1'], ['kk/ideas/research-a-10', 'А: ниво 10, втори слот и учен'],
-    ['kk/ideas/research-b-1', 'Б, обсерватория и компютри: ниво 1'], ['kk/ideas/research-b-10', 'Б: ниво 10, втори слот и учен'],
+    ['kk/research-1', 'Б, обсерватория и компютри: ниво 1 (избрана)'], ['kk/research-10', 'Б: ниво 10, втори слот и учен'],
     ['kk/ideas/research-c-1', 'В, работилница за прототипи: ниво 1'], ['kk/ideas/research-c-10', 'В: ниво 10, втори слот и учен'],
   ] },
 };

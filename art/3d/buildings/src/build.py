@@ -250,7 +250,8 @@ def b_greenhouse(p):
     vent(p, (mx, 0.1, 0.9), 0.15)
     tube([(mx - 0.3, -0.35, 0.9), (mx - 0.38, -0.35, 1.05), (mx - 0.5, -0.32, 1.12)], 0.025, p['char'])
 
-def b_research(p):
+def b_research_old(p):
+    """the first research station (05.11.2026): a rounded box with an observation turret and a dish; replaced by idea B"""
     W, D, H, R = 1.35, 1.2, 0.85, 0.24
     plinth(p, W, D, R)
     rbox(W, D, H, R, p['cream'], (0, 0, 0.1), seg=6)
@@ -876,8 +877,147 @@ def b_home(p, lvl):
             dome(0.26, p['glass'], (sx * wx, ys - 0.1, RZ + 0.06), seg=32, sz=0.7)
 
 
+# ---------- the research station's rooms; (u, v) is across the window and into the room ----------
+def frame(cx, cy, fr):
+    t, i = tangent(fr), inward(fr)
+    return lambda u, v: (cx + t[0] * u + i[0] * v, cy + t[1] * u + i[1] * v)
+
+def chair(p, at, fr, z):
+    """a small chair facing into the room (towards the desk); its back is on the window side"""
+    x, y = at; i = inward(fr)
+    cyl(0.008, 0.06, p['char'], (x, y, z), bev=0.003)
+    rbox(0.07, 0.065, 0.018, 0.008, p['orange'], (x, y, z + 0.06), (0, 0, fr), seg=2)
+    rbox(0.07, 0.016, 0.07, 0.008, p['orange'], (x - i[0] * 0.03, y - i[1] * 0.03, z + 0.075), (0, 0, fr), seg=2)
+
+def screen(p, at, fr, z, w=0.1, h=0.065):
+    """a screen on a short stand; the teal face looks out of the room, towards whoever sits at it"""
+    x, y = at; i = inward(fr)
+    cyl(0.006, 0.03, p['char'], (x, y, z), bev=0.002)
+    rbox(w, 0.012, h, 0.008, p['char'], (x, y, z + 0.025), (0, 0, fr), seg=2)
+    rbox(w - 0.014, 0.004, h - 0.014, 0.003, p['teal'], (x - i[0] * 0.007, y - i[1] * 0.007, z + 0.032), (0, 0, fr), seg=1)
+
+def desk(p, L, fr, fz, u=0.0, v=0.03, w=0.24, top=0.085):
+    """a desk with a screen and a chair: the place where someone works"""
+    rbox(w, 0.1, 0.018, 0.008, p['cream2'], (*L(u, v), fz + top), (0, 0, fr), seg=2)
+    for s in (-1, 1): rbox(0.018, 0.08, top, 0.005, p['char'], (*L(u + s * (w / 2 - 0.02), v), fz), (0, 0, fr), seg=1)
+    screen(p, L(u, v + 0.03), fr, fz + top + 0.018)
+    chair(p, L(u, v - 0.095), fr, fz)
+
+def jars(p, L, fr, z, u, v, n=3):
+    """sample jars: glass with rock, soil and a seedling inside"""
+    fill = [p['ore'], p['soil'], p['leaf'], p['rock']]
+    for k in range(n):
+        x, y = L(u + (k - (n - 1) / 2) * 0.045, v)
+        cyl(0.017, 0.035, fill[k % 4], (x, y, z), bev=0.006)
+        cyl(0.02, 0.055, p['glass'], (x, y, z), bev=0.008)
+        cyl(0.02, 0.01, p['orange'], (x, y, z + 0.055), bev=0.004)
+
+def servers(p, fr, racks=3):
+    """slot of the computer room: racks with blinking lights along the back wall, a console with two screens"""
+    def f(cx, cy, fz):
+        L = frame(cx, cy, fr)
+        for k in range(racks):
+            u = (k - (racks - 1) / 2) * 0.12
+            rbox(0.1, 0.08, 0.2, 0.015, p['char'], (*L(u, 0.06), fz), (0, 0, fr), seg=2)
+            for r in range(5):
+                rbox(0.06, 0.006, 0.008, 0.003, p['teal'] if (r + k) % 2 else p['win'], (*L(u - 0.005, 0.017), fz + 0.04 + r * 0.03), (0, 0, fr), seg=1)
+        rbox(0.22, 0.08, 0.018, 0.008, p['cream2'], (*L(0, -0.03), fz + 0.08), (0, 0, fr), seg=2)
+        for s in (-1, 1): rbox(0.018, 0.06, 0.08, 0.005, p['char'], (*L(s * 0.09, -0.03), fz), (0, 0, fr), seg=1)
+        for s in (-1, 1): screen(p, L(s * 0.055, -0.01), fr, fz + 0.098, 0.09, 0.055)
+        chair(p, L(0, -0.11), fr, fz)
+    return f
+
+def office(p, fr):
+    """the scientist's office: a desk with a screen and a chair, a shelf of sample jars on the back wall"""
+    def f(cx, cy, fz):
+        L = frame(cx, cy, fr)
+        desk(p, L, fr, fz, -0.04, 0.03)
+        rbox(0.1, 0.05, 0.012, 0.004, p['cream2'], (*L(0.13, 0.07), fz + 0.13), (0, 0, fr), seg=1)
+        for s in (-1, 1): rbox(0.01, 0.04, 0.13, 0.003, p['char'], (*L(0.13 + s * 0.045, 0.07), fz), (0, 0, fr), seg=1)
+        jars(p, L, fr, fz + 0.142, 0.13, 0.07, 2)
+        bush(p, (*L(0.14, 0.0), fz), 0.32)
+    return f
+
+def dish(p, at, r=0.3, tilt=70, turn=-55):
+    """a dish on a short mast, facing the sky, with three struts to the feed"""
+    import mathutils
+    x, y, z = at
+    cyl(0.04, 0.24, p['char'], (x, y, z), bev=0.012)
+    rot = (math.radians(tilt), 0, math.radians(turn)); c = Vector((x, y, z + 0.2 + r * 0.85))
+    d = dome(r, p['cream'], (0, 0, 0), seg=40, sz=0.3)
+    sm = d.modifiers.new('shell', 'SOLIDIFY'); sm.thickness = 0.02; _apply(d)   # a shell, so it is solid from the front too
+    d.rotation_euler = (rot[0] + math.pi, 0, rot[2]); d.location = tuple(c)
+    torus(r, 0.035, p['orange'], tuple(c), rot)
+    M = mathutils.Euler(rot).to_matrix(); hub = c + M @ Vector((0, 0, r * 0.45))
+    for k in range(3):
+        a = k * 2.094 + 0.5; rim = c + M @ Vector((math.cos(a) * r * 0.97, math.sin(a) * r * 0.97, 0))
+        tube([tuple(rim), tuple(hub)], 0.01, p['char'])
+    light(p, tuple(hub), 0.035)
+
+# ======================================================================================
+# the research station (Joro picked idea B, 06.11.2026): the observatory and the computer room. The telescope in the dome looks at the sky (the orbit, the moon, the
+#    weather); the racks in the computer room work out the projects, and the dish on its roof talks to the Ark and
+#    the orbit. The computers get warm, so a cooler with two fans sits next to the dish. At level 10 the computer room
+#    is longer with a second console and its racks (slot 2), and the scientist's office is in the drum.
+# ======================================================================================
+def b_research(p, lvl):
+    two = lvl >= 10
+    DX, DY, DR, DH = -0.48, 0.18, 0.5, 0.56
+    cyl(DR + 0.06, 0.1, p['char'], (DX, DY, 0.0), bev=0.03, verts=56)
+    drum = cyl(DR, DH, p['cream'], (DX, DY, 0.08), bev=0.05, verts=56)
+    torus(DR + 0.004, 0.024, p['orange'], (DX, DY, 0.2))
+    TZ = 0.08 + DH
+    torus(DR - 0.01, 0.03, p['char'], (DX, DY, TZ - 0.005))
+    dm = dome(DR - 0.02, p['cream'], (DX, DY, TZ - 0.005), seg=48, sz=0.92)
+    # the open shutter: a dark band from the top of the dome down its front, the telescope looking out of it
+    az = D2R(-135)   # to the front left, so the map camera sees the telescope from the side
+    band = ball(DR - 0.012, p['char'], (DX, DY, TZ - 0.005), (1, 1, 0.92), seg=48)
+    sl = cutter(0.2, DR + 0.2, DR + 0.1, (DX + math.cos(az) * (DR + 0.2) / 2, DY + math.sin(az) * (DR + 0.2) / 2, TZ + 0.02), (0, 0, az + math.pi / 2), 0.02)
+    m = band.modifiers.new('slit', 'BOOLEAN'); m.operation = 'INTERSECT'; m.object = sl; m.solver = 'EXACT'
+    from kb import _apply as _ap
+    _ap(band); bpy.data.objects.remove(sl, do_unlink=True)
+    for poly in band.data.polygons: poly.use_smooth = True
+    # the telescope leaves the dome about 0.31 along its axis, so most of the tube is out in the open slit
+    el = D2R(40); dvec = Vector((math.cos(el) * math.cos(az), math.cos(el) * math.sin(az), math.sin(el)))
+    piv = Vector((DX, DY, TZ + 0.18))
+    a, b = piv - dvec * 0.1, piv + dvec * 0.7
+    tube([tuple(a), tuple(b)], 0.08, p['cream2'])
+    tube([tuple(piv + dvec * 0.42), tuple(piv + dvec * 0.5)], 0.088, p['orange'])
+    c = piv + dvec * 0.71
+    bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=0.065, depth=0.02, location=tuple(c), rotation=Vector((0, 0, 1)).rotation_difference(dvec).to_euler())
+    _done(bpy.context.object, p['glassb'])
+    light(p, (DX + math.cos(az + 0.9) * (DR - 0.01), DY + math.sin(az + 0.9) * (DR - 0.01), TZ + 0.03), 0.026)
+    # the drum: portholes at level 1; at level 10 the scientist's office looks out of it
+    if two:
+        th = D2R(-105); fr = th + math.pi / 2
+        lit_room(p, drum, 0.36, 0.26, 0.3, DX + math.cos(th) * (DR - 0.025), DY + math.sin(th) * (DR - 0.025), 0.3, fr, office(p, fr))
+    else:
+        for k, th in enumerate((D2R(-110), D2R(-140))):
+            porthole(p, (DX + math.cos(th) * DR, DY + math.sin(th) * DR, 0.42), (math.cos(th), math.sin(th)), 0.06)
+    # the computer room in front of the drum, to the right
+    AW = 1.62 if two else 1.2
+    AX, AY, AD, AH, AR = (0.56 if two else 0.36), -0.14, 0.86, 0.66, 0.18
+    rbox(AW + 0.1, AD + 0.1, 0.1, AR + 0.05, p['char'], (AX, AY, 0.0))
+    room_box = rbox(AW, AD, AH, AR, p['cream'], (AX, AY, 0.08), seg=6)
+    slots = (AX - 0.4, AX + 0.1) if two else (AX - 0.15,)
+    for k, x in enumerate(slots):
+        lit_room(p, room_box, 0.44, 0.34, 0.32, x, AY - AD / 2 + 0.01, 0.26, 0.0, servers(p, 0.0, 3), back='char')
+    rbox(AW + 0.025, AD + 0.025, 0.045, AR, p['orange'], (AX, AY, 0.16))
+    door(p, AX + (0.48 if two else 0.25), AY - AD / 2 - 0.02, 0.0, 0.22, 0.44, 0.08)
+    RZ = 0.08 + AH
+    # on its roof: the dish that talks to the Ark and the orbit, and the cooler for the racks
+    dish(p, (AX + AW / 2 - 0.3, AY + 0.12, RZ - 0.01), 0.28, 70, -50)
+    coolers = (AX - 0.4, AX + 0.05) if two else (AX - 0.2,)
+    for x in coolers:
+        rbox(0.38, 0.24, 0.12, 0.05, p['cream2'], (x, AY + 0.08, RZ - 0.01))
+        for s in (-1, 1):
+            cyl(0.065, 0.02, p['char'], (x + s * 0.09, AY + 0.08, RZ + 0.1), bev=0.005)
+            torus(0.065, 0.012, p['orange'], (x + s * 0.09, AY + 0.08, RZ + 0.12))
+            rbox(0.1, 0.012, 0.008, 0.004, p['grey'], (x + s * 0.09, AY + 0.08, RZ + 0.12), (0, 0, D2R(30 * s)))
+        light(p, (x, AY - 0.03, RZ + 0.12), 0.02)
+
 BUILD = {'dome': b_dome, 'kitchen': b_kitchen, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': b_greenhouse,
-         'research': b_research, 'warehouse': b_warehouse, 'furnace': b_furnace, 'mine': b_mine,
+         'research-old': b_research_old, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': b_warehouse, 'furnace': b_furnace, 'mine': b_mine,
          'pump': b_pump, 'solar': b_solar, 'batteries': b_batteries, 'geolocator': b_geolocator, 'mine-portal': b_mine_portal,
          'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20)}
 for name, fn in BUILD.items():

@@ -208,7 +208,7 @@ await Promise.all(['ark-v1', 'carbon-drill-v1'].map(async n => {
 }));
 const smooth = n => { const g = new THREE.Group(); g.add(glb[n].clone(true)); return g; };
 // the soft buildings: Draco-compressed, glass stays see-through
-const KK = ['home-1', 'home-10', 'home-20', 'kitchen', 'veglab', 'research', 'warehouse', 'solar', 'batteries', 'pump', 'greenhouse', 'processor', 'furnace', 'mine', 'mine-portal', 'geolocator'];
+const KK = ['home-1', 'home-10', 'home-20', 'kitchen', 'veglab', 'research-1', 'research-10', 'warehouse', 'solar', 'batteries', 'pump', 'greenhouse', 'processor', 'furnace', 'mine', 'mine-portal', 'geolocator'];
 const kkGlb = {};
 if (KIT) {
   const draco = new DRACOLoader(); draco.setDecoderPath('node_modules/three/examples/jsm/libs/draco/'); gltf.setDRACOLoader(draco);
@@ -223,6 +223,9 @@ const kk = (n, size = 9.6) => { const g = new THREE.Group(), m = kkGlb[n].clone(
 // the colonists' home (idea C, Joro 06.11.2026) at one scale for all its levels, so a higher level stands bigger;
 // home-1 is the first block (4 places), home-10 the U around the winter garden, home-20 the same with the second floor
 const HOME_K = 4.3;
+// the research station (idea B, Joro 06.11.2026) at the same scale as the home: research-1 until the Ark is level 10,
+// research-10 after its upgrade there (the second slot and the scientist's office)
+const research = upgraded => { const n = upgraded ? 'research-10' : 'research-1', g = new THREE.Group(), m = kkGlb[n].clone(true); const b = new THREE.Box3().setFromObject(m), c = b.getCenter(new THREE.Vector3()); m.scale.setScalar(HOME_K); m.position.set(-c.x * HOME_K, -b.min.y * HOME_K, -c.z * HOME_K); g.add(m); return g; };
 const colonyHome = lvl => { const n = lvl >= 11 ? 'home-20' : lvl >= 5 ? 'home-10' : 'home-1', g = new THREE.Group(), m = kkGlb[n].clone(true); const b = new THREE.Box3().setFromObject(m), c = b.getCenter(new THREE.Vector3()); m.scale.setScalar(HOME_K); m.position.set(-c.x * HOME_K, -b.min.y * HOME_K, -c.z * HOME_K); g.add(m); return g; };
 
 // ---------- the street grid ----------
@@ -275,7 +278,8 @@ const base = {
 const kkBase = {
   '-1,1': b => { add(kk('pump', 8.2), b.cx, 0.4, b.cz, 0); },
   '1,-1': b => { add(kk('processor', 7.6), b.cx, 0.4, b.cz); if (S >= 1) add(kk('processor', 4.2), b.cx + 4.0, 0.4, b.cz - 4.0); },
-  '-1,-1': b => add(kk('research', 8.2), b.cx, 0.4, b.cz, 0),
+  // #kk20 and #lvl10 are before the upgrade (at level 10 zone II is still under dust, so the level has only begun); #kk50 is long after
+  '-1,-1': b => add(research(S >= 1), b.cx, 0.4, b.cz, 0),
   '0,2': b => add(kk('veglab', 9.6), b.cx, 0.4, b.cz, 0),
   '0,-2': b => add(colonyHome(LVL10 ? 10 : S === 0 ? 6 : 20), b.cx, 0.4, b.cz, 0),
   '2,0': b => { add(kk('kitchen', 10.2), b.cx, 0.4, b.cz, 0); dust(b.cx - 1.4, 7.4, b.cz - 1.6, 2.4, 0xffffff, 0.45); },
