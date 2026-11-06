@@ -31,87 +31,7 @@ sys.argv = [sys.argv[0], '--', OUTDIR]
 exec(compile(src, "build.py", "exec"))
 from mathutils import Vector
 
-D2R = math.radians
-
-# ---------- shared parts ----------
-def pod(p, at, fr, z, state, s=1.0):
-    """a life pod standing with its glass lid towards the window (-inward(fr)).
-    state: 'sleep' (has power, its sleeper is next: teal), 'dark' (no power yet), 'open' (the lid is open, the person is awake)"""
-    x, y = at; t, i = tangent(fr), inward(fr)
-    L = frame(x, y, fr)
-    W, D, H = 0.17 * s, 0.13 * s, 0.46 * s
-    rbox(W, D, H, 0.06 * s, p['cream'], (x, y, z), (0, 0, fr), seg=3)
-    rbox(W + 0.012, D + 0.012, 0.045 * s, 0.03 * s, p['char'], (x, y, z), (0, 0, fr), seg=2)
-    fv = -D / 2
-    inner = {'sleep': p['teal'], 'dark': p['char'], 'open': p['win']}[state]
-    rbox(W * 0.62, 0.012, H * 0.62, 0.03 * s, inner, (*L(0, fv - 0.004), z + H * 0.2), (0, 0, fr), seg=2)
-    lw, lh = W * 0.72, H * 0.7
-    if state != 'open':
-        rbox(lw, 0.016, lh, 0.035 * s, p['glass'], (*L(0, fv - 0.014), z + H * 0.16), (0, 0, fr), seg=2)
-    else:
-        # the lid has swung open on its hinge at one side, out towards the window
-        th = D2R(75)
-        hx, hy = L(lw / 2, fv - 0.014)
-        d = (-t[0] * math.cos(th) - i[0] * math.sin(th), -t[1] * math.cos(th) - i[1] * math.sin(th))
-        rbox(lw, 0.016, lh, 0.035 * s, p['glass'], (hx + d[0] * lw / 2, hy + d[1] * lw / 2, z + H * 0.16), (0, 0, math.atan2(d[1], d[0])), seg=2)
-    # the status light on top: teal = power and a sleeper, warm = open and empty, none = no power
-    if state != 'dark':
-        ball(0.018 * s, p['teal'] if state == 'sleep' else p['win'], (*L(0, fv + 0.01), z + H + 0.005), seg=10)
-
-def hatch(p, x, y, fr, w=0.4, h=0.46, z=0.1):
-    """the cargo hatch: a roll-up door in an orange frame, with a light over it"""
-    n = (math.sin(fr), -math.cos(fr)); t = tangent(fr)
-    rbox(w + 0.08, 0.06, h + 0.05, 0.04, p['orange'], (x, y, z), (0, 0, fr))
-    rbox(w, 0.08, h, 0.03, p['char'], (x, y, z), (0, 0, fr))
-    for k in range(int(h / 0.07)):
-        rbox(w - 0.03, 0.012, 0.012, 0.004, p['grey'], (x + n[0] * 0.042, y + n[1] * 0.042, z + 0.05 + k * 0.07), (0, 0, fr), seg=1)
-    light(p, (x + n[0] * 0.03 + t[0] * (w / 2 + 0.07), y + n[1] * 0.03 + t[1] * (w / 2 + 0.07), z + h + 0.02), 0.026)
-
-def container(p, at, rz=0.0, w=0.4, d=0.34, h=0.32, eye=True):
-    """a cargo container from the Ark's hold: cream with an orange lower half, charcoal ribs, a lifting eye on the lid"""
-    x, y = at
-    rbox(w, d, h, 0.05, p['cream'], (x, y, 0.0), (0, 0, rz))
-    rbox(w + 0.01, d + 0.01, h * 0.42, 0.05, p['orange'], (x, y, 0.0), (0, 0, rz))
-    for k in range(4):
-        u = -w / 2 + 0.07 + k * (w - 0.14) / 3
-        rbox(0.02, d + 0.02, h, 0.008, p['char'], (x + math.cos(rz) * u, y + math.sin(rz) * u, 0.0), (0, 0, rz), seg=1)
-    if eye:
-        torus(0.025, 0.008, p['char'], (x, y, h + 0.022), (math.pi / 2, 0, rz))
-
-def drone_at(p, at, s):
-    """the building drone (build.py, b_drone), scaled and parked at `at`"""
-    before = set(bpy.data.objects)
-    b_drone(p)
-    for o in [o for o in bpy.data.objects if o not in before]:
-        o.location = (o.location.x * s + at[0], o.location.y * s + at[1], o.location.z * s + at[2])
-        o.scale = (o.scale.x * s, o.scale.y * s, o.scale.z * s)
-
-def pad(p, at, r=0.3):
-    """the drone's pad: a dark disc with an orange ring and lights round its edge"""
-    x, y, z = at
-    cyl(r, 0.045, p['char'], (x, y, z), bev=0.015)
-    torus(r - 0.05, 0.012, p['orange'], (x, y, z + 0.045))
-    for k in range(6):
-        a = k * math.pi / 3 + 0.3
-        light(p, (x + math.cos(a) * (r - 0.015), y + math.sin(a) * (r - 0.015), z + 0.05), 0.016)
-
-def cone(r1, r2, h, m, loc, rot=(0, 0, 0), verts=40):
-    """a cone from radius r1 at the bottom to r2 at the top; loc is its centre"""
-    bpy.ops.mesh.primitive_cone_add(vertices=verts, radius1=r1, radius2=r2, depth=h, location=loc, rotation=rot)
-    o = bpy.context.object
-    bv = o.modifiers.new('b', 'BEVEL'); bv.width = min(0.02, h / 4); bv.segments = 3; bv.limit_method = 'ANGLE'; bv.angle_limit = D2R(30)
-    _apply(o)
-    return _done(o, m)
-
-def radiator(p, a, r0, r1, z0, z1, mounts):
-    """a radiator panel standing out from a round hull along the direction a (radians), on its coolant pipes:
-    a plain cream panel with an orange outer edge and the charcoal manifold along the inner edge"""
-    rc = (r0 + r1) / 2; c, s_ = math.cos(a), math.sin(a)
-    rbox(r1 - r0, 0.03, z1 - z0, 0.015, p['cream'], (c * rc, s_ * rc, z0), (0, 0, a), seg=2)
-    rbox(0.035, 0.045, z1 - z0, 0.015, p['orange'], (c * (r1 - 0.012), s_ * (r1 - 0.012), z0), (0, 0, a), seg=2)
-    cyl(0.022, z1 - z0 - 0.04, p['char'], (c * (r0 + 0.01), s_ * (r0 + 0.01), z0 + 0.02), bev=0.008)
-    for (zm, rh) in mounts:
-        tube([(c * rh, s_ * rh, zm), (c * (r0 + 0.01), s_ * (r0 + 0.01), zm)], 0.022, p['char'])
+# the shared parts (pod, hatch, container, drone_at, pad, cone, radiator, deck, join_all, export_light) live in build.py with the Ark
 
 # ======================================================================================
 # A: the ship that stands (Joro liked it, 06.11.2026, and wants it bigger and plainly a rescue ship)
@@ -120,25 +40,6 @@ def radiator(p, a, r0, r1, z0, z1, mounts):
 #    many pods. On the two decks you see 24 pods; at level 10 ten people are awake (ten pods open) and the eleventh
 #    pod has power (it glows), the other 13 are still dark, as docs/levels.md has it.
 # ======================================================================================
-def deck(p, R, z0, z1, states):
-    """a pod deck: a glass ring with the pods round a column that brings them power and cold"""
-    cyl(R - 0.02, 0.03, p['floor'], (0, 0, z0), bev=0.005, verts=64)
-    bpy.ops.mesh.primitive_cylinder_add(vertices=80, radius=R, depth=z1 - z0, location=(0, 0, (z0 + z1) / 2), end_fill_type='NOTHING')
-    _done(bpy.context.object, p['glass'])
-    for zr in (z0, z1):
-        torus(R + 0.005, 0.032, p['char'], (0, 0, zr))
-    n = len(states)
-    for k in range(n):
-        a = 2 * math.pi * (k + 0.5) / n
-        rbox(0.032, 0.032, z1 - z0, 0.012, p['char'], (math.cos(a) * R, math.sin(a) * R, z0), (0, 0, a), seg=1)
-    cyl(0.2, z1 - z0 - 0.03, p['cream2'], (0, 0, z0 + 0.03), bev=0.03)
-    for zr in (z0 + 0.2, z0 + 0.42):
-        torus(0.205, 0.013, p['teal'], (0, 0, zr))
-    torus(R * 0.62, 0.012, p['lampw'], (0, 0, z1 - 0.03))
-    for k, st in enumerate(states):
-        ar = 2 * math.pi * k / n
-        pod(p, (math.cos(ar) * R * 0.65, math.sin(ar) * R * 0.65), ar + math.pi / 2, z0 + 0.03, st)
-
 def ark_a(p):
     R = 0.8
     Z_SKIRT, Z_HULL, Z_D1, Z_MID, Z_D2, Z_UP, Z_NOSE = 0.5, 0.85, 2.0, 2.65, 2.85, 3.5, 4.1
@@ -373,22 +274,6 @@ def ark_b(p):
     tube([(kx, 1.2, Z1 + 0.18), (kx, 1.2, 0.36)], 0.008, p['char'])
     container(p, (kx, 1.2), 0.0, 0.4, 0.34, 0.32)
     container(p, (-0.45, 1.15), -0.1, 0.4, 0.34, 0.32, eye=False)
-
-def join_all():
-    """one mesh with a part per material, so the file stays light (npx gltf-transform is not needed)"""
-    bpy.ops.object.select_all(action='DESELECT')
-    meshes = [o for o in bpy.data.objects if o.type == 'MESH']
-    for o in meshes: o.select_set(True)
-    bpy.context.view_layer.objects.active = meshes[0]
-    bpy.ops.object.join()
-
-def export_light(path):
-    """like kb.export, without texture coordinates (nothing here has a texture) and with positions to about a millimetre"""
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    bpy.ops.object.select_all(action='SELECT')
-    bpy.ops.export_scene.gltf(filepath=path, export_format='GLB', export_apply=True, export_yup=True, use_selection=False,
-                              export_texcoords=False, export_draco_mesh_compression_enable=True,
-                              export_draco_mesh_compression_level=7, export_draco_position_quantization=12)
 
 IDEAS = [('ark-a', ark_a), ('ark-b', ark_b)]
 for name, fn in IDEAS:

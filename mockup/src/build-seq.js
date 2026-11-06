@@ -30,7 +30,12 @@ export async function setup({ scene, renderer, camera, aim, gltf, NIGHT }) {
   const box = new THREE.Box3().setFromObject(target), c = box.getCenter(new THREE.Vector3()), size = box.getSize(new THREE.Vector3());
   const y0 = box.min.y, y1 = box.max.y, K = target.children[0].scale.x;
   const arkBox = ark ? new THREE.Box3().setFromObject(ark) : new THREE.Box3(new THREE.Vector3(-2, 0, -2), new THREE.Vector3(2, 4, 2));
-  const home = new THREE.Vector3((arkBox.min.x + arkBox.max.x) / 2, arkBox.max.y + 0.6, (arkBox.min.z + arkBox.max.z) / 2);
+  // the drone lives on the Ark's balcony (art/3d/buildings/ark.glb marks its pad 'drone_pad'); the parked one is hidden,
+  // because this one flies out from there. An Ark without the pad sends it from the top, as before.
+  const padNode = ark && ark.getObjectByName('drone_pad'), parked = ark && ark.getObjectByName('parked_drone');
+  if (parked) parked.visible = false;
+  const home = padNode ? padNode.getWorldPosition(new THREE.Vector3())
+    : new THREE.Vector3((arkBox.min.x + arkBox.max.x) / 2, arkBox.max.y + 0.6, (arkBox.min.z + arkBox.max.z) / 2);
 
   // ---------- the building as it is printed: the walls below h, the hot fresh layer at h, the glass later ----------
   const below = new THREE.Plane(new THREE.Vector3(0, -1, 0), y0), bandLo = new THREE.Plane(new THREE.Vector3(0, 1, 0), -y0), bandHi = new THREE.Plane(new THREE.Vector3(0, -1, 0), y0);

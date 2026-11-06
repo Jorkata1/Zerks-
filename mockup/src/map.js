@@ -90,7 +90,7 @@ function colonist(stripe) {
   return shadowAll(g);
 }
 const suits = [0x6fb7ff, 0x9a7cff, 0x33c5a2, 0xff8b3d, 0xff5d8a, 0xffc65c];
-function people(cx, cz, n) { for (let i = 0; i < n; i++) { const side = rnd() < 0.5, t = (rnd() - 0.5) * 12, o = (rnd() < 0.5 ? -1 : 1) * 6.7; add(colonist(pick(suits)), cx + (side ? o : t), 0.15, cz + (side ? t : o), rnd() * 6, 1.25); } }
+function people(cx, cz, n, off = 6.7) { for (let i = 0; i < n; i++) { const side = rnd() < 0.5, t = (rnd() - 0.5) * 12, o = (rnd() < 0.5 ? -1 : 1) * off; add(colonist(pick(suits)), cx + (side ? o : t), 0.15, cz + (side ? t : o), rnd() * 6, 1.25); } }
 
 // ---------- the soft glow, dust and smoke sprites ----------
 const cloudT = T.cloudTex();
@@ -113,7 +113,7 @@ await Promise.all(['ark-v1', 'carbon-drill-v1'].map(async n => {
 }));
 const smooth = n => { const g = new THREE.Group(); g.add(glb[n].clone(true)); return g; };
 // the soft buildings: Draco-compressed, glass stays see-through
-const KK = ['home-10', 'kitchen', 'veglab', 'research-1', 'warehouse', 'solar', 'batteries', 'pump', 'greenhouse', 'processor', 'furnace', 'mine', 'geolocator'];
+const KK = ['ark', 'home-10', 'kitchen', 'veglab', 'research-1', 'warehouse', 'solar', 'batteries', 'pump', 'greenhouse', 'processor', 'furnace', 'mine', 'geolocator'];
 if (ARK) KK.push('ideas/ark-' + ARK);
 const kkGlb = {};
 const draco = new DRACOLoader(); draco.setDecoderPath('node_modules/three/examples/jsm/libs/draco/'); gltf.setDRACOLoader(draco);
@@ -133,13 +133,18 @@ const noSmoke = g => { g.traverse(o => { if (o.isMesh && o.material?.name === 's
 // ---------- the street grid ----------
 // d = i - j runs across the screen, s = i + j along it (positive = towards the camera).
 const PITCH = 16;
-const REACH = 3; // zone I at level 10: how far along the canyon the colony has grown
+// zone I at level 10: how far along the canyon the colony has grown, back (towards zone II) and front. Since the Ark
+// took four plots (Joro, 06.11.2026) zone I reaches one row further to the front, so the buildings it moved have room.
+const REACH = 3, FRONT = 4;
 const blocks = [];
 for (let i = -7; i <= 7; i++) for (let j = -7; j <= 7; j++) {
   const d = i - j, s = i + j;
   if (Math.abs(d) > 3 || Math.abs(s) > 10) continue;
-  blocks.push({ d, s, cx: i * PITCH, cz: j * PITCH, built: Math.abs(d) <= 2 && Math.abs(s) <= REACH });
+  blocks.push({ d, s, cx: i * PITCH, cz: j * PITCH, built: Math.abs(d) <= 2 && s >= -REACH && s <= FRONT });
 }
+// the Ark stands on a plot of 2x2 in the middle (Joro, 06.11.2026): the four blocks with i, j in {-1, 0}, without the
+// streets between them, so it is 28 m across; its centre is (-8, -8), straight up the screen from the old one
+const ARK_PLOTS = new Set(['0,-2', '-1,-1', '1,-1', '0,0']), ARK_AT = [-8, -8], ARK_HALF = 13.8;
 const padMat = flat(C.pad), edgeMat = flat(C.padEdge), roadMat = flat(LOOK.road);
 function plot(b) {
   // the street around the block, the pavement edge, and the plot itself
@@ -156,15 +161,15 @@ function futurePlot(b) {
 // (Joro, 05.11.2026), square to the street grid, so the camera sees it from its corner with the door on the left face.
 // No quarry: the mine replaced it (docs/levels.md, 03.11.2026).
 const built = {
-  '0,0': b => { (ARK ? add(place('ideas/ark-' + ARK, () => 4.15), b.cx, 0.4, b.cz, 0) : add(smooth('ark-v1'), b.cx, 0.4, b.cz, 0, 0.72)).name = 'ark'; },
   '1,1': b => { add(smooth('carbon-drill-v1'), b.cx, 0.4, b.cz, 0, 1.2); for (let i = 0; i < 10; i++) add(new THREE.Mesh(new THREE.DodecahedronGeometry(0.3 + rnd() * 0.25, 0), M.carbon), b.cx - 4 + rnd() * 8, 0.55, b.cz + 4 + rnd()); },
   '-1,1': b => { add(kk('pump', 8.2), b.cx, 0.4, b.cz, 0); },
-  '1,-1': b => { add(kk('processor', 7.6), b.cx, 0.4, b.cz); },
+  // the processor, the research station and the home moved when the Ark took the middle (06.11.2026)
+  '0,4': b => { add(kk('processor', 7.6), b.cx, 0.4, b.cz); },
   // the research station (idea B, Joro 06.11.2026) before its upgrade: zone II is still under dust, so level 10 has only begun
-  '-1,-1': b => add(atScale('research-1'), b.cx, 0.4, b.cz, 0),
+  '-1,-3': b => add(atScale('research-1'), b.cx, 0.4, b.cz, 0),
   '0,2': b => add(kk('veglab', 9.6), b.cx, 0.4, b.cz, 0),
-  // the colonists' home (idea C, Joro 06.11.2026) at level 10: the U around the winter garden
-  '0,-2': b => add(atScale('home-10'), b.cx, 0.4, b.cz, 0),
+  // the colonists' home (idea C, Joro 06.11.2026) at level 10: the U around the winter garden, next to the Ark
+  '1,-3': b => add(atScale('home-10'), b.cx, 0.4, b.cz, 0),
   '2,0': b => { add(kk('kitchen', 10.2), b.cx, 0.4, b.cz, 0); dust(b.cx - 1.4, 7.4, b.cz - 1.6, 2.4, 0xffffff, 0.45); },
   // the mine is level 10 and has become the shaft (the level of the change is a proposal)
   '-2,0': b => add(kk('mine', 10), b.cx, 0.4, b.cz, 0),
@@ -180,6 +185,8 @@ const built = {
 };
 const builtBlocks = [];
 for (const b of blocks) {
+  // the Ark's four blocks: only the streets round them here, the plot and the ship below
+  if (ARK_PLOTS.has(`${b.d},${b.s}`)) { add(rb(PITCH, 0.1, PITCH, roadMat, 0.05, 1), b.cx, 0.03, b.cz); continue; }
   const fill = built[`${b.d},${b.s}`];
   if (b.built && fill) { plot(b); fill(b); builtBlocks.push(b); continue; }
   // the plots of zone I that are still empty show their outlines
@@ -187,15 +194,30 @@ for (const b of blocks) {
   // outside the colony: bare rock on the dusty planet
   for (let i = 0; i < 6; i++) rock(b.cx - 6 + rnd() * 12, b.cz - 6 + rnd() * 12, 0.6 + rnd() * 1.4);
 }
+{
+  const [x, z] = ARK_AT;
+  add(rb(2 * ARK_HALF + 0.8, 0.36, 2 * ARK_HALF + 0.8, edgeMat, 0.5), x, 0.12, z);
+  add(rb(2 * ARK_HALF, 0.36, 2 * ARK_HALF, padMat, 0.45), x, 0.22, z);
+  // the Ark: idea A (Joro, 06.11.2026), made bigger for its plot of 2x2; #lvl10-ark-a / -ark-b show the two ideas
+  add(ARK ? place('ideas/ark-' + ARK, () => 4.15) : place('ark', () => 4.15), x, 0.4, z, 0).name = 'ark';
+  builtBlocks.unshift({ d: 0, s: -1, cx: x, cz: z, half: ARK_HALF + 0.15 });
+}
 // ten are awake and most of them work inside, so only a few walk outside
 let outside = 5;
-for (const b of builtBlocks) { people(b.cx, b.cz, outside-- > 0 ? 1 : 0); pool(b.cx, b.cz, 13, 0xffd9a0, 0.22); }
+for (const b of builtBlocks) { people(b.cx, b.cz, outside-- > 0 ? 1 : 0, b.half ? b.half + 0.75 : 6.7); pool(b.cx, b.cz, b.half ? 30 : 13, 0xffd9a0, 0.22); }
 // lamps on the corners; the air is still thin, so the plants live under glass; a bench in the middle of some sides
 for (const b of builtBlocks) {
-  const e = 5.95, y = 0.4, h = Math.abs(b.d * 3 + b.s);
+  const e = b.half || 5.95, y = 0.4, h = Math.abs(b.d * 3 + b.s);
   for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) { add(B.lamp(0), b.cx + sx * e, y, b.cz + sz * e); pool(b.cx + sx * e, b.cz + sz * e, 7); }
   [[0, 1], [1, 0], [0, -1], [-1, 0]].forEach(([ax, az], side) => {
     const at = t => [b.cx + (ax ? ax * e : t), b.cz + (az ? az * e : t)];
+    if (b.half) {
+      // the Ark's big plot: a lamp in the middle of each side, planters along it, benches beside the lamp
+      { const [x, z] = at(0); add(B.lamp(0), x, y, z); pool(x, z, 7); }
+      for (const t of [-10.2, -6.8, 6.8, 10.2]) { const [x, z] = at(t); add(B.planter(0), x, y, z); }
+      for (const t of [-3.4, 3.4]) { const [x, z] = at(t); add(B.bench(0), x, y, z, ax ? (ax > 0 ? Math.PI / 2 : -Math.PI / 2) : (az > 0 ? 0 : Math.PI)); }
+      return;
+    }
     for (const t of [-3.4, 3.4]) if ((h + side) % 2 === 0) { const [x, z] = at(t); add(B.planter(0), x, y, z); }
     if ((h + side) % 3 === 0) { const [x, z] = at(0); add(B.bench(0), x, y, z, ax ? (ax > 0 ? Math.PI / 2 : -Math.PI / 2) : (az > 0 ? 0 : Math.PI)); }
   });
@@ -212,11 +234,11 @@ function aim(view, x, z) { // view = metres across the screen width
   Object.assign(camera, { left: -view / 2, right: view / 2, top: view / 2 * H / W, bottom: -view / 2 * H / W }); camera.updateProjectionMatrix();
   camera.position.set(x, 0, z).addScaledVector(DIR, 300); camera.lookAt(x, 0, z);
 }
-// the close-ups: __aim(38, -13, 11) the left half, (38, 11, -13) the right half, (20, -16, -16) the home
+// the close-ups: __aim(46, -6.5, 10.5) the left half, (46, 10.5, -6.5) the right half (both with the whole Ark), (20, -16, -32) the home, (40, -10, -10) the Ark
 window.__aim = (view, x, z) => { aim(view, x, z); renderer.render(scene, camera); };
 aim(68, 0, 0);
 renderer.render(scene, camera);
-for (const [x, z, s, c] of [[-16, 0, 8, 0x5fe3d0], [16, -16, 9, 0xffc77a], [16, 16, 8, 0xd38cff], [0, -16, 8, 0x5fe3d0], [-16, -16, 9, 0xffd58a], [0, 0, 12, 0xffd58a]]) pool(x, z, s, c, 0.35);
+for (const [x, z, s, c] of [[-32, -16, 8, 0x5fe3d0], [16, -16, 9, 0xffc77a], [16, 16, 8, 0xd38cff], [32, 32, 8, 0x5fe3d0], [-16, -32, 9, 0xffd58a], [-8, -8, 22, 0xffd58a]]) pool(x, z, s, c, 0.35);
 window.__state = { atm: ATM, night: NIGHT };
 // #lvl10-build: the build sequence (build-seq.js, proposal 06.11.2026) on top of the same map
 if (location.hash.includes('build')) await (await import('./build-seq.js')).setup({ scene, renderer, camera, aim, gltf, NIGHT });

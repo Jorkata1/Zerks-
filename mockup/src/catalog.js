@@ -6,14 +6,14 @@ import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 export const TILES = [
-  ['ark-v1', 'Ковчегът (CellCog)'], ['carbon-drill-v1', 'Карбонова сонда (CellCog)'], ['kk/geolocator', 'Геолокатор'], ['kk/pump', 'Помпа за вода'],
+  ['kk/ark', 'Ковчегът'], ['carbon-drill-v1', 'Карбонова сонда (CellCog)'], ['kk/geolocator', 'Геолокатор'], ['kk/pump', 'Помпа за вода'],
   ['kk/processor', 'Атмосферен процесор'], ['kk/veglab', 'Лаборатория за зеленчуци'], ['kk/home-10', 'Дом на колонистите'], ['kk/kitchen', 'Обща кухня'],
   ['kk/research-10', 'Рисърч станция'], ['kk/mine-portal', 'Мина: в началото тунел'], ['kk/mine', 'Мина: по-късно шахта'], ['kk/warehouse', 'Склад'],
   ['kk/furnace', 'Силициева пещ'], ['kk/solar', 'Слънчеви панели'], ['kk/batteries', 'Батерии'], ['kk/greenhouse', 'Оранжерия'],
 ];
 // #phone: the same tiles three to a row at phone width (mockup/screens/buildings-kk.jpg), only the buildings we made
 const PHONE_TILES = [
-  ['kk/home-10', 'Дом на колонистите'], ['kk/kitchen', 'Обща кухня'], ['kk/processor', 'Атмосферен процесор'],
+  ['kk/ark', 'Ковчегът'], ['kk/home-10', 'Дом на колонистите'], ['kk/kitchen', 'Обща кухня'], ['kk/processor', 'Атмосферен процесор'],
   ['kk/veglab', 'Лаборатория за зеленчуци'], ['kk/greenhouse', 'Оранжерия'], ['kk/research-10', 'Рисърч станция'],
   ['kk/warehouse', 'Склад'], ['kk/furnace', 'Силициева пещ'], ['kk/mine', 'Мина'],
   ['kk/pump', 'Помпа за вода'], ['kk/solar', 'Слънчеви панели'], ['kk/batteries', 'Батерии'], ['kk/geolocator', 'Геолокатор'],
