@@ -25,7 +25,7 @@
 | `batteries.glb` | Батерии | Четири изправени клетки с ленти за заряда, общ кабел, контролна кутия |
 | `greenhouse.glb` | Оранжерия | Стъклена арка с ребра, затворена със стъкло и в двата края, вътре лехи с растения; сервизен модул с врата, прозорче и отдушник |
 
-Всички са в `mockup/map.html#kk20` (и `#kk50`, `#kk85`, `#kk20-night`); кадрите са в `mockup/screens` (`buildings-kk`, `map-kk-*`, `mine-kk`, `mine-portal-kk`).
+На картата са в `mockup/map.html#lvl10` (и `#lvl10-night`); кадрите са в `mockup/screens` (`buildings-kk`, `map-lvl10*`, `mine-kk`, `mine-portal-kk`).
 
 ## Идеите за геолокатора
 
