@@ -29,7 +29,7 @@ const SETS = {
   // the Ark (Joro, 06.11.2026): two new ideas, each from the map's corner and from the back corner, then the one we have;
   // [name, label, metres per unit, turn]: the ideas at the scale they stand on the map, the CellCog Ark at its map scale
   ark: { title: 'Ковчегът: две идеи, отпред и отзад, и сегашният', tiles: [
-    ['kk/ideas/ark-a', 'А, изправеният кораб: откъм камерата', 4.15, 0], ['kk/ideas/ark-a', 'А: отзад', 4.15, Math.PI],
+    ['kk/ideas/ark-a', 'А, изправеният кораб, по-голям: откъм камерата', 4.15, 0], ['kk/ideas/ark-a', 'А: отзад', 4.15, Math.PI],
     ['kk/ideas/ark-b', 'Б, корабът на корема: откъм камерата', 4.15, 0], ['kk/ideas/ark-b', 'Б: отзад', 4.15, Math.PI],
     ['ark-v1', 'Сегашният (CellCog): откъм камерата', 0.72, 0], ['ark-v1', 'Сегашният: отзад', 0.72, Math.PI],
   ] },

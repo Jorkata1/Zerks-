@@ -9,9 +9,10 @@
 #     teal (it has power and its sleeper is next), the rest are dark (no power yet);
 #   - the reactor's radiators: a reactor has to give its heat away, and in thin air that is done by big flat panels;
 #   - the way out for people, the cargo hatch with a crane and the containers, the pad with the drone.
-#   A  the ship that stands: it landed upright on four legs and its engines, like a lander. The pods are in a glass ring
-#      in the middle, a lift takes people down, a crane on the other side lowers the containers, two radiators stand out
-#      to the sides; the drone has a balcony with a small hatch high on the hull.
+#   A  the ship that stands: it landed upright on four legs, like a lander. The pods are on two decks of glass rings,
+#      a lift takes people down, a crane on the other side lowers the containers, two radiators stand out to the sides;
+#      the drone has a balcony with a small hatch high on the hull. Made bigger and plainly a rescue ship (Joro):
+#      the orange top of a lifeboat with reflective tape and a beacon, searchlights round the bridge, about 21 m high.
 #   B  the ship that lies: a lifting body that came down on its belly like a glider, on six short legs. The belly is the
 #      dark heat shield, the cockpit is a glass canopy on the nose, the pods are in a row behind a long window and a
 #      ramp folds down from the airlock. On the roof the bay stands open: the radiators are on the inner faces of its
@@ -113,86 +114,126 @@ def radiator(p, a, r0, r1, z0, z1, mounts):
         tube([(c * rh, s_ * rh, zm), (c * (r0 + 0.01), s_ * (r0 + 0.01), zm)], 0.022, p['char'])
 
 # ======================================================================================
-# A: the ship that stands
+# A: the ship that stands (Joro liked it, 06.11.2026, and wants it bigger and plainly a rescue ship)
+#    It is wider and has two pod decks, so it stands about 21 m high. What makes it read as a rescue ship: the orange
+#    top, like the canopy of a lifeboat, the beacon on it, the searchlights that light the ground round it, and the
+#    many pods. On the two decks you see 24 pods; at level 10 ten people are awake (ten pods open) and the eleventh
+#    pod has power (it glows), the other 13 are still dark, as docs/levels.md has it.
 # ======================================================================================
+def deck(p, R, z0, z1, states):
+    """a pod deck: a glass ring with the pods round a column that brings them power and cold"""
+    cyl(R - 0.02, 0.03, p['floor'], (0, 0, z0), bev=0.005, verts=64)
+    bpy.ops.mesh.primitive_cylinder_add(vertices=80, radius=R, depth=z1 - z0, location=(0, 0, (z0 + z1) / 2), end_fill_type='NOTHING')
+    _done(bpy.context.object, p['glass'])
+    for zr in (z0, z1):
+        torus(R + 0.005, 0.032, p['char'], (0, 0, zr))
+    n = len(states)
+    for k in range(n):
+        a = 2 * math.pi * (k + 0.5) / n
+        rbox(0.032, 0.032, z1 - z0, 0.012, p['char'], (math.cos(a) * R, math.sin(a) * R, z0), (0, 0, a), seg=1)
+    cyl(0.2, z1 - z0 - 0.03, p['cream2'], (0, 0, z0 + 0.03), bev=0.03)
+    for zr in (z0 + 0.2, z0 + 0.42):
+        torus(0.205, 0.013, p['teal'], (0, 0, zr))
+    torus(R * 0.62, 0.012, p['lampw'], (0, 0, z1 - 0.03))
+    for k, st in enumerate(states):
+        ar = 2 * math.pi * k / n
+        pod(p, (math.cos(ar) * R * 0.65, math.sin(ar) * R * 0.65), ar + math.pi / 2, z0 + 0.03, st)
+
 def ark_a(p):
-    R = 0.62
-    Z_SKIRT, Z_HULL, Z_PODS, Z_UP, Z_NOSE = 0.5, 0.78, 1.8, 2.45, 3.05
+    R = 0.8
+    Z_SKIRT, Z_HULL, Z_D1, Z_MID, Z_D2, Z_UP, Z_NOSE = 0.5, 0.85, 2.0, 2.65, 2.85, 3.5, 4.1
+    beacon = mat('beacon', '#ff6a3a', 0.3, emit='#ff4a1a', strength=3.0)
     # the engines under the skirt, the skirt (dark: the base of the ship), four landing legs between the doors
-    for a in (90, 210, 330):
-        cone(0.12, 0.06, 0.26, p['char'], (math.cos(D2R(a)) * 0.25, math.sin(D2R(a)) * 0.25, 0.37))
-    cone(0.5, R + 0.015, Z_HULL - Z_SKIRT + 0.02, p['char'], (0, 0, (Z_SKIRT + Z_HULL + 0.02) / 2), verts=64)
+    for a in (0, 90, 180, 270):
+        cone(0.15, 0.08, 0.28, p['char'], (math.cos(D2R(a)) * 0.34, math.sin(D2R(a)) * 0.34, 0.36))
+    cone(0.66, R + 0.015, Z_HULL - Z_SKIRT + 0.02, p['char'], (0, 0, (Z_SKIRT + Z_HULL + 0.02) / 2), verts=72)
     for a in (45, 135, 225, 315):
         c, s_ = math.cos(D2R(a)), math.sin(D2R(a))
-        top, foot = Vector((c * 0.55, s_ * 0.55, 0.62)), Vector((c * 0.9, s_ * 0.9, 0.09))
-        tube([tuple(top), tuple(foot)], 0.038, p['char'])
-        tube([tuple(top.lerp(foot, 0.35)), tuple(top.lerp(foot, 0.62))], 0.052, p['orange'])
-        ball(0.055, p['char'], tuple(foot), seg=14)
-        cyl(0.12, 0.05, p['char'], (foot.x, foot.y, 0.0), bev=0.02)
+        top, foot = Vector((c * 0.72, s_ * 0.72, 0.68)), Vector((c * 1.15, s_ * 1.15, 0.1))
+        tube([tuple(top), tuple(foot)], 0.05, p['char'])
+        tube([tuple(top.lerp(foot, 0.33)), tuple(top.lerp(foot, 0.6))], 0.068, p['orange'])
+        ball(0.07, p['char'], tuple(foot), seg=14)
+        cyl(0.15, 0.06, p['char'], (foot.x, foot.y, 0.0), bev=0.025)
     # the lower hull: the reactor, the airlock and the hold
-    cyl(R, Z_PODS - Z_HULL, p['cream'], (0, 0, Z_HULL), bev=0.04, verts=64)
-    cyl(R + 0.012, 0.05, p['orange'], (0, 0, 1.56), bev=0.01, verts=64)
-    door(p, 0.0, -R + 0.01, 0.0, w=0.3, h=0.5, z=0.86)
-    rbox(0.36, 0.1, 0.03, 0.01, p['char'], (0.0, -R - 0.04, 0.83))
-    hatch(p, R - 0.01, 0.0, math.pi / 2, w=0.38, h=0.46, z=0.86)
-    for a in (300, 330, 120, 150, 60, 200):
+    cyl(R, Z_D1 - Z_HULL, p['cream'], (0, 0, Z_HULL), bev=0.04, verts=72)
+    cyl(R + 0.012, 0.06, p['orange'], (0, 0, 1.86), bev=0.012, verts=72)
+    door(p, 0.0, -R + 0.01, 0.0, w=0.34, h=0.56, z=0.92)
+    rbox(0.4, 0.1, 0.03, 0.01, p['char'], (0.0, -R - 0.04, 0.89))
+    hatch(p, R - 0.01, 0.0, math.pi / 2, w=0.44, h=0.5, z=0.92)
+    for a in (300, 330, 120, 150, 60, 200, 250, 20):
         c, s_ = math.cos(D2R(a)), math.sin(D2R(a))
-        porthole(p, (c * R, s_ * R, 1.22), (c, s_), r=0.055)
+        porthole(p, (c * R, s_ * R, 1.62), (c, s_), r=0.06)
     # the lift: two rails up the hull, the cage down on the ground, the hoist on top
     for sx in (-1, 1):
-        cyl(0.025, 1.62, p['char'], (sx * 0.24, -0.71, 0.0), bev=0.01)
-        for zb in (0.95, 1.45):
-            rbox(0.04, 0.16, 0.04, 0.015, p['char'], (sx * 0.24, -0.645, zb), seg=2)
-    rbox(0.58, 0.12, 0.1, 0.03, p['char'], (0.0, -0.72, 1.6))
-    light(p, (0.0, -0.785, 1.66), 0.022)
-    rbox(0.44, 0.36, 0.04, 0.02, p['cream2'], (0.0, -0.9, 0.0), seg=2)
+        cyl(0.028, 1.72, p['char'], (sx * 0.27, -R - 0.09, 0.0), bev=0.01)
+        for zb in (1.0, 1.55):
+            rbox(0.045, 0.17, 0.045, 0.015, p['char'], (sx * 0.27, -R - 0.03, zb), seg=2)
+    rbox(0.64, 0.13, 0.11, 0.03, p['char'], (0.0, -R - 0.1, 1.68))
+    light(p, (0.0, -R - 0.17, 1.75), 0.024)
+    rbox(0.5, 0.4, 0.045, 0.02, p['cream2'], (0.0, -R - 0.31, 0.0), seg=2)
     for sx in (-1, 1):
-        side = sx * 0.2
-        tube([(side, -0.74, 0.3), (side, -1.06, 0.3), (sx * 0.08, -1.06, 0.3)], 0.014, p['orange'])
-        for py in (-0.74, -1.06):
-            cyl(0.012, 0.27, p['char'], (side, py, 0.04), bev=0.004)
+        side = sx * 0.23
+        tube([(side, -R - 0.13, 0.33), (side, -R - 0.49, 0.33), (sx * 0.09, -R - 0.49, 0.33)], 0.015, p['orange'])
+        for py in (-R - 0.13, -R - 0.49):
+            cyl(0.013, 0.29, p['char'], (side, py, 0.045), bev=0.004)
     # the radiators of the reactor, out to the two sides
     for a in (45, 225):
-        radiator(p, D2R(a), 0.74, 1.18, 0.95, 1.75, [(1.05, 0.76), (1.45, 0.76)])
+        radiator(p, D2R(a), 0.94, 1.42, 1.0, 1.85, [(1.1, 0.96), (1.6, 0.96)])
     # the crane over the cargo hatch, a container on its hook, another one set down beside it
-    rbox(0.14, 0.14, 0.1, 0.03, p['char'], (R + 0.02, 0.0, 1.42))
-    tube([(R + 0.06, 0.0, 1.47), (0.88, 0.0, 1.68), (1.3, 0.0, 1.68)], 0.035, p['orange'])
-    rbox(0.08, 0.08, 0.06, 0.02, p['char'], (1.3, 0.0, 1.62))
-    tube([(1.3, 0.0, 1.62), (1.3, 0.0, 0.36)], 0.008, p['char'])
-    container(p, (1.3, 0.0), 0.0, 0.38, 0.34, 0.32)
-    container(p, (1.27, 0.5), 0.12, 0.38, 0.34, 0.32, eye=False)
-    # the pod deck: a glass ring, the pods round a column that brings them power and cold
-    cyl(R - 0.02, 0.03, p['floor'], (0, 0, Z_PODS), bev=0.005, verts=64)
-    bpy.ops.mesh.primitive_cylinder_add(vertices=72, radius=R, depth=Z_UP - Z_PODS, location=(0, 0, (Z_PODS + Z_UP) / 2), end_fill_type='NOTHING')
-    _done(bpy.context.object, p['glass'])
-    for zr in (Z_PODS, Z_UP):
-        torus(R + 0.005, 0.03, p['char'], (0, 0, zr))
+    rbox(0.15, 0.15, 0.11, 0.03, p['char'], (R + 0.02, 0.0, 1.58))
+    tube([(R + 0.06, 0.0, 1.64), (1.08, 0.0, 1.88), (1.5, 0.0, 1.88)], 0.038, p['orange'])
+    rbox(0.09, 0.09, 0.06, 0.02, p['char'], (1.5, 0.0, 1.82))
+    tube([(1.5, 0.0, 1.82), (1.5, 0.0, 0.38)], 0.009, p['char'])
+    container(p, (1.5, 0.0), 0.0, 0.4, 0.36, 0.34)
+    container(p, (1.44, 0.56), 0.12, 0.4, 0.36, 0.34, eye=False)
+    # two pod decks with a ring of hull between them: 24 pods you can see, 10 open, 1 with power, 13 dark
+    deck(p, R, Z_D1, Z_MID, ['open', 'open', 'dark', 'dark', 'open', 'dark', 'open', 'open', 'open', 'open', 'open', 'sleep'])
+    cyl(R, Z_D2 - Z_MID, p['cream'], (0, 0, Z_MID), bev=0.0, verts=72)
+    deck(p, R, Z_D2, Z_UP, ['dark', 'dark', 'dark', 'open', 'dark', 'dark', 'dark', 'dark', 'dark', 'dark', 'open', 'dark'])
+    # the upper hull: the bridge with its round windows, the searchlights that light the ground round the ship
+    cyl(R, Z_NOSE - Z_UP, p['cream'], (0, 0, Z_UP), bev=0.0, verts=72)
     for k in range(8):
-        a = D2R(k * 45 + 22.5)
-        rbox(0.032, 0.032, Z_UP - Z_PODS, 0.012, p['char'], (math.cos(a) * R, math.sin(a) * R, Z_PODS), (0, 0, a), seg=1)
-    cyl(0.12, Z_UP - Z_PODS - 0.03, p['cream2'], (0, 0, Z_PODS + 0.03), bev=0.02)
-    for zr in (2.0, 2.2):
-        torus(0.125, 0.012, p['teal'], (0, 0, zr))
-    torus(0.26, 0.012, p['lampw'], (0, 0, Z_UP - 0.03))
-    states = {0: 'open', 45: 'dark', 90: 'dark', 135: 'dark', 180: 'dark', 225: 'open', 270: 'open', 315: 'sleep'}
-    for a, st in states.items():
-        ar = D2R(a)
-        pod(p, (math.cos(ar) * 0.38, math.sin(ar) * 0.38), ar + math.pi / 2, Z_PODS + 0.03, st)
-    # the upper hull with the bridge's round windows, the nose with the antenna
-    cyl(R, Z_NOSE - Z_UP, p['cream'], (0, 0, Z_UP), bev=0.0, verts=64)
-    for a in (270, 300, 330, 0, 180, 90, 135):
-        c, s_ = math.cos(D2R(a)), math.sin(D2R(a))
-        porthole(p, (c * R, s_ * R, 2.78), (c, s_), r=0.065)
-    dome(R, p['cream'], (0, 0, Z_NOSE), seg=48, sz=1.0)
-    cyl(0.07, 0.06, p['cream2'], (0, 0, Z_NOSE + R - 0.03), bev=0.02)
-    cyl(0.012, 0.3, p['char'], (0, 0, Z_NOSE + R + 0.02), bev=0.004)
-    light(p, (0, 0, Z_NOSE + R + 0.33), 0.022)
+        a = D2R(k * 45); c, s_ = math.cos(a), math.sin(a)
+        if k == 5: continue                      # the drone's hatch is here
+        porthole(p, (c * R, s_ * R, 3.76), (c, s_), r=0.07)
+    for a in (22.5, 112.5, 202.5, 292.5):
+        # a searchlight on a short arm, tilted down to light the ground round the ship
+        ar = D2R(a); c, s_ = math.cos(ar), math.sin(ar)
+        tube([(c * (R - 0.01), s_ * (R - 0.01), 4.0), (c * (R + 0.08), s_ * (R + 0.08), 4.0)], 0.018, p['char'])
+        tilt = D2R(35)
+        d = Vector((c * math.cos(tilt), s_ * math.cos(tilt), -math.sin(tilt)))
+        q = d.to_track_quat('Z', 'Y').to_euler()
+        hc = Vector((c * (R + 0.13), s_ * (R + 0.13), 3.97))
+        bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=0.06, depth=0.12, location=tuple(hc), rotation=q)
+        _done(bpy.context.object, p['cream2'])
+        bpy.ops.mesh.primitive_torus_add(major_radius=0.06, minor_radius=0.012, major_segments=24, minor_segments=8, location=tuple(hc + d * 0.06), rotation=q)
+        _done(bpy.context.object, p['orange'])
+        bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=0.05, depth=0.01, location=tuple(hc + d * 0.062), rotation=q)
+        _done(bpy.context.object, p['lampw'])
+    # the orange top, like the canopy of a lifeboat, with the beacon and the antenna
+    dome(R, p['orange'], (0, 0, Z_NOSE), seg=56, sz=0.95)
+    torus(R + 0.004, 0.03, p['char'], (0, 0, Z_NOSE + 0.01))
+    tape = mat('reflective', '#ffffff', 0.25)
+    for k in range(8):
+        az, el = D2R(k * 45 + 22.5), D2R(38)
+        n = Vector((math.cos(az) * math.cos(el), math.sin(az) * math.cos(el), math.sin(el)))
+        pt = Vector((n.x * R, n.y * R, Z_NOSE + n.z * R * 0.95))
+        q = n.to_track_quat('Z', 'Y').to_euler()
+        rbox(0.07, 0.17, 0.014, 0.006, tape, tuple(pt - n * 0.004), tuple(q), seg=1)
+    TOPZ = Z_NOSE + R * 0.95
+    cyl(0.1, 0.05, p['cream2'], (0, 0, TOPZ - 0.03), bev=0.02)
+    ball(0.045, beacon, (0, 0, TOPZ + 0.07), seg=16)
+    dome(0.07, p['glass'], (0, 0, TOPZ + 0.02), seg=20, sz=1.3)
+    mx, my = math.cos(D2R(150)) * 0.5, math.sin(D2R(150)) * 0.5
+    mz = Z_NOSE + R * 0.95 * math.sqrt(1 - (0.5 / R) ** 2)
+    cyl(0.013, 0.38, p['char'], (mx, my, mz - 0.03), bev=0.004)
+    light(p, (mx, my, mz + 0.36), 0.022)
     # the drone's balcony on the upper hull, with the small hatch it goes in by (for paste and charge)
     a = D2R(225); c, s_ = math.cos(a), math.sin(a)
-    rbox(0.34, 0.12, 0.06, 0.02, p['char'], (c * 0.72, s_ * 0.72, 2.56), (0, 0, a), seg=2)
-    pad(p, (c * 0.9, s_ * 0.9, 2.6), 0.26)
-    drone_at(p, (c * 0.9, s_ * 0.9, 2.645), 0.7)
-    door(p, c * (R - 0.01), s_ * (R - 0.01), a + math.pi / 2, w=0.2, h=0.22, z=2.68)
+    rbox(0.36, 0.13, 0.06, 0.02, p['char'], (c * (R + 0.1), s_ * (R + 0.1), 3.56), (0, 0, a), seg=2)
+    pad(p, (c * (R + 0.3), s_ * (R + 0.3), 3.6), 0.28)
+    drone_at(p, (c * (R + 0.3), s_ * (R + 0.3), 3.645), 0.75)
+    door(p, c * (R - 0.01), s_ * (R - 0.01), a + math.pi / 2, w=0.22, h=0.24, z=3.68)
 
 # ======================================================================================
 # B: the ship that lies on its belly
