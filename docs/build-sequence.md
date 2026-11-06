@@ -83,7 +83,7 @@ Build · Pick a building. ECHO shows its spot. · Greenhouse · Builds in 30m ·
 
 - `map.html#lvl10-build` е картата на ниво 10 със строежа; `window.__buildAt(t)` показва момента t в секунди.
 - `node shot-build.js 2,3.8,6.5` прави неподвижни кадри в `out/build-<t>.png` (нощем: `node shot-build.js 14 night`).
-- `node clip-build.js` прави клипа в `out/build-clip.mp4` (нужен е ffmpeg); копие е в `screens/build-clip.mp4`.
+- `node clip-build.js` прави клипа в `out/build-clip.mp4` (нужен е ffmpeg); копие е в `screens/build-clip.mp4`. Сегашното копие е направено с `node clip-build.js 30 day 2`, в 2× размер на екрана (780×1688): с новия Ковчег 3× отнема над час и половина при софтуерното рендериране (06.11.2026).
 - Кодът е в `src/build-seq.js`; картата само го зарежда.
 
 ## Източници
