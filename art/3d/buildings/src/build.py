@@ -355,35 +355,63 @@ def b_research_old(p):
         tube([tuple(rim), tuple(hub)], 0.012, p['char'])
     light(p, tuple(hub), 0.045)
 
-def b_warehouse(p):
-    L, R = 1.7, 0.85
-    rbox(L + 0.15, 2 * R + 0.15, 0.1, 0.08, p['cream2'], (0, 0, 0))
-    bpy.ops.mesh.primitive_cylinder_add(vertices=56, radius=R, depth=L, location=(0, 0, 0.1), rotation=(math.pi / 2, 0, 0))
+def b_warehouse(p, lvl=10):
+    """the store (level 4, docs/levels.md) at its level 1, 10 and 20: 1 000, about 20 000 and about 68 000 of each
+    resource, so it grows plainly: level 1 a short hangar with its roll-up door and the crane with one container on its
+    rope; level 10 a longer hangar and a stack of containers by the crane; level 20 a longer one still, a second door at
+    the side, a taller crane and more stacks"""
+    L = {1: 1.1, 10: 1.7, 20: 2.4}[lvl]; R = 0.85
+    X = -0.25 if lvl >= 20 else 0.0                  # at level 20 the hangar moves left, to leave room for the stacks
+    rbox(L + 0.15, 2 * R + 0.15, 0.1, 0.08, p['cream2'], (X, 0, 0))
+    bpy.ops.mesh.primitive_cylinder_add(vertices=56, radius=R, depth=L, location=(X, 0, 0.1), rotation=(math.pi / 2, 0, 0))
     h = bpy.context.object; cut_below(h, 0.1); _done(h, p['cream'])
-    for y, m in ((-L / 2 + 0.03, 'char'), (-0.25, 'orange'), (0.3, 'char'), (L / 2 - 0.03, 'char')):
-        t = torus(R + 0.01, 0.04, p[m], (0, y, 0.1), (math.pi / 2, 0, 0)); cut_half(t, 0.09)
+    nin = {1: 1, 10: 2, 20: 3}[lvl]
+    ribs = [(-L / 2 + 0.03, 'char'), (L / 2 - 0.03, 'char')] + [(-L / 2 + (k + 1) * L / (nin + 1), 'orange' if k == 0 else 'char') for k in range(nin)]
+    for y, m in ribs:
+        t = torus(R + 0.01, 0.04, p[m], (X, y, 0.1), (math.pi / 2, 0, 0)); cut_half(t, 0.09)
     # the front wall with a charcoal roll-up door in an orange frame
-    # (cyl lifts its centre by half the depth, which a lying cylinder does not want: 0.08 + 0.02 puts it on the axis)
-    fw = cyl(R, 0.04, p['cream2'], (0, -L / 2, 0.08), (math.pi / 2, 0, 0), bev=0.0); cut_below(fw, 0.1)
-    rbox(0.84, 0.06, 0.72, 0.05, p['orange'], (0, -L / 2 - 0.03, 0.1))
-    rbox(0.74, 0.07, 0.66, 0.03, p['char'], (0, -L / 2 - 0.05, 0.1))
-    for k in range(7): rbox(0.72, 0.02, 0.02, 0.008, p['grey'], (0, -L / 2 - 0.09, 0.16 + k * 0.08))
-    light(p, (0, -L / 2 - 0.06, 0.88))
-    # the roof vents sit between the ribs, not under the orange one
-    for y in (-0.55, 0.025): ball(0.1, p['char'], (0.0, y, R + 0.09), (1, 1, 0.55), seg=16)
-    # the crane and the container hanging from it; the crane stands far enough out that the container
-    # clears the ribs, and the rope reaches a lifting eye on the container's lid
-    cx, cy = R + 0.4, 0.5
+    fw = cyl(R, 0.04, p['cream2'], (X, -L / 2, 0.08), (math.pi / 2, 0, 0), bev=0.0); cut_below(fw, 0.1)
+    rbox(0.84, 0.06, 0.72, 0.05, p['orange'], (X, -L / 2 - 0.03, 0.1))
+    rbox(0.74, 0.07, 0.66, 0.03, p['char'], (X, -L / 2 - 0.05, 0.1))
+    for k in range(7): rbox(0.72, 0.02, 0.02, 0.008, p['grey'], (X, -L / 2 - 0.09, 0.16 + k * 0.08))
+    light(p, (X, -L / 2 - 0.06, 0.88))
+    # the roof vents between the ribs
+    ys = sorted(y for y, _ in ribs)
+    for a, b in zip(ys, ys[1:]): ball(0.1, p['char'], (X, (a + b) / 2, R + 0.09), (1, 1, 0.55), seg=16)
+    if lvl >= 20:
+        # a second door on the left side, for the carts: a small vestibule out of the curved wall, the door on its face
+        vx = X - R - 0.02
+        rbox(0.34, 0.56, 0.62, 0.08, p['cream'], (vx, 0.45, 0.1))
+        rbox(0.36, 0.58, 0.03, 0.08, p['orange'], (vx, 0.45, 0.6))
+        rbox(0.06, 0.4, 0.46, 0.03, p['orange'], (vx - 0.17, 0.45, 0.1))
+        rbox(0.07, 0.32, 0.42, 0.02, p['char'], (vx - 0.19, 0.45, 0.1))
+        light(p, (vx - 0.18, 0.45 + 0.24, 0.6), 0.02)
+    # the crane and the container hanging from it; the crane stands far enough out that the container clears the ribs
+    CH = 1.2 if lvl < 20 else 1.5
+    cx, cy = X + R + 0.4, (0.35 if lvl >= 20 else min(0.5, L / 2 - 0.05))
     cyl(0.12, 0.06, p['char'], (cx, cy, 0.0), bev=0.03)
-    cyl(0.055, 1.2, p['orange'], (cx, cy, 0.05), bev=0.02)
-    rbox(0.16, 0.16, 0.16, 0.04, p['char'], (cx, cy, 1.2))
-    tube([(cx, cy, 1.15), (cx - 0.1, cy - 0.65, 0.95)], 0.04, p['orange'])
-    tube([(cx - 0.1, cy - 0.65, 0.95), (cx - 0.1, cy - 0.65, 0.635)], 0.008, p['char'])
+    cyl(0.055, CH, p['orange'], (cx, cy, 0.05), bev=0.02)
+    rbox(0.16, 0.16, 0.16, 0.04, p['char'], (cx, cy, CH))
+    jz = CH - 0.25
+    tube([(cx, cy, CH - 0.05), (cx - 0.1, cy - 0.65, jz)], 0.04, p['orange'])
+    tube([(cx - 0.1, cy - 0.65, jz), (cx - 0.1, cy - 0.65, 0.635)], 0.008, p['char'])
     rbox(0.06, 0.06, 0.025, 0.01, p['char'], (cx - 0.1, cy - 0.65, 0.615))
     ox, oy = cx - 0.1, cy - 0.65
     rbox(0.42, 0.38, 0.5, 0.05, p['cream'], (ox, oy, 0.12))
     rbox(0.43, 0.39, 0.22, 0.05, p['orange'], (ox, oy, 0.12))
     for k in range(4): rbox(0.02, 0.4, 0.5, 0.008, p['char'], (ox - 0.15 + k * 0.1, oy, 0.12))
+    # the stacks of containers by the crane, behind the hanging one
+    def stack(x, y, n):
+        for k in range(n):
+            before = set(bpy.data.objects)
+            container(p, (x, y), math.pi / 2, 0.4, 0.34, 0.32, eye=(k == n - 1))
+            for o in bpy.data.objects:
+                if o not in before: o.location.z += k * 0.32
+    if lvl >= 10:
+        stack(cx + 0.05, cy + 0.42, 2)
+    if lvl >= 20:
+        stack(cx + 0.05, cy + 0.88, 2)
+        stack(cx + 0.05, cy - 1.1, 3)
 
 def b_furnace(p):
     R = 0.62
@@ -2308,7 +2336,7 @@ def b_ark(p, dish_state='folded'):
 
 BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open'),
          'arkdish-folded': lambda p: b_arkdish(p, 'folded'), 'arkdish-open': lambda p: b_arkdish(p, 'open'), 'dome': b_dome, 'kitchen': lambda p: b_kitchen(p, 10), **{f'kitchen-{l}': (lambda l: lambda p: b_kitchen(p, l))(l) for l in (1, 10, 20)}, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': lambda p: b_greenhouse(p, 10), **{f'greenhouse-{l}': (lambda l: lambda p: b_greenhouse(p, l))(l) for l in (1, 10, 20)},
-         'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': b_warehouse, 'furnace': b_furnace, 'mine': b_mine,
+         'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': lambda p: b_warehouse(p, 10), **{f'warehouse-{l}': (lambda l: lambda p: b_warehouse(p, l))(l) for l in (1, 10, 20)}, 'furnace': b_furnace, 'mine': b_mine,
          'pump': b_pump, 'solar': lambda p: b_solar(p, 10), **{f'solar-{l}': (lambda l: lambda p: b_solar(p, l))(l) for l in (1, 10, 20)}, 'batteries': b_batteries, 'geolocator': b_geolocator, 'mine-portal': b_mine_portal,
          'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover, 'drill': lambda p: b_drill(p, 10), **{f'drill-{l}': (lambda l: lambda p: b_drill(p, l))(l) for l in (1, 10, 20)}, 'smelter': b_smelter, 'claypit': b_claypit, 'brickkiln': b_brickkiln, 'copperworks': b_copperworks,
          **{f'brickhome-{l}': (lambda l: lambda p: b_brickhome(p, l))(l) for l in (1, 10, 20)},
