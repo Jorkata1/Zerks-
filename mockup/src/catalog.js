@@ -18,11 +18,12 @@ const PHONE_TILES = [
   ['kk/warehouse', 'Склад'], ['kk/furnace', 'Силициева пещ'], ['kk/mine', 'Мина'],
   ['kk/pump', 'Помпа за вода'], ['kk/solar', 'Слънчеви панели'], ['kk/batteries', 'Батерии'], ['kk/geolocator', 'Геолокатор'],
 ];
-function views(m, title, k, right, left, extra = []) {
+// sideEl: the side views of a model dug into the ground are taken from 22 degrees, so the ground hides the block under it
+function views(m, title, k, right, left, extra = [], sideEl = 4) {
   return { title, k, tiles: [
     [m, 'Откъм камерата на картата', 0, 0], [m, 'Отзад', 0, Math.PI],
-    [m, 'Отгоре', 0, Math.PI / 4, 88], [m, 'Отпред', 0, Math.PI / 4, 4],
-    [m, `Отдясно (${right})`, 0, -Math.PI / 4, 4], [m, `Отляво (${left})`, 0, 3 * Math.PI / 4, 4], ...extra,
+    [m, 'Отгоре', 0, Math.PI / 4, 88], [m, 'Отпред', 0, Math.PI / 4, sideEl],
+    [m, `Отдясно (${right})`, 0, -Math.PI / 4, sideEl], [m, `Отляво (${left})`, 0, 3 * Math.PI / 4, sideEl], ...extra,
   ] };
 }
 // #set=<name>: ideas side by side, level 1 on the left and level 10 on the right (art/3d/buildings/ideas)
@@ -48,7 +49,7 @@ const SETS = {
     ['kk/dock-2', 'Етап 2 (ниво 14, 500): седем ребра', 0, 0], ['kk/dock-3', 'Етап 3 (ниво 17, 1 000): всички ребра, носът, долните надлъжни греди', 0, 0],
     ['kk/ark+kk/dock-1@2.32,-1.82', 'На парцела на Ковчега (етап 1), в мащаба на картата', 4.15, 0, 36, 28],
     ['kk/ark+kk/dock-4@2.32,-1.82', 'На парцела на Ковчега отгоре: кранът и мястото за частите', 4.15, 0, 88, 28]]),
-  claypit: views('kk/claypit', 'Глиненият изкоп: откъм картата, отзад, отгоре и от три страни', 5.4, 'багерът', 'скатът и навесът'),
+  claypit: views('kk/claypit', 'Глиненият изкоп: откъм картата, отзад, отгоре и от три страни (отстрани под 22°)', 5.4, 'рампата', 'навесът', [], 22),
   smelter: views('kk/smelter', 'Топилнята: откъм картата, отзад, отгоре и от три страни', 5.2, 'мачтата и трансформаторът', 'бункерът и лентата',
     [['kk/smelter', 'Топилнята в мащаба на картата', 4.15, 0], ['kk/furnace', 'Силициевата пещ, до която стои, в същия мащаб', 4.15, 0]]),
 };
@@ -59,7 +60,7 @@ if (PHONE) { document.body.classList.add('phone'); document.querySelector('h1').
 const ONE = (location.hash.match(/tile=([\w/-]+)/) || [])[1];
 const PX = 788; // one tile, drawn at twice the size it is shown
 
-const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, stencil: true });
 renderer.setPixelRatio(1); renderer.setSize(PX, PX);
 renderer.toneMapping = THREE.NeutralToneMapping; renderer.toneMappingExposure = 0.95;
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -92,16 +93,27 @@ async function tile(name, fixedK, turn = 0, el = 36, fit = false) {
     if (at) { const [x, y] = at.split(',').map(Number); m.position.set(x, 0, -y); }
     root.add(m);
   }
+  // a model dug into the ground (the clay pit) marks its opening with the material 'hole': it is not drawn, it only
+  // keeps the plot from covering the pit (stencil)
+  let dug = false;
   root.traverse(o => {
     if (!o.isMesh) return;
+    if (o.material && o.material.name === 'hole') {
+      o.material = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false, stencilWrite: true, stencilRef: 1,
+        stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp });
+      o.renderOrder = -1; o.castShadow = false; o.receiveShadow = false; dug = true; return;
+    }
     const ms = Array.isArray(o.material) ? o.material : [o.material], clear = ms.some(m => m.transparent);
     o.castShadow = !clear; o.receiveShadow = true;
     for (const m of ms) { m.metalness = 0; if (m.transparent) { m.depthWrite = false; m.side = THREE.DoubleSide; } else m.roughness = Math.max(0.5, m.roughness ?? 0.6); }
     if (clear) o.renderOrder = 2;
   });
+  // the ground runs to the edge of the picture, as on the map, so the dug block stays under it
+  if (dug) { Object.assign(plot.material, { stencilWrite: true, stencilRef: 1, stencilFunc: THREE.NotEqualStencilFunc, stencilZPass: THREE.KeepStencilOp }); plot.scale.set(4, 1, 4); }
   root.rotation.y = turn; root.updateMatrixWorld(true);
   const b = new THREE.Box3().setFromObject(root), s = b.getSize(new THREE.Vector3()), c = b.getCenter(new THREE.Vector3());
   const k = fixedK || FOOT / Math.max(s.x, s.z);
+  if (dug) { b.min.y = 0; s.y = b.max.y; }                 // dug in: keep its ground at the plot, not its floor
   root.scale.setScalar(k); root.position.set(-c.x * k, -b.min.y * k, -c.z * k); scene.add(root);
 
   // fit = the side of the first model's plot in metres (28 for the Ark's 2x2), drawn round its origin

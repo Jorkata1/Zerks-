@@ -1251,14 +1251,18 @@ def b_smelter(p):
     light(p, (CX - 0.18, CY + 0.08, 0.06 + CH + 0.01), 0.022)
 
 # ======================================================================================
-# the clay pit (level 13, docs/levels.md): on the shore of the ice in the Ice Hollow, a geologist works it. A clay quarry:
-#    a bank of clay layers, its face dug back in terraces (the ice is the map's, not the model's: Joro, 11.11.2026); a small electric excavator on tracks digs
-#    from the terrace (the geologist drives it from the lit cab), swings and tips the clay into the hopper; a belt carries
-#    it under the awning, where it waits in a heap and as blocks on a pallet for the brick kiln (level 15, next door).
-#    A survey stake with an orange flag marks the layer on top of the bank. Nothing grows outside yet (chapter 3).
+# the clay pit (level 13, docs/levels.md): on the shore of the ice in the Ice Hollow, a geologist works it. A clay quarry
+#    dug down into the ground (Joro, 11.11.2026: a pit goes down, not up): a bench half way down and the floor about 2 m
+#    deep, so the layers show in the walls: the red regolith on top, then light and dark clay. A ramp down the right side,
+#    the way the excavator came. On the floor the small electric excavator digs at the back wall (the geologist drives it
+#    from the lit cab) and tips the clay into the hopper; a belt carries it up and over the rim to the awning on the
+#    ground, where it waits in a heap and as blocks on a pallet for the brick kiln (level 15, next door). Water from the
+#    ice seeps into a corner of the floor, and a small pump sends it out by a hose. A stake with an orange flag on the
+#    rim marks the layer. The model reaches 0.6 below the ground; a flat mesh with the material 'hole' marks the opening,
+#    so the map can cut its ground there (catalog.js does it with the stencil). The ice is the map's (Joro, 11.11.2026).
 # ======================================================================================
-def excavator(p, at, yaw):
-    """the small electric excavator, built facing +y at the origin, then turned by yaw and set at `at`;
+def excavator(p, at, yaw, z=0.0):
+    """the small electric excavator, built facing +y at the origin, then turned by yaw and set at `at` (on ground z);
     returns the bucket's place (local 0, 0.47)"""
     before = set(bpy.data.objects)
     for sx in (-1, 1):                                              # the tracks with their rollers
@@ -1291,7 +1295,7 @@ def excavator(p, at, yaw):
     sm = bk.modifiers.new('shell', 'SOLIDIFY'); sm.thickness = 0.008; _apply(bk)
     ball(0.04, p['clay'], (-0.03, 0.47, 0.235), (1, 0.9, 0.6), seg=12)
     import mathutils
-    R = mathutils.Matrix.Translation((at[0], at[1], 0)) @ mathutils.Matrix.Rotation(yaw, 4, 'Z')
+    R = mathutils.Matrix.Translation((at[0], at[1], z)) @ mathutils.Matrix.Rotation(yaw, 4, 'Z')
     for o in [o for o in bpy.data.objects if o not in before]:
         o.matrix_world = R @ o.matrix_world
         bpy.context.view_layer.objects.active = o; bpy.ops.object.select_all(action='DESELECT'); o.select_set(True)
@@ -1299,59 +1303,77 @@ def excavator(p, at, yaw):
     return R @ Vector((-0.03, 0.47, 0.24))
 
 def b_claypit(p):
-    # the bank: a round mound of clay layers at the back left, red regolith on top; on the side of the excavator it is
-    #    dug back: a terrace half way up and the pit floor at the ground, so the layers show in the faces
-    MC, MR = Vector((-0.38, 0.42, 0.0)), (0.86, 0.56, 0.6)
-    bands = ((0.0, 0.17, 'clay'), (0.17, 0.33, 'clay2'), (0.33, 0.47, 'clay'), (0.47, 0.7, 'rock2'))
-    def keep(o, lo, hi, op, r=0.0):
-        if r: c = rbox(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2], r, None, ((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, lo[2]), seg=4)
-        else:
-            bpy.ops.mesh.primitive_cube_add(size=1, location=((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2))
-            c = bpy.context.object; c.scale = (hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]); bpy.ops.object.transform_apply(scale=True)
-        m = o.modifiers.new('k', 'BOOLEAN'); m.operation = op; m.object = c; m.solver = 'EXACT'
-        _apply(o); bpy.data.objects.remove(c, do_unlink=True)
-    for z0, z1, mk in bands:
-        o = ball(1.0, p[mk], tuple(MC), MR, seg=48)
-        keep(o, (-2, -2, z0), (2, 2, z1), 'INTERSECT')
-        keep(o, (-0.16, -2, 0.2), (2, 0.6, 2), 'DIFFERENCE', 0.05)    # the terrace, 0.2 up, its edges rounded
-        keep(o, (0.08, -2, -0.1), (2, 0.38, 2), 'DIFFERENCE', 0.05)   # the pit floor
+    import mathutils
+    # the ground block in layers, from the surface down
+    layers = ((-0.08, -0.003, 'rock'), (-0.2, -0.08, 'clay'), (-0.33, -0.2, 'clay2'), (-0.45, -0.33, 'clay'), (-0.6, -0.45, 'clay2'))
+    OX, OY, OW, OD = 0.05, 0.1, 1.8, 1.3                    # the opening
+    FX_, FY_, FW, FD = 0.0, 0.22, 1.25, 0.85                # the floor
+    BZ, FZ = -0.22, -0.45                                    # the bench and the floor
+    # the ramp down the right side: from the ground at y = -0.95 to the floor at y = 0.6
+    RX0, RX1, RY0, RY1 = 0.62, 0.92, -0.95, 0.6
+    th = math.atan2(-FZ, RY1 - RY0); L = math.hypot(RY1 - RY0, FZ); RH = 0.7
+    mid = Vector(((RX0 + RX1) / 2, (RY0 + RY1) / 2, FZ / 2))
+    up = Vector((0, math.sin(th), math.cos(th)))
+    def cutter_box(w, d, h, loc, rot=(0, 0, 0), r=0.06):
+        return rbox(w, d, h, r, None, loc, rot, seg=4)
+    # the block reaches only 0.1 past the pit and the head of the ramp: the map's ground covers the rest
+    gx0, gx1, gy0, gy1 = OX - OW / 2 - 0.1, max(OX + OW / 2, RX1) + 0.1, RY0 - 0.1, OY + OD / 2 + 0.1
+    for z0, z1, mk in layers:
+        o = rbox(gx1 - gx0, gy1 - gy0, z1 - z0, 0.0001, p[mk], ((gx0 + gx1) / 2, (gy0 + gy1) / 2, z0), seg=1)
+        for c in (cutter_box(OW, OD, 0.6, (OX, OY, BZ)),                       # down to the bench
+                  cutter_box(FW, FD, 0.9, (FX_, FY_, FZ)),                     # down to the floor
+                  cutter_box(RX1 - RX0, L + 0.2, RH, tuple(mid + up * RH / 2 - Vector((0, 0, RH / 2))), (-th, 0, 0), 0.04)):
+            m = o.modifiers.new('c', 'BOOLEAN'); m.operation = 'DIFFERENCE'; m.object = c; m.solver = 'EXACT'
+            _apply(o); bpy.data.objects.remove(c, do_unlink=True)
         for f in o.data.polygons: f.use_smooth = True
-    top = lambda x, y: MR[2] * math.sqrt(max(0.0, 1 - ((x - MC.x) / MR[0]) ** 2 - ((y - MC.y) / MR[1]) ** 2))
-    for (x_, y_, r) in ((-0.62, 0.56, 0.045), (-0.42, 0.7, 0.035), (-0.85, 0.4, 0.03)):
-        ball(r, p['rock'], (x_, y_, top(x_, y_) - r * 0.25), (1.2, 1, 0.7), seg=10)
-    # the survey stake on the terrace: where the geologist marked the good layer
-    cyl(0.008, 0.2, p['char'], (-0.1, 0.5, 0.2), bev=0.003, verts=12)
-    rbox(0.07, 0.006, 0.045, 0.004, p['orange'], (-0.065, 0.5, 0.35), seg=1)
-    # the excavator stands in the pit and digs at the face above the terrace; the hopper waits at its side
-    T = Vector((-0.12, 0.3)); P0 = Vector((0.33, 0.04)); a = math.atan2(T.y - P0.y, T.x - P0.x)
-    excavator(p, (P0.x, P0.y), a - math.pi / 2)
-    HX, HY = 0.0, -0.37
+    # the opening, for the map's ground: the pit and the head of the ramp
+    hole = mat('hole', '#000000', 1.0)
+    rbox(OW, OD, 0.002, 0.06, hole, (OX, OY, -0.002), seg=2)
+    rbox(RX1 - RX0, 0.5, 0.002, 0.04, hole, ((RX0 + RX1) / 2, RY0 + 0.2, -0.002), seg=2)
+    # the excavator on the floor digs at the back wall; the hopper waits at its left
+    excavator(p, (0.05, 0.15), 0.0, FZ)
+    HX, HY = -0.36, 0.0
     for sx in (-1, 1):
-        for sy in (-1, 1): cyl(0.012, 0.22, p['char'], (HX + sx * 0.09, HY + sy * 0.07, 0.0), bev=0.004)
-    hop = rbox(0.24, 0.2, 0.14, 0.04, p['orange'], (HX, HY, 0.2))
-    cut(hop, cutter(0.2, 0.16, 0.14, (HX, HY, 0.24), r=0.03))
-    ball(1.0, p['clay'], (HX, HY, 0.3), (0.09, 0.07, 0.045), seg=12)
-    light(p, (HX + 0.125, HY - 0.06, 0.3), 0.014)
-    # the belt from the hopper to the heap under the awning
-    S, E = Vector((-0.12, -0.38, 0.2)), Vector((-0.68, -0.43, 0.3))
-    dv = E - S; L = dv.length; yaw = math.atan2(dv.y, dv.x); pitch = math.atan2(dv.z, math.hypot(dv.x, dv.y)); mid = (S + E) / 2
-    rbox(L, 0.1, 0.03, 0.015, p['char'], (mid.x, mid.y, mid.z - 0.015), (0, -pitch, yaw))
-    for t in (0.25, 0.6):
+        for sy in (-1, 1): cyl(0.012, 0.24, p['char'], (HX + sx * 0.09, HY + sy * 0.07, FZ), bev=0.004)
+    hop = rbox(0.24, 0.2, 0.14, 0.04, p['orange'], (HX, HY, FZ + 0.22))
+    cut(hop, cutter(0.2, 0.16, 0.14, (HX, HY, FZ + 0.26), r=0.03))
+    ball(1.0, p['clay'], (HX, HY, FZ + 0.32), (0.09, 0.07, 0.045), seg=12)
+    light(p, (HX - 0.125, HY - 0.06, FZ + 0.32), 0.014)
+    # the belt from the hopper up and over the front rim to the heap under the awning
+    S, E = Vector((HX - 0.04, HY - 0.12, FZ + 0.2)), Vector((-0.78, -0.8, 0.3))
+    dv = E - S; L2 = dv.length; yaw = math.atan2(dv.y, dv.x); pitch = math.atan2(dv.z, math.hypot(dv.x, dv.y)); mb = (S + E) / 2
+    rbox(L2, 0.1, 0.03, 0.015, p['char'], (mb.x, mb.y, mb.z - 0.015), (0, -pitch, yaw))
+    for t in (0.2, 0.5, 0.8):
         q = S + dv * t
         ball(0.022, p['clay'], (q.x, q.y, q.z + 0.03), (1.1, 1, 0.7), seg=10)
-        cyl(0.01, q.z - 0.015, p['char'], (q.x, q.y, 0.0), bev=0.003)
-    # the awning on four posts: the heap of clay and a pallet of clay blocks for the brick kiln
-    AX_, AY_, AW_, AD_, AZ_ = -0.76, -0.46, 0.6, 0.44, 0.5
+    for t in (0.25, 0.8):
+        q = S + dv * t
+        floor_z = FZ if (abs(q.x - FX_) < FW / 2 and abs(q.y - FY_) < FD / 2) else (BZ if (abs(q.x - OX) < OW / 2 and abs(q.y - OY) < OD / 2) else 0.0)
+        cyl(0.01, q.z - 0.015 - floor_z, p['char'], (q.x, q.y, floor_z), bev=0.003)
+    # the awning on the ground at the front left: the heap of clay and a pallet of clay blocks
+    AX_, AY_, AW_, AD_, AZ_ = -0.76, -0.8, 0.6, 0.36, 0.5
     for sx in (-1, 1):
         for sy in (-1, 1): cyl(0.018, AZ_, p['char'], (AX_ + sx * AW_ / 2, AY_ + sy * AD_ / 2, 0.0), bev=0.006)
     rbox(AW_ + 0.08, AD_ + 0.08, 0.04, 0.03, p['cream2'], (AX_, AY_, AZ_))
     rbox(AW_ + 0.09, AD_ + 0.09, 0.016, 0.03, p['orange'], (AX_, AY_, AZ_ + 0.006))
     light(p, (AX_ + AW_ / 2, AY_ - AD_ / 2 - 0.045, AZ_ + 0.02), 0.016)
-    ball(1.0, p['clay'], (-0.84, -0.42, 0.0), (0.17, 0.14, 0.12), seg=16)
-    rbox(0.22, 0.18, 0.03, 0.01, p['char'], (-0.6, -0.57, 0.0), seg=2)
+    ball(1.0, p['clay'], (-0.86, -0.8, 0.0), (0.15, 0.13, 0.11), seg=16)
+    rbox(0.22, 0.18, 0.03, 0.01, p['char'], (-0.58, -0.86, 0.0), seg=2)
     for i in range(2):
         for j in range(2):
-            for k in range(2): rbox(0.095, 0.075, 0.048, 0.012, p['clay2'], (-0.648 + i * 0.096, -0.607 + j * 0.078, 0.03 + k * 0.05), seg=2)
+            for k in range(2): rbox(0.095, 0.075, 0.048, 0.012, p['clay2'], (-0.628 + i * 0.096, -0.897 + j * 0.078, 0.03 + k * 0.05), seg=2)
+    # the water in the corner of the floor and the pump that sends it out, up the back wall and over the rim
+    bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=1.0, depth=0.01, location=(0.42, 0.52, FZ + 0.004))
+    o = bpy.context.object; o.scale = (0.16, 0.1, 1); bpy.ops.object.transform_apply(scale=True); _done(o, p['water'])
+    rbox(0.1, 0.08, 0.08, 0.03, p['cream'], (0.5, 0.42, FZ), seg=3)
+    rbox(0.104, 0.084, 0.014, 0.03, p['orange'], (0.5, 0.42, FZ + 0.05), seg=3)
+    light(p, (0.5, 0.375, FZ + 0.085), 0.012)
+    tube([(0.42, 0.52, FZ + 0.01), (0.47, 0.44, FZ + 0.04)], 0.008, p['char'])
+    tube([(0.53, 0.45, FZ + 0.06), (0.55, FY_ + FD / 2 - 0.02, FZ + 0.06), (0.55, FY_ + FD / 2 - 0.02, BZ + 0.02),
+          (0.55, OY + OD / 2 - 0.02, BZ + 0.02), (0.55, OY + OD / 2 - 0.02, 0.02), (0.55, OY + OD / 2 + 0.25, 0.012)], 0.012, p['char'])
+    # the stake with the orange flag on the rim, where the geologist marked the layer
+    cyl(0.008, 0.22, p['char'], (-0.6, 0.86, 0.0), bev=0.003, verts=12)
+    rbox(0.07, 0.006, 0.045, 0.004, p['orange'], (-0.565, 0.86, 0.17), seg=1)
 
 # ======================================================================================
 # the dock and the frame of the ship (levels 12-19, docs/levels.md): an open platform on the Ark's plot, in front of it on
