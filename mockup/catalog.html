@@ -6,7 +6,8 @@
      #tile=<name> shows a single tile; #set=research the ideas for the research station (node shot-catalog.js research);
      #set=ark the two ideas for the Ark from the front and the back, and the CellCog one (node shot-catalog.js ark);
      #set=rover the collector rover, #set=smelter the smelter, #set=dock the dock with its stages and on the Ark's plot,
-     #set=claypit the clay pit, #set=brickkiln the brick kiln, #set=copperworks the copper works, #set=brickhome the brick home and #set=canteen the canteen at levels 1, 10 and 20, #set=antenna the Ark's dish folded and open, #set=kitchen the kitchen and #set=solar the solar panels and #set=drill the carbon drill and #set=greenhouse the greenhouse and #set=warehouse the store and #set=batteries the batteries at levels 1, 10 and 20: each from the map's corner, the back, the top and three sides (node shot-catalog.js <set>). -->
+     #set=claypit the clay pit, #set=brickkiln the brick kiln, #set=copperworks the copper works, #set=brickhome the brick home and #set=canteen the canteen at levels 1, 10 and 20, #set=antenna the Ark's dish folded and open, #set=kitchen the kitchen and #set=solar the solar panels and #set=drill the carbon drill and #set=greenhouse the greenhouse and #set=warehouse the store and #set=batteries the batteries at levels 1, 10 and 20: each from the map's corner, the back, the top and three sides (node shot-catalog.js <set>);
+     #set=all every model on one phone-width sheet (node shot-catalog.js all). -->
 <script type="importmap">{ "imports": { "three": "./node_modules/three/build/three.module.js", "three/addons/": "./node_modules/three/examples/jsm/" } }</script>
 <style>
   @font-face { font-family: Nunito; font-weight: 800; src: url(fonts/nunito-cyrillic-800-normal.woff2) format('woff2'); unicode-range: U+0400-045F; }
@@ -20,6 +21,8 @@
   body.phone { width: 390px; } body.phone h1 { font-size: 7px; padding: 6px 5px 5px; }
   body.phone #grid { grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 0 2px 4px; } body.phone .card div { font-size: 3.6px; padding: 2px 3px 3px; }
   body.pair #grid { grid-template-columns: repeat(2, 1fr); } body.pair .card div { font-size: 5px; }
+  .sect { grid-column: 1 / -1; font-size: 9px; padding: 6px 3px 1px; }
+  body.big h1 { font-size: 11px; } body.big .card div { font-size: 6.5px; line-height: 1.15; padding: 2px 3px 4px; }
 </style></head>
 <body><h1>Zerks-X6: сградите на глава 1 (стилът, в който работим)</h1><div id="grid"></div>
 <script type="module" src="src/catalog.js"></script></body></html>

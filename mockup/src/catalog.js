@@ -118,12 +118,37 @@ const SETS = {
     ['kk/batteries-20', 'Ниво 20: отгоре', 0, Math.PI / 4, 88], ['kk/batteries-20', 'Ниво 20: отпред', 0, Math.PI / 4, 4],
     ['kk/batteries-20', 'Ниво 20: отдясно', 0, -Math.PI / 4, 4], ['kk/batteries-20', 'Ниво 20: отляво', 0, 3 * Math.PI / 4, 4],
   ] },
+  // every model on one phone-width sheet, three to a row, the variants of a building on one row at one scale
+  // (11.11.2026, for Salamen): [null, heading] starts a group
+  all: { title: 'Zerks-X6: всички модели (11.11.2026)', cols: 3, big: true, tiles: [
+    [null, 'Ковчегът, обучението и роботите'],
+    ['kk/ark', 'Ковчегът (до ниво 18)', -1, 0], ['kk/ark-18', 'Ковчегът от ниво 18: чинията', -1, 0], ['kk/geolocator', 'Геолокатор', -1, 0],
+    ['kk/drill-1', 'Карбонова сонда: ниво 1', 3.6, 0], ['kk/drill-10', 'Сондата: ниво 10', 3.6, 0], ['kk/drill-20', 'Сондата: ниво 20', 3.6, 0],
+    ['kk/pump', 'Помпа за вода', -1, 0], ['kk/processor', 'Атмосферен процесор', -1, 0], ['kk/veglab', 'Лаборатория за зеленчуци', -1, 0],
+    ['kk/rover', 'Роботът събирач', 14, 0], ['kk/drone', 'Строителният дрон', 22, 0], ['kk/research-1', 'Рисърч станция: ниво 1', 3.6, 0],
+    [null, 'Глава 1: колонията'],
+    ['kk/home-1', 'Дом: ниво 1', 3.4, 0], ['kk/home-10', 'Дом: ниво 10', 3.4, 0], ['kk/home-20', 'Дом: ниво 20', 3.4, 0],
+    ['kk/kitchen-1', 'Кухня: ниво 1', 3.4, 0], ['kk/kitchen-10', 'Кухня: ниво 10', 3.4, 0], ['kk/kitchen-20', 'Кухня: ниво 20', 3.4, 0],
+    ['kk/warehouse-1', 'Склад: ниво 1', 3.6, 0], ['kk/warehouse-10', 'Склад: ниво 10', 3.6, 0], ['kk/warehouse-20', 'Склад: ниво 20', 3.6, 0],
+    ['kk/solar-1', 'Панели: ниво 1', 4.2, 0], ['kk/solar-10', 'Панели: ниво 10', 4.2, 0], ['kk/solar-20', 'Панели: ниво 20', 4.2, 0],
+    ['kk/batteries-1', 'Батерии: ниво 1', 4.4, 0], ['kk/batteries-10', 'Батерии: ниво 10', 4.4, 0], ['kk/batteries-20', 'Батерии: ниво 20', 4.4, 0],
+    ['kk/greenhouse-1', 'Оранжерия: ниво 1', 3.8, 0], ['kk/greenhouse-10', 'Оранжерия: ниво 10', 3.8, 0], ['kk/greenhouse-20', 'Оранжерия: ниво 20', 3.8, 0],
+    ['kk/research-10', 'Рисърч станция: ниво 10', 3.6, 0], ['kk/mine-portal', 'Мина: тунел', -1, 0], ['kk/mine', 'Мина: шахта', -1, 0],
+    ['kk/furnace', 'Силициева пещ', -1, 0],
+    [null, 'Глава 2'],
+    ['kk/smelter', 'Топилня (ниво 11)', -1, 0], ['kk/claypit', 'Глинен изкоп (ниво 13)', -1, 0], ['kk/brickkiln', 'Пещ за тухли (ниво 15)', -1, 0],
+    ['kk/copperworks', 'Цех за мед (ниво 19)', -1, 0], ['kk/dock-1', 'Докът: етап 1 (ниво 12)', 4.0, 0], ['kk/dock-2', 'Докът: етап 2 (ниво 14)', 4.0, 0],
+    ['kk/dock-3', 'Докът: етап 3 (ниво 17)', 4.0, 0], ['kk/dock-4', 'Докът: рамата е готова (ниво 19)', 4.0, 0], ['kk/ark-18+kk/dock-4@2.32,-1.82', 'Докът на парцела на Ковчега', 4.15, 0, 36, 28],
+    ['kk/brickhome-1', 'Тухлен дом: ниво 1', 3.4, 0], ['kk/brickhome-10', 'Тухлен дом: ниво 10', 3.4, 0], ['kk/brickhome-20', 'Тухлен дом: ниво 20', 3.4, 0],
+    ['kk/canteen-1', 'Столова: ниво 1', 3.4, 0], ['kk/canteen-10', 'Столова: ниво 10', 3.4, 0], ['kk/canteen-20', 'Столова: ниво 20', 3.4, 0],
+  ] },
   smelter: views('kk/smelter', 'Топилнята: откъм картата, отзад, отгоре и от три страни', 5.2, 'мачтата и трансформаторът', 'бункерът и лентата',
     [['kk/smelter', 'Топилнята в мащаба на картата', 4.15, 0], ['kk/furnace', 'Силициевата пещ, до която стои, в същия мащаб', 4.15, 0]]),
 };
 const SET = SETS[(location.hash.match(/set=(\w+)/) || [])[1]];
 const PHONE = location.hash.includes('phone') || !!SET;
-if (SET) document.body.classList.add('pair');
+if (SET && !SET.cols) document.body.classList.add('pair');
+if (SET && SET.big) document.body.classList.add('big');
 if (PHONE) { document.body.classList.add('phone'); document.querySelector('h1').textContent = SET ? SET.title : 'Сградите на глава 1 в избрания стил'; }
 const ONE = (location.hash.match(/tile=([\w/-]+)/) || [])[1];
 const PX = 788; // one tile, drawn at twice the size it is shown
@@ -208,6 +233,7 @@ async function tile(name, fixedK, turn = 0, el = 36, fit = false) {
 
 const grid = document.getElementById('grid');
 for (const [name, label, k, turn, el, fit] of ONE ? TILES.filter(t => t[0] === ONE) : SET ? SET.tiles : PHONE ? PHONE_TILES : TILES) {
+  if (name === null) { const h = document.createElement('div'); h.className = 'sect'; h.textContent = label; grid.append(h); continue; }
   const card = document.createElement('div'); card.className = 'card';
   const img = new Image(); img.src = await tile(name, k < 0 ? 0 : (k || (SET && SET.k)), turn || 0, el ?? 36, fit || 0);   // k < 0: fit the tile await img.decode();
   const cap = document.createElement('div'); cap.textContent = label;
