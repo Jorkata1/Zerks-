@@ -24,7 +24,7 @@ def pal():
         navy=mat('panel', '#262b55', 0.25), rock=mat('rock', '#d4693b', 0.85), rock2=mat('rock2', '#b8532d', 0.85),
         ice=mat('ice', '#dff5ff', 0.15, alpha=0.9), ore=mat('ore', '#3a3634', 0.7), crystal=mat('crystal', '#7ff6f0', 0.2, emit='#5ff0e6', strength=1.2),
         steam=mat('steam', '#ffffff', 0.9, alpha=0.85), wood=mat('wood', '#c98a52', 0.8), tomato=mat('tomato', '#ff5a3c', 0.5),
-        steel=mat('steel', '#b9c3cc', 0.35))
+        steel=mat('steel', '#b9c3cc', 0.35), clay=mat('clay', '#c9967a', 0.85), clay2=mat('clay2', '#a9785d', 0.85))
 
 # ---------- the shared vocabulary ----------
 def cutter(w, d, h, loc, rot=(0, 0, 0), r=0.05):
@@ -1251,6 +1251,115 @@ def b_smelter(p):
     light(p, (CX - 0.18, CY + 0.08, 0.06 + CH + 0.01), 0.022)
 
 # ======================================================================================
+# the clay pit (level 13, docs/levels.md): on the shore of the ice in the Ice Hollow, a geologist works it. A clay quarry:
+#    a bank of clay layers by the frozen lake, its face dug back in terraces; a small electric excavator on tracks digs
+#    from the terrace (the geologist drives it from the lit cab), swings and tips the clay into the hopper; a belt carries
+#    it under the awning, where it waits in a heap and as blocks on a pallet for the brick kiln (level 15, next door).
+#    A survey stake with an orange flag marks the layer on top of the bank. Nothing grows outside yet (chapter 3).
+# ======================================================================================
+def excavator(p, at, yaw):
+    """the small electric excavator, built facing +y at the origin, then turned by yaw and set at `at`;
+    returns the bucket's place (local 0, 0.47)"""
+    before = set(bpy.data.objects)
+    for sx in (-1, 1):                                              # the tracks with their rollers
+        rbox(0.075, 0.36, 0.075, 0.035, p['char'], (sx * 0.11, 0, 0.0), seg=3)
+        for ty in (-0.12, 0.0, 0.12):
+            bpy.ops.mesh.primitive_cylinder_add(vertices=16, radius=0.022, depth=0.01, location=(sx * 0.15, ty, 0.037), rotation=(0, math.pi / 2, 0))
+            _done(bpy.context.object, p['cream2'])
+    cyl(0.1, 0.03, p['char'], (0, 0, 0.075), bev=0.01)              # the turntable
+    rbox(0.26, 0.24, 0.11, 0.05, p['cream'], (0, -0.02, 0.1))
+    rbox(0.265, 0.245, 0.014, 0.05, p['orange'], (0, -0.02, 0.165))
+    rbox(0.24, 0.07, 0.07, 0.03, p['char'], (0, -0.145, 0.11))      # the counterweight (the battery)
+    cyl(0.016, 0.02, p['cream2'], (-0.06, -0.07, 0.205), bev=0.005)          # a small vent that cools the battery
+    ball(0.028, p['char'], (-0.06, -0.07, 0.232), (1, 1, 0.55), seg=14)
+    # the cab on the right: a warm window to the front and to the side, a teal light on its roof, a lamp at the front
+    cab = rbox(0.11, 0.12, 0.15, 0.04, p['cream'], (0.07, 0.04, 0.2))
+    rbox(0.088, 0.012, 0.075, 0.02, p['win'], (0.07, 0.096, 0.255), seg=2)
+    rbox(0.012, 0.088, 0.075, 0.02, p['win'], (0.122, 0.04, 0.255), seg=2)
+    for (w_, d_, x_, y_) in ((0.094, 0.006, 0.07, 0.103), (0.006, 0.094, 0.129, 0.04)):
+        rbox(w_, d_, 0.081, 0.02, p['glass'], (x_, y_, 0.252), seg=2)
+    light(p, (0.07, 0.04, 0.355), 0.014)
+    ball(0.012, p['lampw'], (0.105, 0.102, 0.33), seg=10)
+    # the boom, the stick and the bucket full of clay, with the rams that move them
+    piv, elb, wri = Vector((-0.03, 0.1, 0.2)), Vector((-0.03, 0.27, 0.5)), Vector((-0.03, 0.44, 0.27))
+    tube([tuple(piv), tuple(elb)], 0.026, p['orange']); tube([tuple(elb), tuple(wri)], 0.02, p['orange'])
+    for c, r in ((piv, 0.028), (elb, 0.026), (wri, 0.02)): ball(r, p['char'], tuple(c), seg=12)
+    tube([(-0.03, 0.06, 0.17), tuple(piv.lerp(elb, 0.55) + Vector((0, 0.0, -0.03)))], 0.011, p['char'])
+    tube([tuple(piv.lerp(elb, 0.75) + Vector((0, 0, 0.03))), tuple(elb.lerp(wri, 0.45) + Vector((0, 0.02, 0.02)))], 0.009, p['char'])
+    bk = dome(0.055, p['char'], (0, 0, 0), seg=18); bk.rotation_euler = (math.pi + D2R(35), 0, 0); bk.location = (-0.03, 0.47, 0.24)
+    bpy.context.view_layer.objects.active = bk; bpy.ops.object.transform_apply(location=True, rotation=True, scale=False)
+    sm = bk.modifiers.new('shell', 'SOLIDIFY'); sm.thickness = 0.008; _apply(bk)
+    ball(0.04, p['clay'], (-0.03, 0.47, 0.235), (1, 0.9, 0.6), seg=12)
+    import mathutils
+    R = mathutils.Matrix.Translation((at[0], at[1], 0)) @ mathutils.Matrix.Rotation(yaw, 4, 'Z')
+    for o in [o for o in bpy.data.objects if o not in before]:
+        o.matrix_world = R @ o.matrix_world
+        bpy.context.view_layer.objects.active = o; bpy.ops.object.select_all(action='DESELECT'); o.select_set(True)
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    return R @ Vector((-0.03, 0.47, 0.24))
+
+def b_claypit(p):
+    # the bank: a round mound of clay layers at the back left, red regolith on top; on the side of the excavator it is
+    #    dug back: a terrace half way up and the pit floor at the ground, so the layers show in the faces
+    MC, MR = Vector((-0.38, 0.42, 0.0)), (0.86, 0.56, 0.6)
+    bands = ((0.0, 0.17, 'clay'), (0.17, 0.33, 'clay2'), (0.33, 0.47, 'clay'), (0.47, 0.7, 'rock2'))
+    def keep(o, lo, hi, op, r=0.0):
+        if r: c = rbox(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2], r, None, ((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, lo[2]), seg=4)
+        else:
+            bpy.ops.mesh.primitive_cube_add(size=1, location=((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2))
+            c = bpy.context.object; c.scale = (hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]); bpy.ops.object.transform_apply(scale=True)
+        m = o.modifiers.new('k', 'BOOLEAN'); m.operation = op; m.object = c; m.solver = 'EXACT'
+        _apply(o); bpy.data.objects.remove(c, do_unlink=True)
+    for z0, z1, mk in bands:
+        o = ball(1.0, p[mk], tuple(MC), MR, seg=48)
+        keep(o, (-2, -2, z0), (2, 2, z1), 'INTERSECT')
+        keep(o, (-0.16, -2, 0.2), (2, 0.6, 2), 'DIFFERENCE', 0.05)    # the terrace, 0.2 up, its edges rounded
+        keep(o, (0.08, -2, -0.1), (2, 0.38, 2), 'DIFFERENCE', 0.05)   # the pit floor
+        for f in o.data.polygons: f.use_smooth = True
+    top = lambda x, y: MR[2] * math.sqrt(max(0.0, 1 - ((x - MC.x) / MR[0]) ** 2 - ((y - MC.y) / MR[1]) ** 2))
+    for (x_, y_, r) in ((-0.62, 0.56, 0.045), (-0.42, 0.7, 0.035), (-0.85, 0.4, 0.03)):
+        ball(r, p['rock'], (x_, y_, top(x_, y_) - r * 0.25), (1.2, 1, 0.7), seg=10)
+    # the survey stake on the terrace: where the geologist marked the good layer
+    cyl(0.008, 0.2, p['char'], (-0.1, 0.5, 0.2), bev=0.003, verts=12)
+    rbox(0.07, 0.006, 0.045, 0.004, p['orange'], (-0.065, 0.5, 0.35), seg=1)
+    # the frozen lake behind, on the right: an oval of ice with a few chunks on it
+    bpy.ops.mesh.primitive_cylinder_add(vertices=48, radius=1.0, depth=0.04, location=(0.78, 0.72, 0.02))
+    o = bpy.context.object; o.scale = (0.4, 0.235, 1); bpy.ops.object.transform_apply(scale=True)
+    bv = o.modifiers.new('b', 'BEVEL'); bv.width = 0.015; bv.segments = 3; _apply(o); _done(o, p['ice'])
+    for (x_, y_, r) in ((0.62, 0.66, 0.045), (0.92, 0.8, 0.035), (1.0, 0.64, 0.03)):
+        ball(r, p['ice'], (x_, y_, 0.04), (1.3, 1, 0.6), seg=12)
+    # the excavator stands in the pit and digs at the face above the terrace; the hopper waits at its side
+    T = Vector((-0.12, 0.3)); P0 = Vector((0.33, 0.04)); a = math.atan2(T.y - P0.y, T.x - P0.x)
+    excavator(p, (P0.x, P0.y), a - math.pi / 2)
+    HX, HY = 0.0, -0.37
+    for sx in (-1, 1):
+        for sy in (-1, 1): cyl(0.012, 0.22, p['char'], (HX + sx * 0.09, HY + sy * 0.07, 0.0), bev=0.004)
+    hop = rbox(0.24, 0.2, 0.14, 0.04, p['orange'], (HX, HY, 0.2))
+    cut(hop, cutter(0.2, 0.16, 0.14, (HX, HY, 0.24), r=0.03))
+    ball(1.0, p['clay'], (HX, HY, 0.3), (0.09, 0.07, 0.045), seg=12)
+    light(p, (HX + 0.125, HY - 0.06, 0.3), 0.014)
+    # the belt from the hopper to the heap under the awning
+    S, E = Vector((-0.12, -0.38, 0.2)), Vector((-0.68, -0.43, 0.3))
+    dv = E - S; L = dv.length; yaw = math.atan2(dv.y, dv.x); pitch = math.atan2(dv.z, math.hypot(dv.x, dv.y)); mid = (S + E) / 2
+    rbox(L, 0.1, 0.03, 0.015, p['char'], (mid.x, mid.y, mid.z - 0.015), (0, -pitch, yaw))
+    for t in (0.25, 0.6):
+        q = S + dv * t
+        ball(0.022, p['clay'], (q.x, q.y, q.z + 0.03), (1.1, 1, 0.7), seg=10)
+        cyl(0.01, q.z - 0.015, p['char'], (q.x, q.y, 0.0), bev=0.003)
+    # the awning on four posts: the heap of clay and a pallet of clay blocks for the brick kiln
+    AX_, AY_, AW_, AD_, AZ_ = -0.76, -0.46, 0.6, 0.44, 0.5
+    for sx in (-1, 1):
+        for sy in (-1, 1): cyl(0.018, AZ_, p['char'], (AX_ + sx * AW_ / 2, AY_ + sy * AD_ / 2, 0.0), bev=0.006)
+    rbox(AW_ + 0.08, AD_ + 0.08, 0.04, 0.03, p['cream2'], (AX_, AY_, AZ_))
+    rbox(AW_ + 0.09, AD_ + 0.09, 0.016, 0.03, p['orange'], (AX_, AY_, AZ_ + 0.006))
+    light(p, (AX_ + AW_ / 2, AY_ - AD_ / 2 - 0.045, AZ_ + 0.02), 0.016)
+    ball(1.0, p['clay'], (-0.84, -0.42, 0.0), (0.17, 0.14, 0.12), seg=16)
+    rbox(0.22, 0.18, 0.03, 0.01, p['char'], (-0.6, -0.57, 0.0), seg=2)
+    for i in range(2):
+        for j in range(2):
+            for k in range(2): rbox(0.095, 0.075, 0.048, 0.012, p['clay2'], (-0.648 + i * 0.096, -0.607 + j * 0.078, 0.03 + k * 0.05), seg=2)
+
+# ======================================================================================
 # the dock and the frame of the ship (levels 12-19, docs/levels.md): an open platform on the Ark's plot, in front of it on
 #    the right (the side of the crane), where the parts of the ship grow before the player's eyes. The Ark's fabricator
 #    makes the parts from steel and its crane lowers each one onto the marked pad in the corner of the dock nearest to it
@@ -1610,7 +1719,7 @@ def b_ark(p):
 BUILD = {'ark': b_ark, 'dome': b_dome, 'kitchen': b_kitchen, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': b_greenhouse,
          'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': b_warehouse, 'furnace': b_furnace, 'mine': b_mine,
          'pump': b_pump, 'solar': b_solar, 'batteries': b_batteries, 'geolocator': b_geolocator, 'mine-portal': b_mine_portal,
-         'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover, 'smelter': b_smelter,
+         'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover, 'smelter': b_smelter, 'claypit': b_claypit,
          **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}}
 for name, fn in BUILD.items():
     if ONLY and name not in ONLY: continue
