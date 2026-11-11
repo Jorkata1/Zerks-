@@ -25,7 +25,8 @@ def pal():
         ice=mat('ice', '#dff5ff', 0.15, alpha=0.9), ore=mat('ore', '#3a3634', 0.7), crystal=mat('crystal', '#7ff6f0', 0.2, emit='#5ff0e6', strength=1.2),
         steam=mat('steam', '#ffffff', 0.9, alpha=0.85), wood=mat('wood', '#c98a52', 0.8), tomato=mat('tomato', '#ff5a3c', 0.5),
         steel=mat('steel', '#b9c3cc', 0.35), clay=mat('clay', '#c9967a', 0.85), clay2=mat('clay2', '#a9785d', 0.85),
-        brick=mat('brick', '#a8452f', 0.8))
+        brick=mat('brick', '#a8452f', 0.8), copper=mat('copper', '#c8743a', 0.35), cuore=mat('cuore', '#5d8a78', 0.75),
+        cusol=mat('cusol', '#29a3c9', 0.1, alpha=0.8))
 
 # ---------- the shared vocabulary ----------
 def cutter(w, d, h, loc, rot=(0, 0, 0), r=0.05):
@@ -1470,6 +1471,96 @@ def b_brickkiln(p):
     light(p, (BX + 0.12, BY + 0.05, 0.05 + BH + 0.01), 0.018)
 
 # ======================================================================================
+# the copper works (level 19, docs/levels.md): copper ore -> cables, next to the smelter; an engineer works it. The ore is
+#    not melted (that gives off sulphur gas): it is dissolved in acid, the clean copper is gathered on plates by current
+#    (electrolysis), drawn into wire and dressed in a carbon insulation. The way of the copper: the ore hopper at the back
+#    left tips into the two leach tanks, where the blue solution shows through a glass band; pipes take it into the hall,
+#    where the big lit window shows the cell with its copper plates; the wire comes out of the right wall into the drawing
+#    machine and the coater, and the black cable is wound on reels. The rectifier at the back gives the cell its current;
+#    vents on the roof take the acid mist out. No smoke.
+# ======================================================================================
+def cable_reel(p, at):
+    """a reel of cable lying flat: cream flanges with an orange rim, the black cable wound between, copper at its end"""
+    x, y, z = at
+    for dz in (0.0, 0.085):
+        cyl(0.1, 0.016, p['cream2'], (x, y, z + dz), bev=0.005, verts=32)
+        torus(0.1, 0.006, p['orange'], (x, y, z + dz + 0.008))
+    cyl(0.08, 0.07, p['char'], (x, y, z + 0.016), bev=0.01, verts=32)
+    cyl(0.02, 0.012, p['char'], (x, y, z + 0.101), bev=0.004, verts=16)
+    ball(0.01, p['copper'], (x + 0.07, y - 0.04, z + 0.07), seg=10)
+
+def b_copperworks(p):
+    # the hall with the lit window on the cell, the door, the stripe, the vents and a light on the roof
+    HX, HY, HW, HD, HH = 0.15, 0.15, 1.3, 0.7, 0.55
+    rbox(HW + 0.08, HD + 0.08, 0.06, 0.18, p['char'], (HX, HY, 0.0))
+    hall = rbox(HW, HD, HH, 0.15, p['cream'], (HX, HY, 0.05), seg=5)
+    def cell(cx, cy, fz):
+        L = frame(cx, cy, 0.0)
+        rbox(0.42, 0.17, 0.09, 0.02, p['char'], (*L(-0.04, -0.02), fz), seg=2)
+        rbox(0.4, 0.15, 0.006, 0.01, p['cusol'], (*L(-0.04, -0.02), fz + 0.082), seg=1)
+        for k in range(7): rbox(0.012, 0.12, 0.12, 0.004, p['copper'], (*L(-0.2 + k * 0.053, -0.02), fz + 0.03), seg=1)
+        for v in (-0.07, 0.03): rbox(0.42, 0.012, 0.012, 0.004, p['copper'], (*L(-0.04, v), fz + 0.15), seg=1)
+        for k in range(3): rbox(0.08, 0.1, 0.012, 0.004, p['copper'], (*L(0.25, -0.02), fz + k * 0.014), seg=1)   # the plates taken off
+    lit_room(p, hall, 0.66, 0.26, 0.42, HX - 0.17, HY - HD / 2 + 0.01, 0.2, 0.0, cell)
+    rbox(HW + 0.02, HD + 0.02, 0.035, 0.15, p['orange'], (HX, HY, 0.14))
+    door(p, HX + 0.42, HY - HD / 2 - 0.02, 0.0, 0.2, 0.44, 0.05)
+    RZ = 0.05 + HH
+    for x in (HX - 0.35, HX + 0.15): vent(p, (x, HY + 0.12, RZ - 0.01), 0.1)
+    light(p, (HX + 0.45, HY + 0.1, RZ + 0.01), 0.02)
+    # the two leach tanks at the left: the blue solution through a glass band; the pipes into the hall
+    TX = -0.85
+    for ty in (0.0, 0.4):
+        cyl(0.19, 0.05, p['char'], (TX, ty, 0.0), bev=0.015)
+        cyl(0.16, 0.3, p['cream'], (TX, ty, 0.04), bev=0.03)
+        torus(0.161, 0.012, p['orange'], (TX, ty, 0.16))
+        bpy.ops.mesh.primitive_cylinder_add(vertices=40, radius=0.16, depth=0.1, location=(TX, ty, 0.39), end_fill_type='NOTHING')
+        _done(bpy.context.object, p['glass'])
+        cyl(0.15, 0.09, p['cusol'], (TX, ty, 0.34), bev=0.0)
+        cyl(0.165, 0.025, p['cream2'], (TX, ty, 0.44), bev=0.01)
+        torus(0.165, 0.01, p['orange'], (TX, ty, 0.465))
+        tube([(TX + 0.15, ty, 0.1), (HX - HW / 2 - 0.02, ty * 0.6 + 0.08, 0.1)], 0.016, p['char'])
+    tube([(TX, 0.3, 0.466), (TX, 0.3, 0.52), (TX, 0.1, 0.52), (TX, 0.1, 0.466)], 0.012, p['char'])        # the back tank into the front one
+    light(p, (TX + 0.11, -0.12, 0.3), 0.015)
+    # the ore hopper behind them, on legs, tipping into the back tank
+    OY = 0.8
+    for sx in (-1, 1):
+        for sy in (-1, 1): cyl(0.014, 0.5, p['char'], (TX + sx * 0.1, OY + sy * 0.07, 0.0), bev=0.005)
+    hop = rbox(0.26, 0.2, 0.14, 0.04, p['orange'], (TX, OY, 0.5))
+    cut(hop, cutter(0.22, 0.16, 0.14, (TX, OY, 0.54), r=0.03))
+    ball(1.0, p['cuore'], (TX, OY, 0.6), (0.1, 0.075, 0.045), seg=12)
+    for (dx, dy) in ((-0.04, 0.02), (0.04, -0.02), (0.0, 0.03)): ball(0.022, p['cuore'], (TX + dx, OY + dy, 0.64), (1.1, 1, 0.8), seg=10)
+    tube([(TX, OY - 0.1, 0.52), (TX, 0.5, 0.5)], 0.02, p['char'])
+    # the rectifier at the back: the current for the cell
+    RX_, RY_ = 0.5, 0.75
+    rbox(0.34, 0.22, 0.05, 0.04, p['char'], (RX_, RY_, 0.0))
+    rbox(0.3, 0.18, 0.3, 0.05, p['cream'], (RX_, RY_, 0.04))
+    rbox(0.305, 0.185, 0.025, 0.05, p['orange'], (RX_, RY_, 0.24))
+    for k in range(2): light(p, (RX_ - 0.06 + k * 0.12, RY_ - 0.092, 0.3), 0.016)
+    for k in range(2):
+        xk = RX_ - 0.05 + k * 0.1
+        tube([(xk, RY_ - 0.02, 0.33), (xk, RY_ - 0.1, 0.5), (xk, HY + HD / 2 - 0.08, RZ - 0.01)], 0.014, p['char'])
+    tube([(RX_ + 0.1, RY_ + 0.09, 0.1), (RX_ + 0.16, RY_ + 0.25, 0.03), (RX_ + 0.2, RY_ + 0.36, 0.012)], 0.018, p['char'])
+    # the wire out of the right wall: the drawing machine, the coater, the black cable onto the drum; a full drum waits
+    WX = HX + HW / 2
+    tube([(WX - 0.01, 0.32, 0.2), (WX + 0.11, 0.32, 0.2)], 0.008, p['copper'])
+    rbox(0.2, 0.16, 0.22, 0.04, p['cream'], (WX + 0.2, 0.32, 0.0))
+    rbox(0.205, 0.165, 0.02, 0.04, p['orange'], (WX + 0.2, 0.32, 0.15))
+    for dx in (-0.05, 0.05):
+        bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=0.04, depth=0.02, location=(WX + 0.2 + dx, 0.32 - 0.085, 0.13), rotation=(math.pi / 2, 0, 0))
+        _done(bpy.context.object, p['copper'])
+    light(p, (WX + 0.2, 0.32 - 0.082, 0.2), 0.012)
+    bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=0.035, depth=0.14, location=(WX + 0.2, 0.17, 0.13), rotation=(math.pi / 2, 0, 0))
+    _done(bpy.context.object, p['char'])                                                                     # the coater
+    torus(0.036, 0.008, p['orange'], (WX + 0.2, 0.2, 0.13), (math.pi / 2, 0, 0))
+    # the winder: a reel turning on its motor; then two full reels on a pallet
+    cyl(0.07, 0.06, p['char'], (WX + 0.2, -0.12, 0.0), bev=0.015)
+    light(p, (WX + 0.2 + 0.07, -0.12, 0.04), 0.012)
+    cable_reel(p, (WX + 0.2, -0.12, 0.06))
+    tube([(WX + 0.2, 0.1, 0.13), (WX + 0.2, 0.0, 0.13), (WX + 0.2, -0.04, 0.11)], 0.008, p['char'])
+    rbox(0.26, 0.48, 0.03, 0.01, p['char'], (WX + 0.22, -0.55, 0.0), seg=2)
+    for yy in (-0.43, -0.67): cable_reel(p, (WX + 0.22, yy, 0.03))
+
+# ======================================================================================
 # the dock and the frame of the ship (levels 12-19, docs/levels.md): an open platform on the Ark's plot, in front of it on
 #    the right (the side of the crane), where the parts of the ship grow before the player's eyes. The Ark's fabricator
 #    makes the parts from steel and its crane lowers each one onto the marked pad in the corner of the dock nearest to it
@@ -1829,7 +1920,7 @@ def b_ark(p):
 BUILD = {'ark': b_ark, 'dome': b_dome, 'kitchen': b_kitchen, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': b_greenhouse,
          'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': b_warehouse, 'furnace': b_furnace, 'mine': b_mine,
          'pump': b_pump, 'solar': b_solar, 'batteries': b_batteries, 'geolocator': b_geolocator, 'mine-portal': b_mine_portal,
-         'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover, 'smelter': b_smelter, 'claypit': b_claypit, 'brickkiln': b_brickkiln,
+         'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover, 'smelter': b_smelter, 'claypit': b_claypit, 'brickkiln': b_brickkiln, 'copperworks': b_copperworks,
          **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}}
 for name, fn in BUILD.items():
     if ONLY and name not in ONLY: continue
