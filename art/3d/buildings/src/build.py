@@ -1059,6 +1059,91 @@ def b_drone(p):
         for sy in (-1, 1): cyl(0.006, 0.05, p['char'], (sx * 0.085, sy * 0.07, 0.012), bev=0.002)
 
 # ======================================================================================
+# the collector rover (Joro, 11.11.2026: it replaces the capsules): from level 2 a small rover drives round the canyon and
+#    comes back with stone, carbon or a boost; the player taps it to unload, and while nobody plays it waits full at the
+#    base. Six wheels on a rocker-bogie, like the rovers on Mars, so it climbs over stones; the camera mast with two eyes
+#    and the radio whip at the front left (from level 18 the Ark's antenna guides it further); the arm at the front right
+#    has just lifted a stone over the bin; a small solar panel between them; the bin at the back is full of stone and
+#    carbon, tips back on its hinge to unload, and three teal lights on its side show how full it is. About 2.2 m long
+#    at the map's 4.15 m a unit. Front = -y, like the doors of the buildings.
+# ======================================================================================
+def b_rover(p):
+    BW, BD, BZ, BH = 0.30, 0.46, 0.14, 0.13          # the body: width (x), length (y), its bottom and its height
+    TOP = BZ + BH
+    rbox(BW + 0.01, BD + 0.01, 0.035, 0.05, p['char'], (0, 0, BZ - 0.01))          # the dark base
+    rbox(BW, BD, BH, 0.05, p['cream'], (0, 0, BZ))
+    rbox(BW + 0.008, BD + 0.008, 0.016, 0.05, p['orange'], (0, 0, BZ + 0.085))   # the orange stripe
+    # the front: two warm headlights for the night and an orange bumper; the back: two teal lights
+    for sx in (-1, 1):
+        ball(0.016, p['lampw'], (sx * 0.09, -BD / 2 - 0.002, BZ + 0.06), seg=14)
+        torus(0.018, 0.004, p['char'], (sx * 0.09, -BD / 2 - 0.004, BZ + 0.06), (math.pi / 2, 0, 0))
+        light(p, (sx * 0.1, BD / 2 + 0.002, BZ + 0.06), 0.012)
+    rbox(0.2, 0.03, 0.022, 0.01, p['orange'], (0, -BD / 2 - 0.006, BZ + 0.004))
+    # six wheels on a rocker-bogie each side: the rocker turns on a pivot on the body, carries the front wheel and,
+    # at its back end, the bogie with the middle and rear wheels
+    WR, WW, WX = 0.065, 0.05, 0.215                  # wheel radius, width, centre off the middle
+    AX = BW / 2 + 0.022                              # where the arms run, between the body and the wheels
+    for sx in (-1, 1):
+        P_ = (sx * AX, -0.02, 0.178); B_ = (sx * AX, 0.1, 0.155)
+        for c, r in ((P_, 0.022), (B_, 0.017)):    # the pivots: a disc on the body, a smaller one on the bogie
+            bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=r, depth=0.014, location=(c[0] - sx * 0.008, c[1], c[2]), rotation=(0, math.pi / 2, 0))
+            _done(bpy.context.object, p['cream2'])
+        for (wy, knee) in ((-0.2, 0.125), (0.0, 0.112), (0.2, 0.112)):
+            top = P_ if wy < -0.1 else B_
+            k = (sx * AX, wy, knee); hub = (sx * AX, wy, WR)
+            tube([top, k, hub], 0.01, p['char'])
+            tube([hub, (sx * (WX - WW / 2 + 0.004), wy, WR)], 0.009, p['char'])          # the axle stub
+            # the tyre, the cream hub with an orange ring
+            bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=WR, depth=WW, location=(sx * WX, wy, WR), rotation=(0, math.pi / 2, 0))
+            o = bpy.context.object; bv = o.modifiers.new('b', 'BEVEL'); bv.width = 0.016; bv.segments = 3; bv.limit_method = 'ANGLE'; bv.angle_limit = math.radians(40)
+            _apply(o); _done(o, p['char'])
+            bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=0.03, depth=0.012, location=(sx * (WX + WW / 2 - 0.002), wy, WR), rotation=(0, math.pi / 2, 0))
+            _done(bpy.context.object, p['cream'])
+            torus(0.03, 0.005, p['orange'], (sx * (WX + WW / 2 + 0.004), wy, WR), (0, math.pi / 2, 0))
+        tube([P_, B_], 0.01, p['char'])
+    # the bin at the back: open on top, full of stone and carbon; it tips back on the hinge to unload
+    GW, GD, GH, G0, G1 = 0.26, 0.2, 0.12, 0.0, 0.2
+    gy = (G0 + G1) / 2
+    bin_ = rbox(GW, GD, GH, 0.035, p['cream2'], (0, gy, TOP))
+    cut(bin_, cutter(GW - 0.04, GD - 0.04, GH, (0, gy, TOP + 0.03), r=0.02))
+    rbox(GW + 0.008, GD + 0.008, 0.014, 0.035, p['orange'], (0, gy, TOP + GH - 0.03))
+    rbox(GW - 0.044, GD - 0.044, 0.004, 0.015, p['char'], (0, gy, TOP + 0.03))       # the dark floor inside
+    ball(1.0, p['rock2'], (0, gy, TOP + 0.078), (0.104, 0.074, 0.046), seg=16)       # the heap
+    for (x, y, r, m) in ((-0.06, 0.07, 0.024, 'rock'), (-0.02, 0.12, 0.022, 'ore'), (0.02, 0.085, 0.02, 'rock'),
+                         (-0.07, 0.14, 0.019, 'ore'), (0.03, 0.14, 0.018, 'rock2'), (-0.03, 0.06, 0.017, 'ore')):
+        ball(r, p[m], (x, y, TOP + 0.112), (1.15, 0.9, 0.75), seg=10)
+    bpy.ops.mesh.primitive_cylinder_add(vertices=16, radius=0.01, depth=0.2, location=(0, G1 + 0.006, TOP + 0.012), rotation=(0, math.pi / 2, 0))
+    _done(bpy.context.object, p['char'])                 # the hinge
+    for k in range(3):                                   # how full it is: three teal lights on the side the camera sees
+        light(p, (GW / 2 + 0.001, G0 + 0.05 + k * 0.05, TOP + 0.06), 0.01)
+    # the solar panel on the front deck, and a small vent behind it that cools the battery
+    rbox(0.115, 0.13, 0.012, 0.012, p['cream2'], (0, -0.135, TOP - 0.002))
+    rbox(0.1, 0.115, 0.006, 0.006, p['navy'], (0, -0.135, TOP + 0.008), seg=2)
+    cyl(0.016, 0.022, p['cream2'], (0, -0.035, TOP - 0.002), bev=0.006)
+    ball(0.028, p['char'], (0, -0.035, TOP + 0.026), (1, 1, 0.55), seg=16)
+    # the camera mast at the front left: two dark eyes in teal rings, an orange band, the radio whip with a teal tip
+    MX, MY = -0.09, -0.17
+    cyl(0.012, 0.2, p['char'], (MX, MY, TOP - 0.002), bev=0.004, verts=16)
+    rbox(0.1, 0.055, 0.05, 0.02, p['cream'], (MX, MY, TOP + 0.198))
+    rbox(0.104, 0.059, 0.01, 0.02, p['orange'], (MX, MY, TOP + 0.206))
+    for dx in (-0.024, 0.024):
+        ball(0.014, p['char'], (MX + dx, MY - 0.026, TOP + 0.226), seg=14)
+        torus(0.015, 0.0035, p['teal'], (MX + dx, MY - 0.03, TOP + 0.226), (math.pi / 2, 0, 0))
+    tube([(MX - 0.035, MY + 0.01, TOP + 0.246), (MX - 0.035, MY + 0.01, TOP + 0.34)], 0.004, p['char'])
+    ball(0.009, p['teal'], (MX - 0.035, MY + 0.01, TOP + 0.345), seg=10)
+    # the arm at the front right: turret, shoulder, elbow, wrist, and the scoop held over the bin with a stone in it
+    AXx, AY = 0.095, -0.17
+    cyl(0.022, 0.026, p['char'], (AXx, AY, TOP - 0.002), bev=0.008)
+    sh, el, wr = (AXx, AY, TOP + 0.036), (AXx, -0.13, TOP + 0.16), (0.08, -0.025, TOP + 0.185)
+    tube([sh, el], 0.014, p['cream']); tube([el, wr], 0.012, p['cream'])
+    for c, r in ((sh, 0.019), (el, 0.019), (wr, 0.015)): ball(r, p['char'], c, seg=14)
+    sc = (0.07, 0.03, TOP + 0.175)
+    tube([wr, (sc[0] + 0.004, sc[1] - 0.03, sc[2] + 0.002)], 0.008, p['char'])
+    s = dome(0.034, p['orange'], (0, 0, 0), seg=20); s.rotation_euler = (math.pi + 0.35, 0, 0); s.location = sc
+    bpy.context.view_layer.objects.active = s; bpy.ops.object.transform_apply(location=True, rotation=True, scale=False)
+    ball(0.016, p['rock'], (sc[0], sc[1] + 0.003, sc[2] - 0.006), (1.1, 1, 0.8), seg=10)
+
+# ======================================================================================
 # the Ark (Joro picked idea A, 06.11.2026, and wanted it bigger and plainly a rescue ship, on a plot of 2x2):
 #    the ship we came in, standing upright on four legs where it landed. All 100 colonists are aboard, in four pod decks
 #    of 25 behind glass round a column that brings the pods power and cold; at level 10 ten pods are open (those people
@@ -1326,7 +1411,7 @@ def b_ark(p):
 BUILD = {'ark': b_ark, 'dome': b_dome, 'kitchen': b_kitchen, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': b_greenhouse,
          'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': b_warehouse, 'furnace': b_furnace, 'mine': b_mine,
          'pump': b_pump, 'solar': b_solar, 'batteries': b_batteries, 'geolocator': b_geolocator, 'mine-portal': b_mine_portal,
-         'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20)}
+         'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover}
 for name, fn in BUILD.items():
     if ONLY and name not in ONLY: continue
     reset(); p = pal(); fn(p)

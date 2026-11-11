@@ -33,6 +33,13 @@ const SETS = {
     ['kk/ideas/ark-b', 'Б, корабът на корема: откъм камерата', 4.15, 0], ['kk/ideas/ark-b', 'Б: отзад', 4.15, Math.PI],
     ['ark-v1', 'Сегашният (CellCog): откъм камерата', 0.72, 0], ['ark-v1', 'Сегашният: отзад', 0.72, Math.PI],
   ] },
+  // the collector rover (11.11.2026): from the map's corner and the back corner, then the check from the top and three sides;
+  // [name, label, metres per unit, turn, elevation in degrees]
+  rover: { title: 'Роботът събирач: откъм картата, отзад, отгоре и от три страни', k: 17, tiles: [
+    ['kk/rover', 'Откъм камерата на картата', 0, 0], ['kk/rover', 'Отзад', 0, Math.PI],
+    ['kk/rover', 'Отгоре', 0, Math.PI / 4, 88], ['kk/rover', 'Отпред', 0, Math.PI / 4, 4],
+    ['kk/rover', 'Отдясно (ръката)', 0, -Math.PI / 4, 4], ['kk/rover', 'Отляво (мачтата)', 0, 3 * Math.PI / 4, 4],
+  ] },
 };
 const SET = SETS[(location.hash.match(/set=(\w+)/) || [])[1]];
 const PHONE = location.hash.includes('phone') || !!SET;
@@ -50,11 +57,11 @@ const env = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 
 const gltf = new GLTFLoader(), draco = new DRACOLoader();
 draco.setDecoderPath('node_modules/three/examples/jsm/libs/draco/'); gltf.setDRACOLoader(draco);
 
-const EL = THREE.MathUtils.degToRad(36);
-const DIR = new THREE.Vector3(Math.cos(EL) * Math.SQRT1_2, Math.sin(EL), Math.cos(EL) * Math.SQRT1_2);
+const dirAt = deg => { const e = THREE.MathUtils.degToRad(deg); return new THREE.Vector3(Math.cos(e) * Math.SQRT1_2, Math.sin(e), Math.cos(e) * Math.SQRT1_2); };
 const FOOT = 9.6, PLOT = 14, VIEW = 16; // metres: the building's footprint, the plot, the width of the picture
 
-async function tile(name, fixedK, turn = 0) {
+async function tile(name, fixedK, turn = 0, el = 36) {
+  const DIR = dirAt(el);
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0xe9d39a);
   scene.environment = env; scene.environmentIntensity = 0.35;
@@ -94,9 +101,9 @@ async function tile(name, fixedK, turn = 0) {
 }
 
 const grid = document.getElementById('grid');
-for (const [name, label, k, turn] of ONE ? TILES.filter(t => t[0] === ONE) : SET ? SET.tiles : PHONE ? PHONE_TILES : TILES) {
+for (const [name, label, k, turn, el] of ONE ? TILES.filter(t => t[0] === ONE) : SET ? SET.tiles : PHONE ? PHONE_TILES : TILES) {
   const card = document.createElement('div'); card.className = 'card';
-  const img = new Image(); img.src = await tile(name, k || (SET && SET.k), turn || 0); await img.decode();
+  const img = new Image(); img.src = await tile(name, k || (SET && SET.k), turn || 0, el ?? 36); await img.decode();
   const cap = document.createElement('div'); cap.textContent = label;
   card.append(img, cap); grid.append(card);
 }
