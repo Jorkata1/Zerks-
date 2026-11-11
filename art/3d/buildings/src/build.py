@@ -26,7 +26,7 @@ def pal():
         steam=mat('steam', '#ffffff', 0.9, alpha=0.85), wood=mat('wood', '#c98a52', 0.8), tomato=mat('tomato', '#ff5a3c', 0.5),
         steel=mat('steel', '#b9c3cc', 0.35), clay=mat('clay', '#c9967a', 0.85), clay2=mat('clay2', '#a9785d', 0.85),
         brick=mat('brick', '#a8452f', 0.8), copper=mat('copper', '#c8743a', 0.35), cuore=mat('cuore', '#5d8a78', 0.75),
-        cusol=mat('cusol', '#29a3c9', 0.1, alpha=0.8))
+        cusol=mat('cusol', '#29a3c9', 0.1, alpha=0.8), brickwall=mat('brickwall', '#c4704f', 0.85))
 
 # ---------- the shared vocabulary ----------
 def cutter(w, d, h, loc, rot=(0, 0, 0), r=0.05):
@@ -1561,6 +1561,77 @@ def b_copperworks(p):
     for yy in (-0.43, -0.67): cable_reel(p, (WX + 0.22, yy, 0.03))
 
 # ======================================================================================
+# the brick home (the second home, level 20, docs/levels.md): the drone prints it from a paste with crushed bricks in it,
+#    so its walls are reddish, stronger and warmer; it starts at level 1 with 4 beds and grows with the people to level 20
+#    with 20, like the first home. Its own look (Joro, 11.11.2026: the brick homes look different), in the family of the
+#    first: a long house with a soft gable roof (idea B of 06.11.2026). A room for two behind every front window, with a
+#    cream lintel over it; the airlock porch in the row; solar tiles on the front slope, the air unit and the water tank at
+#    the back. Level 1: two rooms; level 10: five rooms, plants under glass in front and a bench; level 20: the upper floor
+#    with small balconies (ten rooms) and the winter garden at the end, where everyone sits in the evening.
+# ======================================================================================
+def gable(p, W, D, zb, m, pitch=0.55):
+    """a soft gable roof over a W x D body standing at zb; returns its height"""
+    s_ = (D + 0.16) / math.sqrt(2)
+    roof = rbox(W, s_, s_, 0.07, m, (0, 0, zb - s_ / 2), (D2R(45), 0, 0), seg=4)
+    apply_all([roof])
+    for v in roof.data.vertices: v.co.z = zb + (v.co.z - zb) * pitch
+    cut_half(roof, zb)
+    return (D + 0.16) / 2 * pitch
+
+def b_brickhome(p, lvl):
+    rooms = 2 if lvl < 5 else 5
+    two = lvl >= 11
+    SL, D, FH = 0.4, 0.9, 0.5
+    W = (rooms + 1) * SL + 0.14
+    door_slot = 1 if rooms == 2 else 2
+    xs = [-W / 2 + 0.07 + SL * (k + 0.5) for k in range(rooms + 1)]
+    H = FH * (2 if two else 1) + 0.04
+    rbox(W + 0.1, D + 0.1, 0.08, 0.14, p['char'], (0, 0, 0))
+    body = rbox(W, D, H, 0.12, p['brickwall'], (0, 0, 0.08), seg=5)
+    for z in ((0.08 + FH,) if two else ()): rbox(W + 0.02, D + 0.02, 0.035, 0.12, p['cream'], (0, 0, z))
+    for fl in ((0, 1) if two else (0,)):
+        for k, x in enumerate(xs):
+            if k == door_slot and fl == 0: continue
+            z = 0.2 + fl * FH
+            room(p, body, x, -D / 2 + 0.01, z, 0.0)
+            rbox(0.36, 0.05, 0.04, 0.015, p['cream'], (x, -D / 2 - 0.01, z + 0.25), seg=2)          # the lintel
+            if fl == 1:
+                rbox(0.32, 0.12, 0.03, 0.02, p['cream2'], (x, -D / 2 - 0.05, 0.08 + FH + 0.035))
+                tube([(x - 0.15, -D / 2 - 0.1, 0.08 + FH + 0.065), (x - 0.15, -D / 2 - 0.1, 0.08 + FH + 0.15), (x + 0.15, -D / 2 - 0.1, 0.08 + FH + 0.15), (x + 0.15, -D / 2 - 0.1, 0.08 + FH + 0.065)], 0.008, p['orange'])
+    # the airlock porch in the row, with a canopy and a light
+    xd = xs[door_slot]
+    rbox(0.34, 0.24, 0.48, 0.1, p['cream2'], (xd, -D / 2 - 0.08, 0.08))
+    door(p, xd, -D / 2 - 0.21, 0.0, 0.22, 0.34, 0.08)
+    rbox(0.42, 0.18, 0.03, 0.02, p['orange'], (xd, -D / 2 - 0.2, 0.56))
+    # the roof: a soft cream gable with an orange ridge, a vent on the ridge, a light at the end
+    zb = 0.08 + H
+    rh = gable(p, W + 0.12, D, zb, p['cream'])
+    hcyl(0.035, W + 0.14, p['orange'], (0, 0, zb + rh - 0.02), 'x', bev=0.012)
+    vent(p, (W / 2 - 0.3, 0.0, zb + rh - 0.03), 0.09)
+    light(p, (-W / 2 + 0.05, 0.0, zb + rh + 0.03), 0.026)
+    half = (D + 0.16) / 2; ang = math.atan2(rh, half)
+    for x in ((-0.24, 0.24) if rooms == 2 else (-0.9, -0.45, 0.0, 0.45)):
+        rbox(0.38, 0.28, 0.02, 0.02, p['navy'], (x, -half / 2 - math.sin(ang) * 0.02, zb + rh / 2 + math.cos(ang) * 0.02 - 0.01), (ang, 0, 0))
+    porthole(p, (W / 2 + 0.06, 0.0, zb + rh * 0.38), (1, 0), 0.06)
+    # the air unit and the water tank at the back, their pipes into the back wall
+    air_unit(p, (-W / 4, D / 2 + 0.17, 0.0), math.pi, 1.0)
+    tube([(-W / 4, D / 2 + 0.06, 0.16), (-W / 4, D / 2 - 0.02, 0.16)], 0.02, p['char'])
+    tank(p, (W / 4, D / 2 + 0.18, 0.0))
+    tube([(W / 4, D / 2 + 0.05, 0.3), (W / 4, D / 2 - 0.02, 0.3)], 0.016, p['char'])
+    if lvl >= 10:
+        for k, x in enumerate(xs):
+            if k != door_slot and k % 2 == 0: bell(p, (x, -D / 2 - 0.16, 0.0), 0.8)
+        bench(p, (xs[door_slot + 1], -D / 2 - 0.2, 0.0), 0.0)
+    if lvl >= 20:
+        gx = W / 2 + 0.26
+        rbox(0.44, 0.66, 0.08, 0.06, p['char'], (gx, 0.0, 0.0))
+        rbox(0.4, 0.62, 0.02, 0.02, p['floor'], (gx, 0.0, 0.08))
+        bush(p, (gx - 0.06, 0.1, 0.1), 1.0); bush(p, (gx + 0.08, -0.12, 0.1), 0.8)
+        bench(p, (gx, -0.18, 0.1), D2R(90))
+        rbox(0.4, 0.62, 0.42, 0.08, p['glass'], (gx, 0.0, 0.1))
+        rbox(0.44, 0.66, 0.035, 0.06, p['orange'], (gx, 0.0, 0.52))
+
+# ======================================================================================
 # the dock and the frame of the ship (levels 12-19, docs/levels.md): an open platform on the Ark's plot, in front of it on
 #    the right (the side of the crane), where the parts of the ship grow before the player's eyes. The Ark's fabricator
 #    makes the parts from steel and its crane lowers each one onto the marked pad in the corner of the dock nearest to it
@@ -1921,6 +1992,7 @@ BUILD = {'ark': b_ark, 'dome': b_dome, 'kitchen': b_kitchen, 'processor': b_proc
          'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': b_warehouse, 'furnace': b_furnace, 'mine': b_mine,
          'pump': b_pump, 'solar': b_solar, 'batteries': b_batteries, 'geolocator': b_geolocator, 'mine-portal': b_mine_portal,
          'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover, 'smelter': b_smelter, 'claypit': b_claypit, 'brickkiln': b_brickkiln, 'copperworks': b_copperworks,
+         **{f'brickhome-{l}': (lambda l: lambda p: b_brickhome(p, l))(l) for l in (1, 10, 20)},
          **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}}
 for name, fn in BUILD.items():
     if ONLY and name not in ONLY: continue
