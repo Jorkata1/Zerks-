@@ -1632,6 +1632,90 @@ def b_brickhome(p, lvl):
         rbox(0.44, 0.66, 0.035, 0.06, p['orange'], (gx, 0.0, 0.52))
 
 # ======================================================================================
+# the canteen (level 20, docs/levels.md): the second food building, for the colonists from 21 to 40; it starts at level 1
+#    with 8 places and grows with the people to level 20 with 20, one level for each new colonist; a cook works in it,
+#    the others eat there; it needs cables from the copper works. Like the homes, whose windows count the beds, its big
+#    windows show the tables and the seats count the places: level 1 two tables of four (8); level 10 the hall is longer,
+#    with a small table for two (10); level 20 five tables of four (20) and herbs under glass on the roof. At the back on
+#    the right the cook's kitchen: the stove and the pot behind its window, steam from its flue. The airlock door at the
+#    front, the air unit and the water tank at the back, as at the homes.
+# ======================================================================================
+def tables(p, n, seats):
+    """dining tables along a window, their long side to the glass, with stools on both long sides:
+    four at a table of four, two at a small one; plates and a little food on top"""
+    def f(cx, cy, fz):
+        L = frame(cx, cy, 0.0)
+        for k in range(n):
+            u = (k - (n - 1) / 2) * 0.27
+            small = seats == 2
+            tl = 0.12 if small else 0.22
+            rbox(tl, 0.1, 0.016, 0.01, p['cream2'], (*L(u, 0.0), fz + 0.085), seg=2)
+            for su in ((0.0,) if small else (-1, 1)):
+                cyl(0.009, 0.085, p['char'], (*L(u + su * (tl / 2 - 0.03), 0.0), fz), bev=0.003)
+            for uu in ((0.0,) if small else (-0.055, 0.055)):
+                for sv in (-1, 1):
+                    cyl(0.022, 0.05, p['orange'], (*L(u + uu, sv * 0.085), fz), bev=0.007)
+                    cyl(0.014, 0.004, p['room'], (*L(u + uu, sv * 0.03), fz + 0.101), bev=0.002)
+            ball(0.014, p['tomato'], (*L(u - 0.02, 0.0), fz + 0.108), seg=8)
+            ball(0.014, p['leaf2'], (*L(u + 0.02, 0.0), fz + 0.108), seg=8)
+    return f
+
+def stove(p):
+    """the cook's corner: a stove with a warm top, a pot, a shelf of jars on the back wall"""
+    def f(cx, cy, fz):
+        fr = math.pi / 2; L = frame(cx, cy, fr)
+        rbox(0.16, 0.09, 0.08, 0.012, p['char'], (*L(0.0, 0.05), fz), (0, 0, fr), seg=2)
+        rbox(0.12, 0.06, 0.006, 0.01, p['fire'], (*L(0.0, 0.05), fz + 0.08), (0, 0, fr), seg=1)
+        cyl(0.03, 0.04, p['grey'], (*L(-0.025, 0.05), fz + 0.086), bev=0.008)
+        rbox(0.14, 0.04, 0.008, 0.003, p['cream2'], (*L(0.0, 0.09), fz + 0.17), (0, 0, fr), seg=1)
+        for k in range(3): cyl(0.012, 0.03, [p['tomato'], p['leaf'], p['wood']][k], (*L(-0.04 + k * 0.04, 0.09), fz + 0.178), bev=0.004)
+    return f
+
+def b_canteen(p, lvl):
+    wins = {1: [(0.6, 2, 4)], 10: [(0.6, 2, 4), (0.36, 1, 2)], 20: [(0.6, 2, 4), (0.6, 2, 4), (0.36, 1, 4)]}[lvl]
+    HW = {1: 1.1, 10: 1.5, 20: 2.2}[lvl]; HD, HH, HY = 0.8, 0.5, 0.1
+    rbox(HW + 0.1, HD + 0.1, 0.08, 0.2, p['char'], (0, HY, 0.0))
+    hall = rbox(HW, HD, HH, 0.15, p['cream'], (0, HY, 0.08), seg=5)
+    x = -HW / 2 + 0.1
+    for (w, n, seats) in wins:
+        lit_room(p, hall, w, 0.26, 0.4, x + w / 2, HY - HD / 2 + 0.01, 0.2, 0.0, tables(p, n, seats))
+        x += w + 0.08
+    rbox(HW + 0.02, HD + 0.02, 0.035, 0.15, p['orange'], (0, HY, 0.08 + HH - 0.14))
+    # the airlock porch with the door at the front right
+    xd = HW / 2 - 0.2
+    rbox(0.34, 0.24, 0.46, 0.1, p['cream2'], (xd, HY - HD / 2 - 0.08, 0.08))
+    door(p, xd, HY - HD / 2 - 0.21, 0.0, 0.2, 0.34, 0.08)
+    rbox(0.42, 0.18, 0.03, 0.02, p['orange'], (xd, HY - HD / 2 - 0.2, 0.54))
+    # the cook's kitchen at the back right: its window on the right side, the flue with steam
+    KX, KY, KW, KD, KH = HW / 2 - 0.3, HY + HD / 2 + 0.17, 0.5, 0.4, 0.45
+    rbox(KW + 0.08, KD + 0.08, 0.08, 0.12, p['char'], (KX, KY, 0.0))
+    kit = rbox(KW, KD, KH, 0.12, p['cream'], (KX, KY, 0.08), seg=5)
+    lit_room(p, kit, 0.2, 0.2, 0.22, KX + KW / 2 - 0.01, KY, 0.2, math.pi / 2, stove(p))
+    rbox(KW + 0.02, KD + 0.02, 0.03, 0.12, p['orange'], (KX, KY, 0.08 + KH - 0.12))
+    cyl(0.05, 0.22, p['cream2'], (KX - 0.1, KY + 0.06, 0.08 + KH - 0.01), bev=0.015)
+    cyl(0.065, 0.04, p['char'], (KX - 0.1, KY + 0.06, 0.08 + KH + 0.2), bev=0.012)
+    steam(p, (KX - 0.1, KY + 0.06, 0.08 + KH + 0.36), 0.08)
+    light(p, (KX + 0.15, KY - 0.05, 0.08 + KH + 0.01), 0.018)
+    # on the hall's roof: a vent and a light; the air unit and the water tank at the back on the left
+    RZ = 0.08 + HH
+    vent(p, (-HW / 2 + 0.3, HY + 0.12, RZ - 0.01), 0.09)
+    light(p, (-HW / 2 + 0.12, HY - 0.2, RZ + 0.01), 0.02)
+    air_unit(p, (-HW / 2 + 0.25, HY + HD / 2 + 0.17, 0.0), math.pi, 0.9)
+    tube([(-HW / 2 + 0.25, HY + HD / 2 + 0.07, 0.15), (-HW / 2 + 0.25, HY + HD / 2 - 0.02, 0.15)], 0.02, p['char'])
+    tank(p, (-HW / 2 + 0.6, HY + HD / 2 + 0.17, 0.0))
+    tube([(-HW / 2 + 0.6, HY + HD / 2 + 0.05, 0.3), (-HW / 2 + 0.6, HY + HD / 2 - 0.02, 0.3)], 0.016, p['char'])
+    if lvl >= 10:
+        for k, (w, n, seats) in enumerate(wins[:2]):
+            bell(p, (-HW / 2 + 0.1 + k * 0.68 + 0.08, HY - HD / 2 - 0.16, 0.0), 0.8)
+    if lvl >= 20:
+        for k in range(2):
+            px = -HW / 2 + 0.55 + k * 0.6
+            rbox(0.44, 0.4, 0.06, 0.04, p['orange'], (px, HY - 0.1, RZ))
+            rbox(0.4, 0.36, 0.02, 0.03, p['soil'], (px, HY - 0.1, RZ + 0.05))
+            bush(p, (px - 0.08, HY - 0.16, RZ + 0.06), 0.55); bush(p, (px + 0.08, HY - 0.02, RZ + 0.06), 0.45)
+            dome(0.24, p['glass'], (px, HY - 0.1, RZ + 0.06), seg=32, sz=0.7)
+
+# ======================================================================================
 # the dock and the frame of the ship (levels 12-19, docs/levels.md): an open platform on the Ark's plot, in front of it on
 #    the right (the side of the crane), where the parts of the ship grow before the player's eyes. The Ark's fabricator
 #    makes the parts from steel and its crane lowers each one onto the marked pad in the corner of the dock nearest to it
@@ -1993,6 +2077,7 @@ BUILD = {'ark': b_ark, 'dome': b_dome, 'kitchen': b_kitchen, 'processor': b_proc
          'pump': b_pump, 'solar': b_solar, 'batteries': b_batteries, 'geolocator': b_geolocator, 'mine-portal': b_mine_portal,
          'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover, 'smelter': b_smelter, 'claypit': b_claypit, 'brickkiln': b_brickkiln, 'copperworks': b_copperworks,
          **{f'brickhome-{l}': (lambda l: lambda p: b_brickhome(p, l))(l) for l in (1, 10, 20)},
+         **{f'canteen-{l}': (lambda l: lambda p: b_canteen(p, l))(l) for l in (1, 10, 20)},
          **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}}
 for name, fn in BUILD.items():
     if ONLY and name not in ONLY: continue
