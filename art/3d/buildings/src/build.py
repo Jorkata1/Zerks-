@@ -1251,6 +1251,98 @@ def b_smelter(p):
     light(p, (CX - 0.18, CY + 0.08, 0.06 + CH + 0.01), 0.022)
 
 # ======================================================================================
+# the dock and the frame of the ship (levels 12-19, docs/levels.md): an open platform on the Ark's plot, in front of it on
+#    the right (the side of the crane), where the parts of the ship grow before the player's eyes. The Ark's fabricator
+#    makes the parts from steel and its crane lowers each one onto the marked pad in the corner of the dock nearest to it
+#    (the crane's jib reaches about 3.7 m); a small gantry on rails along the dock (proposal) carries it to its place.
+#    The frame is a ship's skeleton on keel blocks, bow to the front (-y): the keel, U-shaped ribs, the stem and the
+#    stringers. Four stages (200, 500, 1 000 and 1 500 steel): 1 the keel, the transom and three ribs; 2 seven ribs;
+#    3 all ten ribs, the stem and the lower stringers; 4 the stringers and the deck beams: the frame is ready.
+#    Stage 0 is the empty dock. Set on the Ark's plot with its centre at (2.32, -1.82) from the Ark, unturned:
+#    the pad is then 0.87 from the crane's foot (the jib reaches 0.9) and the dock 0.1 clear of the Ark's leg. About 5.4 x 12.5 m.
+# ======================================================================================
+def b_dock(p, stage):
+    PW, PL, PZ = 1.26, 3.0, 0.07
+    rbox(PW + 0.04, PL + 0.04, 0.03, 0.12, p['char'], (0, 0, 0.0))
+    rbox(PW, PL, 0.05, 0.12, p['cream2'], (0, 0, 0.02))
+    rbox(PW + 0.012, PL + 0.012, 0.012, 0.12, p['orange'], (0, 0, 0.042))
+    for sx in (-1, 1):
+        for sy in (-1, 1): light(p, (sx * (PW / 2 - 0.05), sy * (PL / 2 - 0.05), PZ + 0.004), 0.018)
+    RX = 0.5
+    for sx in (-1, 1): rbox(0.04, PL - 0.1, 0.022, 0.008, p['char'], (sx * RX, 0, PZ), seg=2)
+    # the pad where the Ark's crane puts the parts down: an orange edge round a dark square, a teal light by it
+    PDX, PDY = -0.24, 1.38
+    rbox(0.4, 0.3, 0.006, 0.02, p['orange'], (PDX, PDY, PZ), seg=2)
+    rbox(0.34, 0.24, 0.009, 0.015, p['char'], (PDX, PDY, PZ), seg=2)
+    light(p, (PDX + 0.23, PDY - 0.16, PZ + 0.004), 0.016)
+    # the hull's lines: half-width and depth below the deck line, bow at y = -1.3, transom at 1.2
+    ZT = 0.67
+    def w(y):
+        if y >= -0.2: return 0.37 - 0.03 * max(0.0, (y - 0.4) / 0.8)
+        return 0.37 * max(0.0, (y + 1.3) / 1.1) ** 0.6
+    def h(y):
+        if y >= -0.3: return 0.42 - 0.04 * max(0.0, (y - 0.4) / 0.8)
+        return 0.42 - 0.3 * ((-0.3 - y) / 1.0) ** 1.5
+    def rib_pts(y, n=13, lift=0.0):
+        return [(w(y) * math.sin(t), y, ZT + lift - h(y) * math.cos(t)) for t in [-math.pi / 2 + k * math.pi / (n - 1) for k in range(n)]]
+    RIBS = [1.05, 0.83, 0.61, 0.39, 0.17, -0.05, -0.27, -0.49, -0.71, -0.93]
+    nribs = {0: 0, 1: 3, 2: 7, 3: 10, 4: 10}[stage]
+    # the keel blocks: dark blocks with orange saddles, between the ribs
+    for cy in (0.94, 0.5, 0.06, -0.38):
+        kb_ = ZT - h(cy) - 0.03
+        rbox(0.26, 0.1, kb_ - PZ - 0.024, 0.02, p['char'], (0, cy, PZ), seg=2)
+        rbox(0.2, 0.12, 0.024, 0.01, p['orange'], (0, cy, kb_ - 0.024), seg=2)
+    if stage >= 1:
+        ky = [y / 20 for y in range(24, -19, -1)]                     # 1.2 down to -0.9
+        tube([(0, y, ZT - h(y)) for y in ky], 0.03, p['steel'])                                    # the keel
+        tube(rib_pts(1.2), 0.022, p['steel'])                                                      # the transom
+        tube([(-w(1.2), 1.2, ZT), (w(1.2), 1.2, ZT)], 0.02, p['steel'])
+        for y in RIBS[:nribs]: tube(rib_pts(y), 0.022, p['steel'])
+    if stage >= 3:
+        sp = [(0, -0.9, ZT - h(-0.9)), (0, -1.08, ZT - h(-1.08) + 0.02), (0, -1.2, ZT - 0.18), (0, -1.28, ZT - 0.04), (0, -1.3, ZT + 0.04)]
+        tube(sp, 0.026, p['steel'])                                                                # the stem
+        def stem_y(z):
+            for a, b in zip(sp, sp[1:]):
+                if a[2] <= z <= b[2]: return a[1] + (b[1] - a[1]) * (z - a[2]) / (b[2] - a[2])
+            return sp[-1][1]
+        ts = [0.9] if stage == 3 else [0.9, 0.45, math.pi / 2]
+        for t in ts:
+            for sx in (-1, 1):
+                pts = [(sx * w(y) * math.sin(t), y, ZT - h(y) * math.cos(t)) for y in [1.2] + RIBS]
+                zb = pts[-1][2]; pts.append((sx * 0.02, stem_y(zb) + 0.02, zb))
+                tube(pts, 0.018, p['steel'])
+    if stage >= 4:
+        for y in RIBS: tube([(-w(y), y, ZT), (w(y), y, ZT)], 0.016, p['steel'])                   # the deck beams
+        rbox(0.16, 0.012, 0.07, 0.008, p['orange'], (0, 1.2 + 0.03, ZT - 0.16), seg=1)              # an orange plate on the transom
+    # the gantry: legs on the rails, the orange beam, the trolley and the hook with the next part
+    GZ = 0.98
+    gy, tx, load = {0: (PDY, PDX, 'pad'), 1: (RIBS[3], 0.0, 'rib'), 2: (RIBS[7], 0.0, 'rib'), 3: (PDY, 0.0, 'beams'), 4: (PDY, 0.0, None)}[stage]
+    for sx in (-1, 1):
+        rbox(0.08, 0.2, 0.05, 0.02, p['char'], (sx * RX, gy, PZ + 0.02), seg=2)
+        for sy in (-1, 1): cyl(0.022, 0.012, p['char'], (sx * RX + sx * 0.045, gy + sy * 0.06, PZ + 0.02), (0, math.pi / 2, 0), bev=0.004)
+        rbox(0.06, 0.1, GZ - PZ - 0.07, 0.025, p['cream'], (sx * RX, gy, PZ + 0.07), seg=3)
+        light(p, (sx * (RX + 0.07), gy, GZ + 0.04), 0.016)
+    rbox(2 * RX + 0.14, 0.1, 0.08, 0.03, p['orange'], (0, gy, GZ), seg=3)
+    rbox(0.14, 0.14, 0.06, 0.02, p['char'], (tx, gy, GZ - 0.06), seg=2)
+    ball(0.02, p['lampw'], (tx + 0.1, gy, GZ - 0.01), seg=10)
+    hz = {'pad': PZ + 0.2, 'rib': ZT + 0.2, 'beams': GZ - 0.14, None: GZ - 0.14}[load]
+    tube([(tx, gy, GZ - 0.06), (tx, gy, hz + 0.03)], 0.007, p['char'])
+    torus(0.022, 0.007, p['char'], (tx, gy, hz), (math.pi / 2, 0, 0))
+    if load == 'rib':
+        hung = rib_pts(gy, lift=0.12)
+        tube(hung, 0.022, p['steel'])
+        for e in (hung[0], hung[-1]): tube([(tx, gy, hz - 0.02), e], 0.005, p['char'])
+    elif load == 'beams':                                 # the stringers for stage 4 wait on the pad, the hook is up
+        for k in range(3): rbox(0.34, 0.05, 0.04, 0.012, p['steel'], (PDX, PDY - 0.07 + k * 0.07, PZ + 0.009), seg=2)
+    # two floodlight masts at the front corners, for work at night
+    for sx in (-1, 1):
+        mx, my = sx * 0.58, -1.38
+        cyl(0.035, 0.03, p['char'], (mx, my, PZ), bev=0.01)
+        cyl(0.02, 0.82, p['cream'], (mx, my, PZ + 0.02), bev=0.008, verts=16)
+        rbox(0.1, 0.07, 0.05, 0.02, p['char'], (mx - sx * 0.02, my + 0.02, PZ + 0.84), (D2R(-25), 0, D2R(sx * 30)), seg=2)
+        ball(0.022, p['lampw'], (mx - sx * 0.035, my + 0.05, PZ + 0.855), seg=10)
+
+# ======================================================================================
 # the Ark (Joro picked idea A, 06.11.2026, and wanted it bigger and plainly a rescue ship, on a plot of 2x2):
 #    the ship we came in, standing upright on four legs where it landed. All 100 colonists are aboard, in four pod decks
 #    of 25 behind glass round a column that brings the pods power and cold; at level 10 ten pods are open (those people
@@ -1518,7 +1610,8 @@ def b_ark(p):
 BUILD = {'ark': b_ark, 'dome': b_dome, 'kitchen': b_kitchen, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': b_greenhouse,
          'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': b_warehouse, 'furnace': b_furnace, 'mine': b_mine,
          'pump': b_pump, 'solar': b_solar, 'batteries': b_batteries, 'geolocator': b_geolocator, 'mine-portal': b_mine_portal,
-         'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover, 'smelter': b_smelter}
+         'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover, 'smelter': b_smelter,
+         **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}}
 for name, fn in BUILD.items():
     if ONLY and name not in ONLY: continue
     reset(); p = pal(); fn(p)

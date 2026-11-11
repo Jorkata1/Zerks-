@@ -43,6 +43,11 @@ const SETS = {
   // one new model checked from the map's corner, the back, the top and three sides (11.11.2026):
   // [name, label, metres per unit, turn, elevation in degrees]
   rover: views('kk/rover', 'Роботът събирач: откъм картата, отзад, отгоре и от три страни', 17, 'ръката', 'мачтата'),
+  dock: views('kk/dock-4', 'Докът с рамата: готовата рама откъм картата, отзад, отгоре и от три страни; етапите; на парцела на Ковчега', 4.6, 'страната към Ковчега', 'външната страна', [
+    ['kk/dock-0', 'Ниво 12: празният док', 0, 0], ['kk/dock-1', 'Етап 1 (ниво 12, 200 стомана): кил, кърма, три ребра', 0, 0],
+    ['kk/dock-2', 'Етап 2 (ниво 14, 500): седем ребра', 0, 0], ['kk/dock-3', 'Етап 3 (ниво 17, 1 000): всички ребра, носът, долните надлъжни греди', 0, 0],
+    ['kk/ark+kk/dock-1@2.32,-1.82', 'На парцела на Ковчега (етап 1), в мащаба на картата', 4.15, 0, 36, 28],
+    ['kk/ark+kk/dock-4@2.32,-1.82', 'На парцела на Ковчега отгоре: кранът и мястото за частите', 4.15, 0, 88, 28]]),
   smelter: views('kk/smelter', 'Топилнята: откъм картата, отзад, отгоре и от три страни', 5.2, 'мачтата и трансформаторът', 'бункерът и лентата',
     [['kk/smelter', 'Топилнята в мащаба на картата', 4.15, 0], ['kk/furnace', 'Силициевата пещ, до която стои, в същия мащаб', 4.15, 0]]),
 };
@@ -65,7 +70,7 @@ draco.setDecoderPath('node_modules/three/examples/jsm/libs/draco/'); gltf.setDRA
 const dirAt = deg => { const e = THREE.MathUtils.degToRad(deg); return new THREE.Vector3(Math.cos(e) * Math.SQRT1_2, Math.sin(e), Math.cos(e) * Math.SQRT1_2); };
 const FOOT = 9.6, PLOT = 14, VIEW = 16; // metres: the building's footprint, the plot, the width of the picture
 
-async function tile(name, fixedK, turn = 0, el = 36) {
+async function tile(name, fixedK, turn = 0, el = 36, fit = false) {
   const DIR = dirAt(el);
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0xe9d39a);
@@ -79,7 +84,13 @@ async function tile(name, fixedK, turn = 0, el = 36) {
   const plot = new THREE.Mesh(new THREE.BoxGeometry(PLOT, 0.02, PLOT), new THREE.MeshStandardMaterial({ color: 0xe0d7c6, roughness: 0.9 }));
   plot.position.y = -0.01; plot.receiveShadow = true; scene.add(plot);
 
-  const root = (await gltf.loadAsync('models/' + name + '.glb')).scene;
+  // 'a+b@x,y': more models in one picture, b set at (x, y) Blender units from a (the dock on the Ark's plot)
+  const root = new THREE.Group();
+  for (const part of name.split('+')) {
+    const [path, at] = part.split('@'), m = (await gltf.loadAsync('models/' + path + '.glb')).scene;
+    if (at) { const [x, y] = at.split(',').map(Number); m.position.set(x, 0, -y); }
+    root.add(m);
+  }
   root.traverse(o => {
     if (!o.isMesh) return;
     const ms = Array.isArray(o.material) ? o.material : [o.material], clear = ms.some(m => m.transparent);
@@ -92,12 +103,21 @@ async function tile(name, fixedK, turn = 0, el = 36) {
   const k = fixedK || FOOT / Math.max(s.x, s.z);
   root.scale.setScalar(k); root.position.set(-c.x * k, -b.min.y * k, -c.z * k); scene.add(root);
 
+  // fit = the side of the first model's plot in metres (28 for the Ark's 2x2), drawn round its origin
+  if (fit) { plot.scale.set(fit / PLOT, 1, fit / PLOT); plot.position.set(-c.x * k, -0.01, -c.z * k); sun.shadow.camera.left = sun.shadow.camera.bottom = -40; sun.shadow.camera.right = sun.shadow.camera.top = 40; sun.shadow.camera.updateProjectionMatrix(); }
   const h = s.y * k, cam = new THREE.OrthographicCamera(-VIEW / 2, VIEW / 2, VIEW / 2, -VIEW / 2, 1, 600);
   const look = new THREE.Vector3(0, h * 0.36, 0);
   cam.position.copy(look).addScaledVector(DIR, 300); cam.lookAt(look); cam.updateMatrixWorld();
   // a tall model (the carbon drill) gets a wider picture, so its top is not cut off
   const box = new THREE.Box3().setFromObject(root), top = new THREE.Vector3(0, box.max.y, 0).applyMatrix4(cam.matrixWorldInverse).y;
-  if (top > VIEW / 2 * 0.9) {
+  if (fit) {
+    // the whole group in the picture: fit the frustum round its projected box
+    box.union(new THREE.Box3().setFromObject(plot));
+    const pts = []; for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) pts.push(new THREE.Vector3(x, y, z).applyMatrix4(cam.matrixWorldInverse));
+    const lo = { x: Math.min(...pts.map(q => q.x)), y: Math.min(...pts.map(q => q.y)) }, hi = { x: Math.max(...pts.map(q => q.x)), y: Math.max(...pts.map(q => q.y)) };
+    const v = Math.max(hi.x - lo.x, hi.y - lo.y) / 2 * 1.08, cx = (lo.x + hi.x) / 2, cy = (lo.y + hi.y) / 2;
+    Object.assign(cam, { left: cx - v, right: cx + v, top: cy + v, bottom: cy - v }); cam.updateProjectionMatrix();
+  } else if (top > VIEW / 2 * 0.9) {
     const v = (top + VIEW / 2) / 1.85; // keep the bottom edge, leave a margin above the top
     Object.assign(cam, { left: -v, right: v, top: v, bottom: -v }); cam.position.addScaledVector(cam.up.clone().applyQuaternion(cam.quaternion), v - VIEW / 2); cam.updateProjectionMatrix();
   }
@@ -106,9 +126,9 @@ async function tile(name, fixedK, turn = 0, el = 36) {
 }
 
 const grid = document.getElementById('grid');
-for (const [name, label, k, turn, el] of ONE ? TILES.filter(t => t[0] === ONE) : SET ? SET.tiles : PHONE ? PHONE_TILES : TILES) {
+for (const [name, label, k, turn, el, fit] of ONE ? TILES.filter(t => t[0] === ONE) : SET ? SET.tiles : PHONE ? PHONE_TILES : TILES) {
   const card = document.createElement('div'); card.className = 'card';
-  const img = new Image(); img.src = await tile(name, k || (SET && SET.k), turn || 0, el ?? 36); await img.decode();
+  const img = new Image(); img.src = await tile(name, k || (SET && SET.k), turn || 0, el ?? 36, fit || 0); await img.decode();
   const cap = document.createElement('div'); cap.textContent = label;
   card.append(img, cap); grid.append(card);
 }
