@@ -1954,7 +1954,59 @@ def export_light(path):
                               export_draco_mesh_compression_level=7, export_draco_position_quantization=12)
 
 ARK_KEEP = []
-def b_ark(p):
+def ark_dish(p, at, state, outward=D2R(330)):
+    """the Ark's dish (level 18, docs/levels.md) on its base at `at`: 'folded' as it was stowed for the landing and broken
+    there (eight cream petals closed like an umbrella round the mast, no light); 'open' after the repair (the dish about
+    3.5 m across, an orange rim, the receiver on three struts, its light on), looking up at the containers in orbit"""
+    x, y, z = at
+    cyl(0.12, 0.06, p['cream2'], (x, y, z - 0.02), bev=0.02)
+    if state == 'open':
+        import mathutils
+        cyl(0.04, 0.24, p['char'], (x, y, z + 0.03), bev=0.012)
+        G = Vector((x, y, z + 0.3)); ball(0.06, p['char'], tuple(G), seg=14)                 # the gimbal on the mast
+        el = D2R(50); n = Vector((math.cos(outward) * math.cos(el), math.sin(outward) * math.cos(el), math.sin(el)))
+        r = 0.42; c = G + n * 0.19                                     # the dish's back just touches the gimbal
+        d = dome(r, p['cream'], (0, 0, 0), seg=40, sz=0.3)
+        sm = d.modifiers.new('shell', 'SOLIDIFY'); sm.thickness = 0.02; _apply(d)
+        q = (-n).to_track_quat('Z', 'Y')                                                      # the dome's top is the dish's back
+        d.matrix_world = mathutils.Matrix.Translation(c) @ q.to_matrix().to_4x4()
+        bpy.context.view_layer.objects.active = d; bpy.ops.object.select_all(action='DESELECT'); d.select_set(True)
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=False)
+        rq = n.to_track_quat('Z', 'Y').to_euler()
+        torus(r, 0.035, p['orange'], tuple(c), tuple(rq))
+        M = n.to_track_quat('Z', 'Y').to_matrix(); hub = c + n * (r * 0.45)
+        for k in range(3):
+            a = k * 2.094 + 0.5; rim = c + M @ Vector((math.cos(a) * r * 0.97, math.sin(a) * r * 0.97, 0))
+            tube([tuple(rim), tuple(hub)], 0.01, p['char'])
+        light(p, tuple(hub), 0.035)
+        return
+    cyl(0.04, 0.24, p['char'], (x, y, z + 0.03), bev=0.012)
+    hub = Vector((x, y, z + 0.3))
+    ball(0.06, p['char'], tuple(hub), seg=14)
+    ax = Vector((math.cos(outward) * math.sin(D2R(25)), math.sin(outward) * math.sin(D2R(25)), math.cos(D2R(25))))
+    import mathutils
+    q = ax.to_track_quat('Z', 'Y')
+    for k in range(8):
+        a = k * math.pi / 4
+        rad = q @ Vector((math.cos(a), math.sin(a), 0))
+        base = hub + rad * 0.07 + ax * 0.03
+        tip = hub + rad * 0.03 + ax * 0.5
+        L_ = (tip - base).length; zc = (tip - base).normalized()
+        xc = ax.cross(rad).normalized(); yc = zc.cross(xc)
+        o = rbox(0.1, 0.014, L_, 0.006, p['cream'], (0, 0, -L_ / 2), seg=2)       # centred on the origin
+        M = mathutils.Matrix((xc, yc, zc)).transposed().to_4x4(); M.translation = (base + tip) / 2
+        o.matrix_world = M
+        bpy.context.view_layer.objects.active = o; bpy.ops.object.select_all(action='DESELECT'); o.select_set(True)
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=False)
+    cyl(0.03, 0.04, p['orange'], tuple(hub + ax * 0.5), bev=0.01)
+
+def b_arkdish(p, state):
+    """the dish alone on a piece of the Ark's orange top, for the close look"""
+    dome(1.3, p['orange'], (0, 0, -1.0), seg=64, sz=0.95)
+    zt = -1.0 + 1.3 * 0.95 * math.sqrt(1 - (0.0 / 1.3) ** 2)
+    ark_dish(p, (0, 0, zt), state, D2R(-45))
+
+def b_ark(p, dish_state='folded'):
     R = 1.3
     Z_SKIRT, Z_HULL, Z_DECKS, DECK, RING = 0.75, 1.2, 2.65, 0.65, 0.2
     Z_UP = Z_DECKS + 4 * DECK + 3 * RING
@@ -2060,6 +2112,9 @@ def b_ark(p):
     mz = Z_NOSE + R * 0.95 * math.sqrt(1 - (0.8 / R) ** 2)
     cyl(0.016, 0.5, p['char'], (mx, my, mz - 0.04), bev=0.005)
     light(p, (mx, my, mz + 0.47), 0.026)
+    # the dish at the front right of the top, where the map's camera sees it: folded until level 18, open after
+    dr = 0.75; da = D2R(330)
+    ark_dish(p, (math.cos(da) * dr, math.sin(da) * dr, Z_NOSE + R * 0.95 * math.sqrt(1 - (dr / R) ** 2)), dish_state, da)
     # the drone's balcony on the upper hull, with the small hatch it goes in by (for paste and charge)
     a = D2R(225); c, s_ = math.cos(a), math.sin(a)
     bz = Z_UP + 0.03
@@ -2072,7 +2127,8 @@ def b_ark(p):
     e.location = (c * (R + 0.44), s_ * (R + 0.44), pz)
     door(p, c * (R - 0.012), s_ * (R - 0.012), a + math.pi / 2, w=0.26, h=0.3, z=bz + 0.09)
 
-BUILD = {'ark': b_ark, 'dome': b_dome, 'kitchen': b_kitchen, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': b_greenhouse,
+BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open'),
+         'arkdish-folded': lambda p: b_arkdish(p, 'folded'), 'arkdish-open': lambda p: b_arkdish(p, 'open'), 'dome': b_dome, 'kitchen': b_kitchen, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': b_greenhouse,
          'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': b_warehouse, 'furnace': b_furnace, 'mine': b_mine,
          'pump': b_pump, 'solar': b_solar, 'batteries': b_batteries, 'geolocator': b_geolocator, 'mine-portal': b_mine_portal,
          'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover, 'smelter': b_smelter, 'claypit': b_claypit, 'brickkiln': b_brickkiln, 'copperworks': b_copperworks,
@@ -2082,6 +2138,6 @@ BUILD = {'ark': b_ark, 'dome': b_dome, 'kitchen': b_kitchen, 'processor': b_proc
 for name, fn in BUILD.items():
     if ONLY and name not in ONLY: continue
     reset(); p = pal(); fn(p)
-    if name == 'ark': join_all(ARK_KEEP); export_light(f'{OUT}/{name}.glb')
+    if name in ('ark', 'ark-18'): join_all(ARK_KEEP); export_light(f'{OUT}/{name}.glb')
     else: export(f'{OUT}/{name}.glb')
     print('built', name)
