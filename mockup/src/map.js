@@ -180,7 +180,8 @@ const built = {
   // the geolocator, the seismic station (Joro, 05.11.2026), alone at the size of the other buildings
   '-2,2': b => add(kk('geolocator', 9.4), b.cx, 0.4, b.cz, 0),
   // the panels from level 5 and 6 on their plot by the greenhouse, the batteries (level 7) on the plot next to them
-  '1,3': b => { add(kk('solar', 6.0), b.cx, 0.4, b.cz - 2.7, 0); add(kk('solar', 6.0), b.cx, 0.4, b.cz + 2.7, 0); },
+  // (since 11.11.2026 one plot that grows with its upgrades: solar.glb is its level 10, three rows)
+  '1,3': b => add(kk('solar', 11.0), b.cx, 0.4, b.cz, 0),
   '-1,3': b => add(kk('batteries', 6.0), b.cx, 0.4, b.cz, 0),
 };
 const builtBlocks = [];

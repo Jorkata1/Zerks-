@@ -532,23 +532,48 @@ def b_pump(p):
     for i, (x, y, r) in enumerate(((-0.75, -0.55, 0.13), (-0.55, -0.75, 0.1), (-0.85, -0.25, 0.09), (0.7, -0.6, 0.11))):
         rbox(r * 2, r * 1.8, r * 1.4, r * 0.4, p['ice'], (x, y, 0.0), (0, 0, i * 0.7))
 
-def b_solar(p):
-    # two rows of navy panels in cream frames on soft stands, an inverter box with lights, a cable
-    rbox(1.9, 1.5, 0.08, 0.05, p['cream2'], (0, 0, 0))
-    for y in (-0.35, 0.35):
-        for x in (-0.55, 0.55):
-            cyl(0.035, 0.3, p['char'], (x, y + 0.12, 0.06), bev=0.012); cyl(0.07, 0.04, p['char'], (x, y + 0.12, 0.05), bev=0.015)
-        tilt = (math.radians(-30), 0, 0)
-        rbox(1.6, 0.6, 0.05, 0.035, p['cream'], (0, y, 0.33), tilt)
-        rbox(1.5, 0.52, 0.03, 0.02, p['navy'], (0, y, 0.37), tilt)
-        for i in range(1, 4): rbox(0.012, 0.52, 0.012, 0.005, p['cream'], (-0.75 + i * 0.375, y, 0.397), tilt)
-        rbox(0.012, 0.012, 0.012, 0.004, p['orange'], (0.0, y, 0.33), tilt)
-        rbox(1.62, 0.04, 0.03, 0.015, p['orange'], (0, y - 0.27, 0.2), tilt)
-    bx, by = 1.15, -0.25
-    rbox(0.36, 0.3, 0.45, 0.1, p['cream'], (bx, by, 0.0)); rbox(0.38, 0.32, 0.04, 0.1, p['orange'], (bx, by, 0.32))
-    vent(p, (bx, by, 0.45), 0.08)
-    for k in range(3): light(p, (bx - 0.18, by - 0.08 + k * 0.08, 0.22), 0.025)
-    tube([(bx - 0.18, by, 0.06), (0.75, -0.2, 0.06)], 0.03, p['char'])
+def b_solar(p, lvl=10):
+    """the solar panels (level 5, docs/levels.md): one plot that grows with its upgrades, row by row (Joro, 11.11.2026);
+    one worker for them all keeps them clean of dust (+20%). Rows fill the plot from the back: level 1 one row,
+    level 10 three, level 20 five; the footings of the rows to come wait in the empty part. Each row: navy cells in a
+    cream frame on dark posts, tilted to the sun, an orange edge. At the front right the inverter with its lights and
+    the cable to the batteries; the cleaning cart with its brush and water tank parked at the end of the front row."""
+    rows = {1: 1, 10: 3, 20: 5}[lvl]
+    PW, PD = 2.6, 2.4
+    rbox(PW, PD, 0.06, 0.08, p['cream2'], (0, 0, 0))
+    RL, RD = 2.0, 0.44                              # a row: its length along x and the depth of its panels
+    ys = [0.9 - k * 0.48 for k in range(5)]          # from the back to the front
+    tilt = (math.radians(30), 0, 0)                  # the cells face the front, where the sun and the map's camera are
+    for k, y in enumerate(ys):
+        if k >= rows:
+            for x in (-0.85, 0.0, 0.85): cyl(0.05, 0.02, p['char'], (x - 0.15, y + 0.08, 0.06), bev=0.008)   # a footing to come
+            continue
+        for x in (-0.85, 0.0, 0.85):
+            cyl(0.03, 0.24, p['char'], (x - 0.15, y + 0.08, 0.05), bev=0.01); cyl(0.055, 0.03, p['char'], (x - 0.15, y + 0.08, 0.05), bev=0.012)
+        rbox(RL, RD, 0.04, 0.03, p['cream'], (-0.15, y, 0.27), tilt)
+        rbox(RL - 0.08, RD - 0.07, 0.025, 0.018, p['navy'], (-0.15, y, 0.3), tilt)
+        for i in range(1, 6): rbox(0.01, RD - 0.07, 0.01, 0.004, p['cream'], (-0.15 - (RL - 0.08) / 2 + i * (RL - 0.08) / 6, y, 0.322), tilt)
+        rbox(RL + 0.02, 0.03, 0.025, 0.012, p['orange'], (-0.15, y - RD / 2 * math.cos(math.radians(30)) + 0.01, 0.16), tilt)
+        if k: tube([(-0.15 + RL / 2, y + 0.05, 0.08), (-0.15 + RL / 2 + 0.06, y + 0.05, 0.07), (-0.15 + RL / 2 + 0.06, ys[k - 1] + 0.05, 0.07)], 0.012, p['char'])
+    # the inverter at the front right, its lights, and the cable that goes off to the batteries
+    bx, by = 1.05, -0.95
+    rbox(0.34, 0.28, 0.42, 0.09, p['cream'], (bx, by, 0.05)); rbox(0.36, 0.3, 0.035, 0.09, p['orange'], (bx, by, 0.32))
+    vent(p, (bx, by, 0.47), 0.07)
+    for k in range(3): light(p, (bx - 0.172, by - 0.08 + k * 0.08, 0.24), 0.02)
+    front = ys[rows - 1]
+    tube([(-0.15 + RL / 2 + 0.06, front + 0.05, 0.07), (bx - 0.1, front + 0.05, 0.07), (bx - 0.1, by + 0.14, 0.07)], 0.014, p['char'])
+    tube([(bx + 0.12, by + 0.1, 0.08), (PW / 2 + 0.05, by + 0.3, 0.03), (PW / 2 + 0.3, by + 0.4, 0.012)], 0.022, p['char'])
+    # the cleaning cart: the worker pushes it along the rows; a soft orange brush, a water tank, small wheels
+    cx, cy = -0.15 - RL / 2 - 0.2, front - 0.05
+    rbox(0.16, 0.24, 0.1, 0.035, p['cream'], (cx, cy, 0.08), seg=3)
+    cyl(0.05, 0.1, p['cream2'], (cx, cy + 0.04, 0.18), bev=0.015)
+    light(p, (cx, cy + 0.04, 0.29), 0.012)
+    bpy.ops.mesh.primitive_cylinder_add(vertices=20, radius=0.035, depth=0.2, location=(cx + 0.11, cy, 0.15), rotation=(math.pi / 2, 0, 0))
+    _done(bpy.context.object, p['orange'])
+    for sy in (-1, 1):
+        bpy.ops.mesh.primitive_cylinder_add(vertices=16, radius=0.025, depth=0.014, location=(cx - 0.05, cy + sy * 0.1, 0.085), rotation=(0, math.pi / 2, 0))
+        _done(bpy.context.object, p['char'])
+    tube([(cx - 0.08, cy, 0.18), (cx - 0.16, cy, 0.32)], 0.008, p['char'])
 
 def b_batteries(p):
     # four upright cells with teal charge strips and orange tops, joined by a cable, a small control box
@@ -2162,7 +2187,7 @@ def b_ark(p, dish_state='folded'):
 BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open'),
          'arkdish-folded': lambda p: b_arkdish(p, 'folded'), 'arkdish-open': lambda p: b_arkdish(p, 'open'), 'dome': b_dome, 'kitchen': lambda p: b_kitchen(p, 10), **{f'kitchen-{l}': (lambda l: lambda p: b_kitchen(p, l))(l) for l in (1, 10, 20)}, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': b_greenhouse,
          'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': b_warehouse, 'furnace': b_furnace, 'mine': b_mine,
-         'pump': b_pump, 'solar': b_solar, 'batteries': b_batteries, 'geolocator': b_geolocator, 'mine-portal': b_mine_portal,
+         'pump': b_pump, 'solar': lambda p: b_solar(p, 10), **{f'solar-{l}': (lambda l: lambda p: b_solar(p, l))(l) for l in (1, 10, 20)}, 'batteries': b_batteries, 'geolocator': b_geolocator, 'mine-portal': b_mine_portal,
          'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover, 'smelter': b_smelter, 'claypit': b_claypit, 'brickkiln': b_brickkiln, 'copperworks': b_copperworks,
          **{f'brickhome-{l}': (lambda l: lambda p: b_brickhome(p, l))(l) for l in (1, 10, 20)},
          **{f'canteen-{l}': (lambda l: lambda p: b_canteen(p, l))(l) for l in (1, 10, 20)},
