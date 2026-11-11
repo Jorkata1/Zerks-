@@ -21,7 +21,7 @@ const path = require('path');
     page.on('console', m => { if (m.type() === 'error') errors.push(m.text().slice(0, 300)); });
     await page.goto('http://127.0.0.1:8777/catalog.html' + hash, { waitUntil: 'commit', timeout: 120000 });
     await page.waitForFunction(() => window.__ready === true, null, { timeout: 600000 }).catch(() => errors.push('timeout'));
-    await page.screenshot({ path: path.join(outDir, file), type: 'jpeg', quality: 90, fullPage: true });
+    await page.screenshot({ path: path.join(outDir, file), type: 'jpeg', quality: set && set.startsWith('all') ? 95 : 90, fullPage: true });
     console.log(file, errors.join(' | ') || 'ok');
     await page.close();
   }
