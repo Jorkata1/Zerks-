@@ -640,20 +640,49 @@ def b_solar(p, lvl=10):
         _done(bpy.context.object, p['char'])
     tube([(cx - 0.08, cy, 0.18), (cx - 0.16, cy, 0.32)], 0.008, p['char'])
 
-def b_batteries(p):
-    # four upright cells with teal charge strips and orange tops, joined by a cable, a small control box
-    rbox(1.8, 1.2, 0.08, 0.05, p['cream2'], (0, 0, 0))
-    for i, x in enumerate((-0.6, -0.2, 0.2, 0.6)):
-        y = 0.15
-        cyl(0.18, 0.08, p['char'], (x, y, 0.06), bev=0.03)
-        cyl(0.16, 0.72, p['cream'], (x, y, 0.1), bev=0.12)
-        torus(0.16, 0.02, p['orange'], (x, y, 0.55))
-        for k in range(4 if i != 2 else 2): rbox(0.11, 0.05, 0.06, 0.025, p['teal'], (x, y - 0.15, 0.2 + k * 0.08))
-        cyl(0.08, 0.06, p['orange'], (x, y, 0.8), bev=0.025); cyl(0.03, 0.06, p['char'], (x, y, 0.85), bev=0.01)
-    tube([(-0.6, 0.15, 0.9), (-0.6, 0.15, 0.98), (0.6, 0.15, 0.98), (0.6, 0.15, 0.9)], 0.02, p['char'])
-    bx, by = 0.0, -0.42
+def b_batteries(p, lvl=10):
+    """the batteries (level 7, docs/levels.md): the power for the night, no worker; they grow with their cells, so the
+    night lasts with the smelter and the kilns too. Upright cells with teal charge strips and orange tops on a pale
+    pad, a control box. Level 1 two cells; level 10 four in a row; level 20 eight in two rows joined by copper bus bars
+    (from level 18 the smelter makes them, and the night lasts longer) and a cooler with fans, because so many cells
+    get warm"""
+    rows = [(0.15, 2)] if lvl < 10 else ([(0.15, 4)] if lvl < 20 else [(0.45, 4), (-0.15, 4)])
+    PW, PD = (1.0, 1.1) if lvl < 10 else ((1.8, 1.2) if lvl < 20 else (1.9, 1.95))
+    PY = 0.0 if lvl < 20 else 0.05
+    rbox(PW, PD, 0.08, 0.05, p['cream2'], (0, PY, 0))
+    bus = p['copper'] if lvl >= 20 else p['char']
+    for r, (y, n) in enumerate(rows):
+        xs = [(-(n - 1) / 2 + i) * 0.4 for i in range(n)]
+        for i, x in enumerate(xs):
+            cyl(0.18, 0.08, p['char'], (x, y, 0.06), bev=0.03)
+            cyl(0.16, 0.72, p['cream'], (x, y, 0.1), bev=0.12)
+            torus(0.16, 0.02, p['orange'], (x, y, 0.55))
+            full = 4 if (i + r) % 3 else 2
+            for k in range(full): rbox(0.11, 0.05, 0.06, 0.025, p['teal'], (x, y - 0.15, 0.2 + k * 0.08))
+            cyl(0.08, 0.06, p['orange'], (x, y, 0.8), bev=0.025); cyl(0.03, 0.06, p['char'], (x, y, 0.85), bev=0.01)
+        if lvl >= 20:
+            rbox(xs[-1] - xs[0] + 0.06, 0.04, 0.025, 0.01, p['copper'], ((xs[0] + xs[-1]) / 2, y, 0.93), seg=1)
+            for x in xs: rbox(0.03, 0.03, 0.05, 0.008, p['copper'], (x, y, 0.89), seg=1)
+        else:
+            tube([(xs[0], y, 0.9), (xs[0], y, 0.98), (xs[-1], y, 0.98), (xs[-1], y, 0.9)], 0.02, p['char'])
+    if lvl >= 20:
+        tube([(rows[0][1] * 0.2 - 0.2 + 0.03, rows[0][0], 0.94), (0.82, rows[0][0], 0.94), (0.82, rows[1][0], 0.94), (0.63, rows[1][0], 0.94)], 0.014, p['copper'])
+    # the control box in front, its cable to the cells
+    bx, by = (0.0, -0.42) if lvl < 20 else (-0.45, -0.68)
     rbox(0.5, 0.26, 0.3, 0.09, p['cream'], (bx, by, 0.06)); rbox(0.52, 0.28, 0.035, 0.09, p['orange'], (bx, by, 0.24))
     rbox(0.26, 0.03, 0.08, 0.02, p['teal'], (bx, by - 0.13, 0.13)); vent(p, (bx + 0.15, by, 0.36), 0.06)
+    front = rows[-1][0]
+    tube([(bx, by + 0.13, 0.12), (bx, front - 0.2, 0.1)], 0.018, bus)
+    if lvl >= 20:
+        # the cooler: so many cells get warm; a box with two fans and a light, a pipe along the rows
+        cxx, cyy = 0.45, -0.68
+        rbox(0.42, 0.26, 0.16, 0.05, p['cream2'], (cxx, cyy, 0.06))
+        for sgn in (-1, 1):
+            cyl(0.07, 0.02, p['char'], (cxx + sgn * 0.1, cyy, 0.22), bev=0.005)
+            torus(0.07, 0.012, p['orange'], (cxx + sgn * 0.1, cyy, 0.24))
+            rbox(0.12, 0.012, 0.008, 0.004, p['grey'], (cxx + sgn * 0.1, cyy, 0.24), (0, 0, D2R(30 * sgn)))
+        light(p, (cxx, cyy - 0.13, 0.17), 0.016)
+        tube([(cxx, cyy + 0.13, 0.12), (cxx, front - 0.22, 0.1), (-0.65, front - 0.22, 0.1)], 0.016, p['char'])
 
 def b_geolocator_round(p):
     # the first geolocator, until 05.11.2026 (too bare; replaced by the seismic station below): a small round station with a rotating scanner arm and a glowing screen
@@ -2337,7 +2366,7 @@ def b_ark(p, dish_state='folded'):
 BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open'),
          'arkdish-folded': lambda p: b_arkdish(p, 'folded'), 'arkdish-open': lambda p: b_arkdish(p, 'open'), 'dome': b_dome, 'kitchen': lambda p: b_kitchen(p, 10), **{f'kitchen-{l}': (lambda l: lambda p: b_kitchen(p, l))(l) for l in (1, 10, 20)}, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': lambda p: b_greenhouse(p, 10), **{f'greenhouse-{l}': (lambda l: lambda p: b_greenhouse(p, l))(l) for l in (1, 10, 20)},
          'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': lambda p: b_warehouse(p, 10), **{f'warehouse-{l}': (lambda l: lambda p: b_warehouse(p, l))(l) for l in (1, 10, 20)}, 'furnace': b_furnace, 'mine': b_mine,
-         'pump': b_pump, 'solar': lambda p: b_solar(p, 10), **{f'solar-{l}': (lambda l: lambda p: b_solar(p, l))(l) for l in (1, 10, 20)}, 'batteries': b_batteries, 'geolocator': b_geolocator, 'mine-portal': b_mine_portal,
+         'pump': b_pump, 'solar': lambda p: b_solar(p, 10), **{f'solar-{l}': (lambda l: lambda p: b_solar(p, l))(l) for l in (1, 10, 20)}, 'batteries': lambda p: b_batteries(p, 10), **{f'batteries-{l}': (lambda l: lambda p: b_batteries(p, l))(l) for l in (1, 10, 20)}, 'geolocator': b_geolocator, 'mine-portal': b_mine_portal,
          'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover, 'drill': lambda p: b_drill(p, 10), **{f'drill-{l}': (lambda l: lambda p: b_drill(p, l))(l) for l in (1, 10, 20)}, 'smelter': b_smelter, 'claypit': b_claypit, 'brickkiln': b_brickkiln, 'copperworks': b_copperworks,
          **{f'brickhome-{l}': (lambda l: lambda p: b_brickhome(p, l))(l) for l in (1, 10, 20)},
          **{f'canteen-{l}': (lambda l: lambda p: b_canteen(p, l))(l) for l in (1, 10, 20)},
