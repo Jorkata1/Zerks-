@@ -18,6 +18,13 @@ const PHONE_TILES = [
   ['kk/warehouse', 'Склад'], ['kk/furnace', 'Силициева пещ'], ['kk/mine', 'Мина'],
   ['kk/pump', 'Помпа за вода'], ['kk/solar', 'Слънчеви панели'], ['kk/batteries', 'Батерии'], ['kk/geolocator', 'Геолокатор'],
 ];
+function views(m, title, k, right, left, extra = []) {
+  return { title, k, tiles: [
+    [m, 'Откъм камерата на картата', 0, 0], [m, 'Отзад', 0, Math.PI],
+    [m, 'Отгоре', 0, Math.PI / 4, 88], [m, 'Отпред', 0, Math.PI / 4, 4],
+    [m, `Отдясно (${right})`, 0, -Math.PI / 4, 4], [m, `Отляво (${left})`, 0, 3 * Math.PI / 4, 4], ...extra,
+  ] };
+}
 // #set=<name>: ideas side by side, level 1 on the left and level 10 on the right (art/3d/buildings/ideas)
 const SETS = {
   // k: one scale for the whole sheet (metres per Blender unit), so the level-10 building stands bigger than level 1
@@ -33,13 +40,11 @@ const SETS = {
     ['kk/ideas/ark-b', 'Б, корабът на корема: откъм камерата', 4.15, 0], ['kk/ideas/ark-b', 'Б: отзад', 4.15, Math.PI],
     ['ark-v1', 'Сегашният (CellCog): откъм камерата', 0.72, 0], ['ark-v1', 'Сегашният: отзад', 0.72, Math.PI],
   ] },
-  // the collector rover (11.11.2026): from the map's corner and the back corner, then the check from the top and three sides;
+  // one new model checked from the map's corner, the back, the top and three sides (11.11.2026):
   // [name, label, metres per unit, turn, elevation in degrees]
-  rover: { title: 'Роботът събирач: откъм картата, отзад, отгоре и от три страни', k: 17, tiles: [
-    ['kk/rover', 'Откъм камерата на картата', 0, 0], ['kk/rover', 'Отзад', 0, Math.PI],
-    ['kk/rover', 'Отгоре', 0, Math.PI / 4, 88], ['kk/rover', 'Отпред', 0, Math.PI / 4, 4],
-    ['kk/rover', 'Отдясно (ръката)', 0, -Math.PI / 4, 4], ['kk/rover', 'Отляво (мачтата)', 0, 3 * Math.PI / 4, 4],
-  ] },
+  rover: views('kk/rover', 'Роботът събирач: откъм картата, отзад, отгоре и от три страни', 17, 'ръката', 'мачтата'),
+  smelter: views('kk/smelter', 'Топилнята: откъм картата, отзад, отгоре и от три страни', 5.2, 'мачтата и трансформаторът', 'бункерът и лентата',
+    [['kk/smelter', 'Топилнята в мащаба на картата', 4.15, 0], ['kk/furnace', 'Силициевата пещ, до която стои, в същия мащаб', 4.15, 0]]),
 };
 const SET = SETS[(location.hash.match(/set=(\w+)/) || [])[1]];
 const PHONE = location.hash.includes('phone') || !!SET;

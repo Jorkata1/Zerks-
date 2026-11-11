@@ -23,7 +23,8 @@ def pal():
         fire=mat('fire', '#ffb040', 0.4, emit='#ff8a2a', strength=4.0), lampw=mat('lamp', '#fff3d0', 0.3, emit='#ffe08a', strength=3.0),
         navy=mat('panel', '#262b55', 0.25), rock=mat('rock', '#d4693b', 0.85), rock2=mat('rock2', '#b8532d', 0.85),
         ice=mat('ice', '#dff5ff', 0.15, alpha=0.9), ore=mat('ore', '#3a3634', 0.7), crystal=mat('crystal', '#7ff6f0', 0.2, emit='#5ff0e6', strength=1.2),
-        steam=mat('steam', '#ffffff', 0.9, alpha=0.85), wood=mat('wood', '#c98a52', 0.8), tomato=mat('tomato', '#ff5a3c', 0.5))
+        steam=mat('steam', '#ffffff', 0.9, alpha=0.85), wood=mat('wood', '#c98a52', 0.8), tomato=mat('tomato', '#ff5a3c', 0.5),
+        steel=mat('steel', '#b9c3cc', 0.35))
 
 # ---------- the shared vocabulary ----------
 def cutter(w, d, h, loc, rot=(0, 0, 0), r=0.05):
@@ -1144,6 +1145,112 @@ def b_rover(p):
     ball(0.016, p['rock'], (sc[0], sc[1] + 0.003, sc[2] - 0.006), (1.1, 1, 0.8), seg=10)
 
 # ======================================================================================
+# the smelter (level 11, docs/levels.md): iron ore + carbon + power -> steel, next to the silicon furnace. An electric
+#    furnace, the way small steelworks melt today: a round vessel with a lid, three thick graphite electrodes (graphite is
+#    carbon) down through the lid on orange arms from a mast, fat cables from the arms to the transformer, because it eats
+#    a lot of power. The way of the material: the hopper at the back left holds iron ore and carbon, a belt tips them into
+#    the lid; the melt runs out of the spout at the front into a ladle, and the cast steel bars wait on a pallet. The
+#    fumes go from the top of the lid through a duct into the filter tower (the filter is studied on the same level), so
+#    no smoke rises. The engineer works in the cabin at the front left, at a desk behind a lit window.
+# ======================================================================================
+def b_smelter(p):
+    FX, FY, R = 0.15, 0.1, 0.5
+    LZ = 0.08 + 0.45                                     # the top of the vessel, where the lid sits
+    cyl(R + 0.06, 0.1, p['char'], (FX, FY, 0.0), bev=0.03, verts=56)
+    cyl(R, 0.45, p['cream'], (FX, FY, 0.08), bev=0.05, verts=56)
+    torus(R + 0.004, 0.026, p['orange'], (FX, FY, 0.36))
+    torus(R - 0.01, 0.03, p['char'], (FX, FY, LZ - 0.005))
+    LR, LS = R - 0.02, 0.45
+    dome(LR, p['cream'], (FX, FY, LZ - 0.005), seg=48, sz=LS)
+    lid_z = lambda r: LZ - 0.005 + LR * LS * math.sqrt(max(0.0, 1 - (r / LR) ** 2))
+    light(p, (FX + math.cos(D2R(-60)) * (R + 0.01), FY + math.sin(D2R(-60)) * (R + 0.01), 0.45), 0.024)
+    # the mast with the three electrode arms, each at its own height, so they pass over one another
+    MX, MY = 0.88, -0.1
+    cyl(0.1, 0.06, p['char'], (MX, MY, 0.0), bev=0.02)
+    cyl(0.075, 1.3, p['cream'], (MX, MY, 0.05), bev=0.03)
+    torus(0.076, 0.016, p['orange'], (MX, MY, 0.5))
+    light(p, (MX, MY, 1.37), 0.026)
+    for ang, az in ((330, 1.06), (90, 1.13), (210, 1.2)):
+        a = D2R(ang); ex, ey = FX + math.cos(a) * 0.19, FY + math.sin(a) * 0.19
+        z0 = lid_z(0.19)
+        cyl(0.085, 0.05, p['orange'], (ex, ey, z0 - 0.02), bev=0.015)          # the collar where it goes through the lid
+        cyl(0.055, az + 0.06 - z0, p['char'], (ex, ey, z0), bev=0.01, verts=24) # the graphite electrode
+        torus(0.06, 0.016, p['cream2'], (ex, ey, az))                          # the clamp
+        tube([(MX, MY, az), (ex, ey, az)], 0.032, p['orange'])                 # the arm
+    # the transformer behind the mast, the fat cables from the mast to it, and the line to the panels and batteries
+    TX, TY = 1.08, 0.3
+    rbox(0.36, 0.38, 0.06, 0.05, p['char'], (TX, TY, 0.0))
+    rbox(0.32, 0.34, 0.34, 0.06, p['cream'], (TX, TY, 0.05))
+    rbox(0.325, 0.345, 0.03, 0.06, p['orange'], (TX, TY, 0.27))
+    for k in range(4): rbox(0.012, 0.26, 0.2, 0.005, p['char'], (TX + 0.163, TY - 0.09 + k * 0.06, 0.07), (0, 0, 0), seg=1)
+    for k in range(2): light(p, (TX - 0.06 + k * 0.12, TY - 0.172, 0.33), 0.018)
+    for k in range(3):
+        tube([(MX + 0.02, MY + 0.07, 0.95 - k * 0.05), (MX + 0.1 + k * 0.02, MY + 0.25, 0.7 - k * 0.04), (TX - 0.08 + k * 0.08, TY - 0.06, 0.38)], 0.016, p['char'])
+        cyl(0.026, 0.03, p['cream2'], (TX - 0.08 + k * 0.08, TY - 0.06, 0.37), bev=0.008)
+    tube([(TX + 0.05, TY + 0.17, 0.12), (TX + 0.12, TY + 0.36, 0.04), (TX + 0.16, TY + 0.5, 0.012)], 0.02, p['char'])
+    # the fumes: a port on top of the lid, the duct to the filter tower with its mushroom vent; no smoke comes out
+    FTX, FTY, FTR, FTH = 0.74, 0.66, 0.17, 0.95
+    cyl(0.08, 0.06, p['char'], (FX, FY, lid_z(0) - 0.03), bev=0.015)
+    cyl(FTR + 0.04, 0.06, p['char'], (FTX, FTY, 0.0), bev=0.02)
+    cyl(FTR, FTH, p['cream'], (FTX, FTY, 0.05), bev=0.04)
+    torus(FTR + 0.003, 0.018, p['orange'], (FTX, FTY, 0.35))
+    torus(FTR + 0.003, 0.018, p['orange'], (FTX, FTY, 0.75))
+    vent(p, (FTX, FTY, 0.05 + FTH - 0.01), 0.12)
+    light(p, (FTX + math.cos(D2R(-120)) * (FTR + 0.005), FTY + math.sin(D2R(-120)) * (FTR + 0.005), 0.6), 0.02)
+    d = Vector((FTX - FX, FTY - FY, 0)).normalized()
+    side = (FTX - d.x * (FTR - 0.01), FTY - d.y * (FTR - 0.01), 0.92)
+    tube([(FX, FY, lid_z(0) + 0.02), (FX, FY, 0.92), side], 0.052, p['cream2'])
+    torus(0.058, 0.012, p['orange'], (FX + d.x * 0.32, FY + d.y * 0.32, 0.92), (math.pi / 2, 0, math.atan2(d.y, d.x) + math.pi / 2))
+    # the hopper at the back left: iron ore in one half, carbon in the other; the belt tips them into the lid
+    HX, HY = -0.75, 0.42
+    for sx in (-1, 1):
+        for sy in (-1, 1): cyl(0.018, 0.3, p['char'], (HX + sx * 0.18, HY + sy * 0.12, 0.0), bev=0.006)
+    hop = rbox(0.46, 0.34, 0.22, 0.05, p['orange'], (HX, HY, 0.28))
+    cut(hop, cutter(0.42, 0.3, 0.22, (HX, HY, 0.32), r=0.03))
+    rbox(0.02, 0.3, 0.17, 0.008, p['orange'], (HX, HY, 0.31), seg=1)               # the wall between the two
+    for k, (m, xs) in enumerate((('ore', -1), ('char', 1))):
+        ball(1.0, p[m], (HX + xs * 0.105, HY, 0.43), (0.095, 0.13, 0.06), seg=14)
+        for j in range(3):
+            ball(0.03, p[m], (HX + xs * (0.06 + 0.04 * j), HY - 0.07 + 0.07 * j, 0.47), (1.1, 1, 0.8), seg=10)
+    S, E = Vector((-0.5, 0.38, 0.33)), Vector((-0.13, 0.33, 0.85))
+    dv = E - S; L = dv.length; yaw = math.atan2(dv.y, dv.x); pitch = math.atan2(dv.z, math.hypot(dv.x, dv.y))
+    mid = (S + E) / 2
+    rbox(L, 0.15, 0.04, 0.02, p['char'], (mid.x, mid.y, mid.z - 0.02), (0, -pitch, yaw))
+    for t in (0.3, 0.55, 0.8):
+        q = S + dv * t
+        ball(0.026, p['ore' if t != 0.55 else 'char'], (q.x, q.y, q.z + 0.045), (1.1, 1, 0.8), seg=10)
+    for t in (0.35, 0.75):
+        q = S + dv * t
+        cyl(0.016, q.z - 0.02, p['char'], (q.x, q.y, 0.0), bev=0.005)
+    px, py = -0.1, 0.33
+    cyl(0.062, 0.07, p['char'], (px, py, lid_z(math.hypot(px - FX, py - FY)) - 0.025), bev=0.015)  # the feed port
+    # the spout at the front: the melt runs into the ladle; the cast bars wait on a pallet for the store
+    sy0 = FY - R + 0.02
+    sp_s, sp_e = Vector((FX, sy0, 0.36)), Vector((FX, -0.6, 0.31))
+    dv = sp_e - sp_s; L = dv.length; pitch = math.atan2(dv.z, -dv.y)
+    rbox(0.1, L, 0.045, 0.02, p['orange'], ((sp_s.x + sp_e.x) / 2, (sp_s.y + sp_e.y) / 2, (sp_s.z + sp_e.z) / 2 - 0.02), (pitch, 0, 0))
+    rbox(0.06, L - 0.02, 0.012, 0.005, p['fire'], ((sp_s.x + sp_e.x) / 2, (sp_s.y + sp_e.y) / 2, (sp_s.z + sp_e.z) / 2 + 0.018), (pitch, 0, 0), seg=1)
+    LX, LY = FX, -0.67
+    tube([(FX, -0.6, 0.305), (FX, -0.64, 0.24), (LX, LY + 0.01, 0.17)], 0.018, p['fire'])
+    cyl(0.11, 0.16, p['char'], (LX, LY, 0.0), bev=0.02)
+    torus(0.111, 0.014, p['orange'], (LX, LY, 0.1))
+    cyl(0.088, 0.012, p['fire'], (LX, LY, 0.145), bev=0.003)
+    BX, BY = 0.66, -0.6
+    rbox(0.42, 0.26, 0.04, 0.015, p['char'], (BX, BY, 0.0))
+    for k in range(3): rbox(0.38, 0.065, 0.05, 0.015, p['steel'], (BX, BY - 0.08 + k * 0.08, 0.04), seg=2)
+    for k in range(3): rbox(0.065, 0.24, 0.05, 0.015, p['steel'], (BX - 0.12 + k * 0.12, BY, 0.09), seg=2)
+    for k in range(2): rbox(0.36, 0.065, 0.05, 0.015, p['steel'], (BX, BY - 0.04 + k * 0.08, 0.14), seg=2)
+    # the engineer's cabin at the front left: a door, and a lit window with the desk and a screen
+    CX, CY, CW, CD, CH = -0.72, -0.3, 0.6, 0.42, 0.62
+    rbox(CW + 0.08, CD + 0.08, 0.08, 0.14, p['char'], (CX, CY, 0.0))
+    cab = rbox(CW, CD, CH, 0.12, p['cream'], (CX, CY, 0.06), seg=5)
+    lit_room(p, cab, 0.24, 0.22, 0.2, CX + 0.13, CY - CD / 2 + 0.01, 0.28, 0.0, lambda cx, cy, fz: desk(p, frame(cx, cy, 0.0), 0.0, fz, 0.0, 0.0, 0.18))
+    rbox(CW + 0.02, CD + 0.02, 0.035, 0.12, p['orange'], (CX, CY, 0.17))
+    door(p, CX - 0.14, CY - CD / 2 - 0.02, 0.0, 0.2, 0.44, 0.06)
+    vent(p, (CX + 0.12, CY + 0.06, 0.06 + CH - 0.01), 0.1)
+    light(p, (CX - 0.18, CY + 0.08, 0.06 + CH + 0.01), 0.022)
+
+# ======================================================================================
 # the Ark (Joro picked idea A, 06.11.2026, and wanted it bigger and plainly a rescue ship, on a plot of 2x2):
 #    the ship we came in, standing upright on four legs where it landed. All 100 colonists are aboard, in four pod decks
 #    of 25 behind glass round a column that brings the pods power and cold; at level 10 ten pods are open (those people
@@ -1411,7 +1518,7 @@ def b_ark(p):
 BUILD = {'ark': b_ark, 'dome': b_dome, 'kitchen': b_kitchen, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': b_greenhouse,
          'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': b_warehouse, 'furnace': b_furnace, 'mine': b_mine,
          'pump': b_pump, 'solar': b_solar, 'batteries': b_batteries, 'geolocator': b_geolocator, 'mine-portal': b_mine_portal,
-         'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover}
+         'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover, 'smelter': b_smelter}
 for name, fn in BUILD.items():
     if ONLY and name not in ONLY: continue
     reset(); p = pal(); fn(p)
