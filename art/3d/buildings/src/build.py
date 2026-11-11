@@ -24,7 +24,8 @@ def pal():
         navy=mat('panel', '#262b55', 0.25), rock=mat('rock', '#d4693b', 0.85), rock2=mat('rock2', '#b8532d', 0.85),
         ice=mat('ice', '#dff5ff', 0.15, alpha=0.9), ore=mat('ore', '#3a3634', 0.7), crystal=mat('crystal', '#7ff6f0', 0.2, emit='#5ff0e6', strength=1.2),
         steam=mat('steam', '#ffffff', 0.9, alpha=0.85), wood=mat('wood', '#c98a52', 0.8), tomato=mat('tomato', '#ff5a3c', 0.5),
-        steel=mat('steel', '#b9c3cc', 0.35), clay=mat('clay', '#c9967a', 0.85), clay2=mat('clay2', '#a9785d', 0.85))
+        steel=mat('steel', '#b9c3cc', 0.35), clay=mat('clay', '#c9967a', 0.85), clay2=mat('clay2', '#a9785d', 0.85),
+        brick=mat('brick', '#a8452f', 0.8))
 
 # ---------- the shared vocabulary ----------
 def cutter(w, d, h, loc, rot=(0, 0, 0), r=0.05):
@@ -1376,6 +1377,99 @@ def b_claypit(p):
     rbox(0.07, 0.006, 0.045, 0.004, p['orange'], (-0.565, 0.86, 0.17), seg=1)
 
 # ======================================================================================
+# the brick kiln (level 15, docs/levels.md): electric, clay + power -> bricks, no smoke; next to the clay pit; an engineer
+#    works it. A tunnel kiln, the way bricks are fired today: the clay goes into the hopper on the press at the back left,
+#    the press pushes it out as a band that is cut into raw bricks, and they are stacked on a small kiln car; the car rolls
+#    on rails into the long arched tunnel, hot inside (the round sight glasses on the front glow), and out at the right
+#    with red fired bricks, which wait on a pallet. No chimney: only vents for the hot air on the arch, and the power
+#    cabinet at the back. The engineer's booth at the front left: a door and a lit window with a desk.
+# ======================================================================================
+def kiln_car(p, x, y, m):
+    """a kiln car on the rails: dark chassis on four wheels, a fireproof deck, three layers of bricks"""
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            bpy.ops.mesh.primitive_cylinder_add(vertices=16, radius=0.03, depth=0.016, location=(x + sx * 0.11, y + sy * 0.09, 0.03), rotation=(math.pi / 2, 0, 0))
+            _done(bpy.context.object, p['char'])
+    rbox(0.34, 0.26, 0.03, 0.012, p['char'], (x, y, 0.04), seg=2)
+    rbox(0.32, 0.24, 0.035, 0.012, p['cream2'], (x, y, 0.07), seg=2)
+    for k in range(3):
+        for i in range(3):
+            for j in range(2):
+                rbox(0.09, 0.07, 0.034, 0.008, p[m], (x - 0.1 + i * 0.1, y - 0.04 + j * 0.08, 0.105 + k * 0.038), seg=1)
+
+def b_brickkiln(p):
+    TX0, TX1, TY0, TY1 = -0.65, 0.85, -0.1, 0.4
+    TW, TD = TX1 - TX0, TY1 - TY0; tx, ty = (TX0 + TX1) / 2, (TY0 + TY1) / 2
+    plinth_ = rbox(TW + 0.04, TD + 0.04, 0.06, 0.08, p['char'], (tx, ty, 0.0))
+    body = rbox(TW, TD, 0.3, 0.08, p['cream'], (tx, ty, 0.05))
+    # the portals at both ends, where the cars go in and come out
+    for ex in (TX0, TX1):
+        for o in (plinth_, body):
+            cut(o, cutter(0.5, 0.3, 0.27, (ex, ty, -0.02), r=0.04))
+    # the arched roof (a lying cylinder cut along its middle), the stripe, the dark inside of the portals with the glow
+    bpy.ops.mesh.primitive_cylinder_add(vertices=48, radius=TD / 2, depth=TW, location=(tx, ty, 0.35), rotation=(0, math.pi / 2, 0))
+    arch = bpy.context.object
+    bv = arch.modifiers.new('b', 'BEVEL'); bv.width = 0.05; bv.segments = 4; bv.limit_method = 'ANGLE'; bv.angle_limit = D2R(40); _apply(arch)
+    _done(arch, p['cream']); cut_below(arch, 0.35)
+    rbox(TW + 0.02, TD + 0.02, 0.03, 0.08, p['orange'], (tx, ty, 0.25))
+    for ex, s_ in ((TX0, 1), (TX1, -1)):
+        rbox(0.02, 0.3, 0.26, 0.01, p['char'], (ex + s_ * 0.24, ty, 0.0), seg=1)
+        rbox(0.012, 0.24, 0.03, 0.006, p['fire'], (ex + s_ * 0.228, ty, 0.21), seg=1)
+    # the sight glasses along the front: the heat inside
+    for x in (-0.35, -0.05, 0.25, 0.55):
+        porthole(p, (x, TY0, 0.17), (0, -1), 0.045, 'fire')
+    light(p, (TX1 - 0.05, TY0 - 0.01, 0.31), 0.018)
+    # vents for the hot air on the arch (no chimney: nothing burns), the power cabinet at the back with its cables
+    for x in (-0.2, 0.45): vent(p, (x, ty, 0.35 + TD / 2 - 0.02), 0.085)
+    CX, CY = 0.5, 0.62
+    rbox(0.34, 0.22, 0.05, 0.04, p['char'], (CX, CY, 0.0))
+    rbox(0.3, 0.18, 0.3, 0.05, p['cream'], (CX, CY, 0.04))
+    rbox(0.305, 0.185, 0.025, 0.05, p['orange'], (CX, CY, 0.24))
+    for k in range(2): light(p, (CX - 0.06 + k * 0.12, CY - 0.092, 0.3), 0.016)
+    for k in range(2):
+        xk = CX - 0.06 + k * 0.12
+        tube([(xk, CY - 0.02, 0.33), (xk, CY - 0.08, 0.46), (xk, ty + 0.18, 0.35 + math.sqrt((TD / 2) ** 2 - 0.18 ** 2) - 0.01)], 0.014, p['char'])
+    tube([(CX + 0.1, CY + 0.09, 0.1), (CX + 0.16, CY + 0.25, 0.03), (CX + 0.2, CY + 0.36, 0.012)], 0.018, p['char'])
+    # the rails through the tunnel, the car going in with raw bricks and the car coming out with fired ones
+    for y in (ty - 0.09, ty + 0.09): rbox(TW + 0.6, 0.022, 0.018, 0.006, p['char'], (tx + 0.0, y, 0.0), seg=1)
+    kiln_car(p, TX0 - 0.05, ty, 'clay')
+    kiln_car(p, TX1 + 0.06, ty, 'brick')
+    # the press at the back left: the hopper on its barrel, the motor, the band of clay out of the mouth onto the table,
+    #    where it is cut into raw bricks next to the car
+    EX = -0.84
+    for yy in (0.56, 0.74): rbox(0.1, 0.04, 0.09, 0.015, p['char'], (EX, yy, 0.0), seg=2)
+    bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=0.075, depth=0.3, location=(EX, 0.65, 0.16), rotation=(math.pi / 2, 0, 0))
+    o = bpy.context.object; bv = o.modifiers.new('b', 'BEVEL'); bv.width = 0.02; bv.segments = 3; bv.limit_method = 'ANGLE'; bv.angle_limit = D2R(40); _apply(o); _done(o, p['cream'])
+    torus(0.077, 0.012, p['orange'], (EX, 0.6, 0.16), (math.pi / 2, 0, 0))
+    rbox(0.13, 0.11, 0.13, 0.03, p['char'], (EX, 0.855, 0.095))
+    light(p, (EX + 0.066, 0.855, 0.2), 0.014)
+    hop = rbox(0.2, 0.17, 0.12, 0.035, p['orange'], (EX, 0.7, 0.225))
+    cut(hop, cutter(0.16, 0.13, 0.12, (EX, 0.7, 0.26), r=0.025))
+    ball(1.0, p['clay'], (EX, 0.7, 0.32), (0.075, 0.06, 0.035), seg=12)
+    torus(0.05, 0.014, p['char'], (EX, 0.5, 0.16), (math.pi / 2, 0, 0))
+    rbox(0.14, 0.17, 0.025, 0.01, p['char'], (EX + 0.04, 0.39, 0.12), seg=2)
+    for sx in (-1, 1):
+        for yy in (0.32, 0.46): cyl(0.008, 0.12, p['char'], (EX + 0.04 + sx * 0.06, yy, 0.0), bev=0.003)
+    rbox(0.08, 0.09, 0.05, 0.012, p['clay'], (EX, 0.445, 0.145), seg=2)
+    for j in range(2): rbox(0.08, 0.05, 0.035, 0.008, p['clay'], (EX + 0.04, 0.37 - j * 0.03 + 0.03, 0.145), seg=1)
+    # the fired bricks on a pallet by the exit
+    PX, PY = 1.12, -0.36
+    rbox(0.28, 0.2, 0.03, 0.01, p['char'], (PX, PY, 0.0), seg=2)
+    for k in range(3):
+        for i in range(3):
+            for j in range(2):
+                rbox(0.085, 0.085, 0.034, 0.008, p['brick'], (PX - 0.09 + i * 0.09, PY - 0.045 + j * 0.09, 0.03 + k * 0.036), seg=1)
+    light(p, (PX + 0.16, PY - 0.08, 0.02), 0.014)
+    # the engineer's booth at the front left
+    BX, BY, BW, BD, BH = -0.86, -0.38, 0.42, 0.34, 0.56
+    rbox(BW + 0.06, BD + 0.06, 0.06, 0.12, p['char'], (BX, BY, 0.0))
+    booth = rbox(BW, BD, BH, 0.1, p['cream'], (BX, BY, 0.05), seg=5)
+    lit_room(p, booth, 0.17, 0.2, 0.16, BX + 0.1, BY - BD / 2 + 0.01, 0.25, 0.0, lambda cx, cy, fz: desk(p, frame(cx, cy, 0.0), 0.0, fz, 0.0, 0.0, 0.14))
+    rbox(BW + 0.02, BD + 0.02, 0.03, 0.1, p['orange'], (BX, BY, 0.16))
+    door(p, BX - 0.1, BY - BD / 2 - 0.02, 0.0, 0.17, 0.42, 0.05)
+    light(p, (BX + 0.12, BY + 0.05, 0.05 + BH + 0.01), 0.018)
+
+# ======================================================================================
 # the dock and the frame of the ship (levels 12-19, docs/levels.md): an open platform on the Ark's plot, in front of it on
 #    the right (the side of the crane), where the parts of the ship grow before the player's eyes. The Ark's fabricator
 #    makes the parts from steel and its crane lowers each one onto the marked pad in the corner of the dock nearest to it
@@ -1735,7 +1829,7 @@ def b_ark(p):
 BUILD = {'ark': b_ark, 'dome': b_dome, 'kitchen': b_kitchen, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': b_greenhouse,
          'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': b_warehouse, 'furnace': b_furnace, 'mine': b_mine,
          'pump': b_pump, 'solar': b_solar, 'batteries': b_batteries, 'geolocator': b_geolocator, 'mine-portal': b_mine_portal,
-         'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover, 'smelter': b_smelter, 'claypit': b_claypit,
+         'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover, 'smelter': b_smelter, 'claypit': b_claypit, 'brickkiln': b_brickkiln,
          **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}}
 for name, fn in BUILD.items():
     if ONLY and name not in ONLY: continue
