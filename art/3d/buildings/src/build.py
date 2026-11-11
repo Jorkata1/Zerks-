@@ -1252,7 +1252,7 @@ def b_smelter(p):
 
 # ======================================================================================
 # the clay pit (level 13, docs/levels.md): on the shore of the ice in the Ice Hollow, a geologist works it. A clay quarry:
-#    a bank of clay layers by the frozen lake, its face dug back in terraces; a small electric excavator on tracks digs
+#    a bank of clay layers, its face dug back in terraces (the ice is the map's, not the model's: Joro, 11.11.2026); a small electric excavator on tracks digs
 #    from the terrace (the geologist drives it from the lit cab), swings and tips the clay into the hopper; a belt carries
 #    it under the awning, where it waits in a heap and as blocks on a pallet for the brick kiln (level 15, next door).
 #    A survey stake with an orange flag marks the layer on top of the bank. Nothing grows outside yet (chapter 3).
@@ -1322,12 +1322,6 @@ def b_claypit(p):
     # the survey stake on the terrace: where the geologist marked the good layer
     cyl(0.008, 0.2, p['char'], (-0.1, 0.5, 0.2), bev=0.003, verts=12)
     rbox(0.07, 0.006, 0.045, 0.004, p['orange'], (-0.065, 0.5, 0.35), seg=1)
-    # the frozen lake behind, on the right: an oval of ice with a few chunks on it
-    bpy.ops.mesh.primitive_cylinder_add(vertices=48, radius=1.0, depth=0.04, location=(0.78, 0.72, 0.02))
-    o = bpy.context.object; o.scale = (0.4, 0.235, 1); bpy.ops.object.transform_apply(scale=True)
-    bv = o.modifiers.new('b', 'BEVEL'); bv.width = 0.015; bv.segments = 3; _apply(o); _done(o, p['ice'])
-    for (x_, y_, r) in ((0.62, 0.66, 0.045), (0.92, 0.8, 0.035), (1.0, 0.64, 0.03)):
-        ball(r, p['ice'], (x_, y_, 0.04), (1.3, 1, 0.6), seg=12)
     # the excavator stands in the pit and digs at the face above the terrace; the hopper waits at its side
     T = Vector((-0.12, 0.3)); P0 = Vector((0.33, 0.04)); a = math.atan2(T.y - P0.y, T.x - P0.x)
     excavator(p, (P0.x, P0.y), a - math.pi / 2)
