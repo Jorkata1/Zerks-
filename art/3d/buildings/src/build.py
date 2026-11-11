@@ -149,33 +149,65 @@ def b_dome(p):
     # small utility box at the side with a vent
     rbox(0.42, 0.36, 0.3, 0.08, p['cream'], (R * 0.82, R * 0.35, 0.0)); vent(p, (R * 0.82, R * 0.35, 0.3), 0.11); light(p, (R * 0.82 - 0.22, R * 0.35 - 0.12, 0.22))
 
-def b_kitchen(p):
+def b_kitchen(p, lvl=10):
+    """the common kitchen (level 3, docs/levels.md) at its own level 1, 10 and 20: 8, 10 and 20 places; one cook, the
+    others eat here. The look of the first one stays (11.11.2026, Joro: variant A, with our own furniture); like the
+    canteen, the tables and the stools behind the glass count the places: level 1 the cook's stove and two tables of
+    four in the big window; level 10 a small wing on the left with a table for two, plants under glass in front;
+    level 20 a bigger wing on the left with two tables of four and a small one on the right with another table of four,
+    herbs under glass on the roof"""
     W, D, H, R = 1.7, 1.15, 0.85, 0.24
     plinth(p, W, D, R)
     body = rbox(W, D, H, R, p['cream'], (0, 0, 0.1), seg=6)
-    # a big window on the front with the dining room inside
+    # the big window on the front: the cook's stove on the right, two tables of four on the left
     def furn(cx, cy, fz):
-        place(REST + 'table_round_A_small_decorated.gltf', 0.26, (cx - 0.18, cy, fz))
-        place(REST + 'stove_multi_decorated.gltf', 0.3, (cx + 0.22, cy + 0.06, fz), rz=math.pi)
-        place(REST + 'chair_A.gltf', 0.12, (cx - 0.02, cy - 0.06, fz), rz=0.5)
+        tables(p, 2, 4)(cx - 0.11, cy, fz)
+        L = frame(cx, cy, 0.0)
+        rbox(0.12, 0.09, 0.09, 0.012, p['char'], (*L(0.28, 0.06), fz), seg=2)
+        rbox(0.09, 0.06, 0.006, 0.01, p['fire'], (*L(0.28, 0.06), fz + 0.09), seg=1)
+        cyl(0.026, 0.04, p['grey'], (*L(0.26, 0.06), fz + 0.096), bev=0.008)
+        rbox(0.12, 0.04, 0.008, 0.003, p['cream2'], (*L(0.28, 0.15), fz + 0.2), seg=1)
+        for k in range(3): cyl(0.012, 0.03, [p['tomato'], p['leaf'], p['wood']][k], (*L(0.24 + k * 0.04, 0.15), fz + 0.208), bev=0.004)
     lit_room(p, body, 0.78, 0.4, 0.38, -0.25, -D / 2 + 0.01, 0.38, 0.0, furn)
     stripe_box(p, W, D, R, 0.3)
     # door on the right of the front, under an orange awning
     door(p, 0.5, -D / 2 - 0.02, 0.0, 0.3, 0.52, 0.1)
-    aw = rbox(0.5, 0.36, 0.04, 0.02, p['orange'], (0.5, -D / 2 - 0.16, 0.68), (math.radians(-18), 0, 0))
+    rbox(0.5, 0.36, 0.04, 0.02, p['orange'], (0.5, -D / 2 - 0.16, 0.68), (math.radians(-18), 0, 0))
     # chimney with an orange band and a charcoal cap, a roof vent box, steam
     ch = (-0.45, 0.2, H + 0.05)
     cyl(0.1, 0.55, p['cream'], ch, bev=0.04); torus(0.1, 0.022, p['orange'], (ch[0], ch[1], ch[2] + 0.3))
     ball(0.16, p['char'], (ch[0], ch[1], ch[2] + 0.58), (1, 1, 0.45), seg=20)
     steam(p, (ch[0], ch[1], ch[2] + 0.85), 0.1)
     rbox(0.3, 0.3, 0.16, 0.05, p['cream2'], (0.45, 0.25, H + 0.06)); ball(0.08, p['char'], (0.45, 0.25, H + 0.24), (1, 1, 0.55), seg=16)
-    # an orange barrel at the side and a picnic table in front
-    cyl(0.15, 0.36, p['orange'], (W / 2 + 0.16, 0.0, 0.0), bev=0.05); torus(0.12, 0.012, p['char'], (W / 2 + 0.16, 0.0, 0.38), (0, math.pi / 2, 0))
+    # the wings as the kitchen grows: (width, window, tables, seats) on the left, and at level 20 one on the right
+    def wing(cx, ww, win, n, seats):
+        WD, WH = 0.9, 0.6
+        rbox(ww + 0.08, WD + 0.08, 0.1, 0.16, p['char'], (cx, 0.0, 0.0))
+        wb = rbox(ww, WD, WH, 0.16, p['cream'], (cx, 0.0, 0.1), seg=5)
+        lit_room(p, wb, win, 0.28, 0.3, cx, -WD / 2 + 0.01, 0.24, 0.0, tables(p, n, seats))
+        rbox(ww + 0.02, WD + 0.02, 0.035, 0.16, p['orange'], (cx, 0.0, 0.1 + WH - 0.14))
+        light(p, (cx, 0.15, 0.1 + WH + 0.01), 0.02)
+    if lvl >= 20:
+        wing(-W / 2 - 0.4 + 0.05, 0.8, 0.6, 2, 4)
+        wing(W / 2 + 0.25 - 0.05, 0.5, 0.36, 1, 4)
+    elif lvl >= 10:
+        wing(-W / 2 - 0.3 + 0.05, 0.6, 0.36, 1, 2)
+    # an orange barrel at the side (behind, once the right wing stands there) and a picnic table in front
+    bx, by = (W / 2 + 0.16, 0.0) if lvl < 20 else (W / 2 - 0.05, D / 2 + 0.2)
+    cyl(0.15, 0.36, p['orange'], (bx, by, 0.0), bev=0.05); torus(0.12, 0.012, p['char'], (bx, by, 0.38), (0, math.pi / 2, 0))
     tx, ty = -0.25, -D / 2 - 0.75
     rbox(0.7, 0.32, 0.05, 0.02, p['cream2'], (tx, ty, 0.3))
-    for s in (-1, 1):
-        rbox(0.7, 0.12, 0.04, 0.02, p['orange'], (tx, ty + s * 0.3, 0.17))
-        for e in (-1, 1): rbox(0.04, 0.04, 0.3, 0.01, p['char'], (tx + e * 0.28, ty + s * 0.1, 0.0))
+    for s_ in (-1, 1):
+        rbox(0.7, 0.12, 0.04, 0.02, p['orange'], (tx, ty + s_ * 0.3, 0.17))
+        for e in (-1, 1): rbox(0.04, 0.04, 0.3, 0.01, p['char'], (tx + e * 0.28, ty + s_ * 0.1, 0.0))
+    if lvl >= 10:
+        for x in (-0.7, 0.15): bell(p, (x, -D / 2 - 0.2, 0.0), 0.8)
+    if lvl >= 20:
+        px, py, RZ = -0.05, -0.1, 0.1 + H
+        rbox(0.5, 0.4, 0.06, 0.04, p['orange'], (px, py, RZ))
+        rbox(0.46, 0.36, 0.02, 0.03, p['soil'], (px, py, RZ + 0.05))
+        bush(p, (px - 0.1, py - 0.06, RZ + 0.06), 0.55); bush(p, (px + 0.1, py + 0.06, RZ + 0.06), 0.45)
+        dome(0.26, p['glass'], (px, py, RZ + 0.06), seg=32, sz=0.7)
 
 def b_processor(p):
     # base drum with a door and dark slit windows, a big charcoal platform with a railing and a ladder,
@@ -2128,7 +2160,7 @@ def b_ark(p, dish_state='folded'):
     door(p, c * (R - 0.012), s_ * (R - 0.012), a + math.pi / 2, w=0.26, h=0.3, z=bz + 0.09)
 
 BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open'),
-         'arkdish-folded': lambda p: b_arkdish(p, 'folded'), 'arkdish-open': lambda p: b_arkdish(p, 'open'), 'dome': b_dome, 'kitchen': b_kitchen, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': b_greenhouse,
+         'arkdish-folded': lambda p: b_arkdish(p, 'folded'), 'arkdish-open': lambda p: b_arkdish(p, 'open'), 'dome': b_dome, 'kitchen': lambda p: b_kitchen(p, 10), **{f'kitchen-{l}': (lambda l: lambda p: b_kitchen(p, l))(l) for l in (1, 10, 20)}, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': b_greenhouse,
          'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': b_warehouse, 'furnace': b_furnace, 'mine': b_mine,
          'pump': b_pump, 'solar': b_solar, 'batteries': b_batteries, 'geolocator': b_geolocator, 'mine-portal': b_mine_portal,
          'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover, 'smelter': b_smelter, 'claypit': b_claypit, 'brickkiln': b_brickkiln, 'copperworks': b_copperworks,
