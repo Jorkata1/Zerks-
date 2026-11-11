@@ -261,29 +261,66 @@ def b_veglab(p):
     rbox(0.04, 0.03, 0.3, 0.015, p['teal'], (tx - 0.3, ty - 0.02, 0.22), (0, 0, math.pi / 2))
     tube([(tx - 0.3, ty, 0.3), (W / 2 + 0.02, ty, 0.3)], 0.03, p['char'])
 
-def b_greenhouse(p):
-    L, R = 1.9, 0.62
-    rbox(L + 0.15, 2 * R + 0.15, 0.08, 0.04, p['cream2'], (-0.35, 0, 0))
-    bpy.ops.mesh.primitive_cylinder_add(vertices=56, radius=R, depth=L, location=(-0.35, 0, 0.08), rotation=(0, math.pi / 2, 0))
+def gh_arch(p, xc, yc, L, R, kind):
+    """one glass arch of the greenhouse along x: cream ribs, glass ends, two beds; kind 'air' (green plants for the air)
+    or 'food' (tomatoes on one bed, the seedling bed with small green trays on the other); lamps under the ridge"""
+    bpy.ops.mesh.primitive_cylinder_add(vertices=56, radius=R, depth=L, location=(xc, yc, 0.08), rotation=(0, math.pi / 2, 0))
     g = bpy.context.object; cut_below(g, 0.08); _done(g, p['glass'])
-    for x in (-0.35 - L / 2, -0.35 + L / 2):
-        e = cyl(R, 0.015, p['glass'], (x, 0, 0.08 - 0.0075), (0, math.pi / 2, 0), bev=0.0); cut_below(e, 0.08)
-    for k in range(8):
-        x = -0.35 - L / 2 + 0.02 + k * (L - 0.04) / 7
-        t = torus(R + 0.005, 0.025, p['cream'], (x, 0, 0.08), (0, math.pi / 2, 0)); cut_half(t, 0.07)
-    for y in (-R * 0.95, R * 0.95): rbox(L, 0.04, 0.05, 0.02, p['cream'], (-0.35, y, 0.08))
-    for y in (-0.25, 0.25):
-        rbox(L - 0.25, 0.32, 0.1, 0.04, p['soil'], (-0.35, y, 0.08))
-        for i in range(6): bush(p, (-0.35 - L / 2 + 0.3 + i * (L - 0.5) / 5, y, 0.15), 1.05)
+    for x in (xc - L / 2, xc + L / 2):
+        e = cyl(R, 0.015, p['glass'], (x, yc, 0.08 - 0.0075), (0, math.pi / 2, 0), bev=0.0); cut_below(e, 0.08)
+    nr = max(3, int(round(L / 0.27)) + 1)
+    for k in range(nr):
+        x = xc - L / 2 + 0.02 + k * (L - 0.04) / (nr - 1)
+        t = torus(R + 0.005, 0.025, p['cream'], (x, yc, 0.08), (0, math.pi / 2, 0)); cut_half(t, 0.07)
+    for y in (-R * 0.95, R * 0.95): rbox(L, 0.04, 0.05, 0.02, p['cream'], (xc, yc + y, 0.08))
+    nb = max(3, int(L / 0.3))
+    for j, y in enumerate((-0.25, 0.25)):
+        rbox(L - 0.25, 0.32, 0.1, 0.04, p['soil'], (xc, yc + y, 0.08))
+        for i in range(nb):
+            x = xc - L / 2 + 0.3 + i * (L - 0.5) / max(1, nb - 1)
+            if kind == 'food' and j == 1 and i < 2:                      # the seedling bed: trays of small seedlings
+                rbox(0.22, 0.26, 0.03, 0.01, p['orange'], (x, yc + y, 0.18), seg=1)
+                for a in range(3):
+                    for b in range(3): ball(0.022, p['leaf2'], (x - 0.07 + a * 0.07, yc + y - 0.08 + b * 0.08, 0.215), seg=8)
+                continue
+            bush(p, (x, yc + y, 0.15), 1.05)
+            if kind == 'food' and j == 0:
+                for (dx, dy, dz) in ((0.0, -0.125, 0.25), (0.095, -0.08, 0.2), (-0.1, -0.07, 0.29), (0.07, 0.07, 0.33)):
+                    ball(0.03, p['tomato'], (x + dx, yc + y + dy, dz), seg=10)      # on the outside of the plant, where they show
+    for k in range(max(2, nr // 2)):                                       # the lamps for the night under the ridge
+        x = xc - L / 2 + 0.2 + k * (L - 0.4) / max(1, max(2, nr // 2) - 1)
+        tube([(x, yc, 0.08 + R - 0.03), (x, yc, 0.08 + R - 0.12)], 0.005, p['char'])
+        ball(0.025, p['lampw'], (x, yc, 0.08 + R - 0.14), seg=10)
+
+def b_greenhouse(p, lvl=10):
+    """the greenhouse (level 8, docs/levels.md) at its level 1, 10 and 20: first air only, from its level 16 food too
+    (the switch "air only" / "air and food"), from level 17 a seedling bed; an agronomist works it; at night it works
+    and its lamps are on. Level 1 a short arch; level 10 the arch as long as the plot; level 20 a second arch beside
+    it with the tomatoes and the seedling bed, and the switch with two lights on the service module"""
+    R = 0.62
+    L = {1: 1.2, 10: 1.9, 20: 1.9}[lvl]
+    arches = [(0.0, 'air')] if lvl < 20 else [(0.65, 'air'), (-0.65, 'food')]
+    xc = -0.35 + (1.9 - L) / 2
+    span = (2 * R + 0.15) if lvl < 20 else (4 * R + 0.2)
+    rbox(L + 0.15, span, 0.08, 0.04, p['cream2'], (xc, 0, 0))
+    for yc, kind in arches: gh_arch(p, xc, yc, L, R, kind)
     # the service module at the end, with a door, a porthole and a vent; a dark pipe up its side
-    mx = -0.35 + L / 2 + 0.42
-    plinth(p, 0.78, 0.9, 0.2, 0.0) if False else rbox(0.86, 0.98, 0.1, 0.24, p['char'], (mx, 0, 0))
-    rbox(0.8, 0.92, 0.82, 0.24, p['cream'], (mx, 0, 0.08), seg=6)
-    rbox(0.825, 0.945, 0.04, 0.24, p['orange'], (mx, 0, 0.62))
-    door(p, mx - 0.12, -0.47, 0.0, 0.26, 0.48, 0.08)
+    mx = xc + L / 2 + 0.42
+    MD = 0.92 if lvl < 20 else 2.4
+    rbox(0.86, MD + 0.06, 0.1, 0.24, p['char'], (mx, 0, 0))
+    mod = rbox(0.8, MD, 0.82, 0.24, p['cream'], (mx, 0, 0.08), seg=6)
+    rbox(0.825, MD + 0.025, 0.04, 0.24, p['orange'], (mx, 0, 0.62))
+    door(p, mx - 0.12, -MD / 2 - 0.01, 0.0, 0.26, 0.48, 0.08)
     porthole(p, (mx + 0.4, -0.15, 0.48), (1, 0), 0.07)
     vent(p, (mx, 0.1, 0.9), 0.15)
     tube([(mx - 0.3, -0.35, 0.9), (mx - 0.38, -0.35, 1.05), (mx - 0.5, -0.32, 1.12)], 0.025, p['char'])
+    if lvl >= 20:
+        # the switch "air only" / "air and food": a panel with a lever, a teal light for the air, an orange one for food
+        sx_, sy_ = mx + 0.17, -MD / 2 - 0.01
+        rbox(0.2, 0.03, 0.14, 0.02, p['char'], (sx_, sy_, 0.3), seg=2)
+        light(p, (sx_ - 0.05, sy_ - 0.02, 0.41), 0.016)
+        ball(0.016, p['fire'], (sx_ + 0.05, sy_ - 0.02, 0.41), seg=10)
+        tube([(sx_, sy_ - 0.02, 0.34), (sx_ + 0.04, sy_ - 0.06, 0.38)], 0.008, p['orange'])
 
 def b_research_old(p):
     """the first research station (05.11.2026): a rounded box with an observation turret and a dish; replaced by idea B"""
@@ -2270,7 +2307,7 @@ def b_ark(p, dish_state='folded'):
     door(p, c * (R - 0.012), s_ * (R - 0.012), a + math.pi / 2, w=0.26, h=0.3, z=bz + 0.09)
 
 BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open'),
-         'arkdish-folded': lambda p: b_arkdish(p, 'folded'), 'arkdish-open': lambda p: b_arkdish(p, 'open'), 'dome': b_dome, 'kitchen': lambda p: b_kitchen(p, 10), **{f'kitchen-{l}': (lambda l: lambda p: b_kitchen(p, l))(l) for l in (1, 10, 20)}, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': b_greenhouse,
+         'arkdish-folded': lambda p: b_arkdish(p, 'folded'), 'arkdish-open': lambda p: b_arkdish(p, 'open'), 'dome': b_dome, 'kitchen': lambda p: b_kitchen(p, 10), **{f'kitchen-{l}': (lambda l: lambda p: b_kitchen(p, l))(l) for l in (1, 10, 20)}, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': lambda p: b_greenhouse(p, 10), **{f'greenhouse-{l}': (lambda l: lambda p: b_greenhouse(p, l))(l) for l in (1, 10, 20)},
          'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': b_warehouse, 'furnace': b_furnace, 'mine': b_mine,
          'pump': b_pump, 'solar': lambda p: b_solar(p, 10), **{f'solar-{l}': (lambda l: lambda p: b_solar(p, l))(l) for l in (1, 10, 20)}, 'batteries': b_batteries, 'geolocator': b_geolocator, 'mine-portal': b_mine_portal,
          'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover, 'drill': lambda p: b_drill(p, 10), **{f'drill-{l}': (lambda l: lambda p: b_drill(p, l))(l) for l in (1, 10, 20)}, 'smelter': b_smelter, 'claypit': b_claypit, 'brickkiln': b_brickkiln, 'copperworks': b_copperworks,
