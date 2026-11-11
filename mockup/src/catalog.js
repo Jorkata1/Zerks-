@@ -6,7 +6,7 @@ import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 export const TILES = [
-  ['kk/ark', 'Ковчегът'], ['carbon-drill-v1', 'Карбонова сонда (CellCog)'], ['kk/geolocator', 'Геолокатор'], ['kk/pump', 'Помпа за вода'],
+  ['kk/ark', 'Ковчегът'], ['kk/drill', 'Карбонова сонда'], ['kk/geolocator', 'Геолокатор'], ['kk/pump', 'Помпа за вода'],
   ['kk/processor', 'Атмосферен процесор'], ['kk/veglab', 'Лаборатория за зеленчуци'], ['kk/home-10', 'Дом на колонистите'], ['kk/kitchen', 'Обща кухня'],
   ['kk/research-10', 'Рисърч станция'], ['kk/mine-portal', 'Мина: в началото тунел'], ['kk/mine', 'Мина: по-късно шахта'], ['kk/warehouse', 'Склад'],
   ['kk/furnace', 'Силициева пещ'], ['kk/solar', 'Слънчеви панели'], ['kk/batteries', 'Батерии'], ['kk/greenhouse', 'Оранжерия'],
@@ -88,6 +88,14 @@ const SETS = {
     ['kk/solar-20', 'Ниво 20: пет реда, целият парцел', 0, 0], ['kk/solar-20', 'Ниво 20: отзад', 0, Math.PI],
     ['kk/solar-20', 'Ниво 20: отгоре', 0, Math.PI / 4, 88], ['kk/solar-20', 'Ниво 20: отпред', 0, Math.PI / 4, 4],
     ['kk/solar-20', 'Ниво 20: отдясно', 0, -Math.PI / 4, 4], ['kk/solar-20', 'Ниво 20: отляво', 0, 3 * Math.PI / 4, 4],
+  ] },
+  drill: { title: 'Карбоновата сонда в нашия стил: ниво 1, 10 и 20; старата от CellCog за сравнение', k: 4.4, tiles: [
+    ['kk/drill-1', 'Ниво 1: обучението', 0, 0], ['kk/drill-1', 'Ниво 1: отзад', 0, Math.PI],
+    ['kk/drill-10', 'Ниво 10: по-висока кула, повече щанги, по-голям силоз', 0, 0], ['kk/drill-10', 'Ниво 10: отзад', 0, Math.PI],
+    ['kk/drill-20', 'Ниво 20: най-високата кула, два мотора, два силоза', 0, 0], ['kk/drill-20', 'Ниво 20: отзад', 0, Math.PI],
+    ['kk/drill-20', 'Ниво 20: отгоре', 0, Math.PI / 4, 88], ['kk/drill-20', 'Ниво 20: отпред', 0, Math.PI / 4, 4],
+    ['kk/drill-20', 'Ниво 20: отдясно (силозите)', 0, -Math.PI / 4, 4], ['kk/drill-20', 'Ниво 20: отляво (щангите)', 0, 3 * Math.PI / 4, 4],
+    ['carbon-drill-v1', 'Старата сонда от CellCog (всяка вписана в плочката)', -1, 0], ['kk/drill-10', 'Новата на ниво 10 (вписана в плочката)', -1, 0],
   ] },
   smelter: views('kk/smelter', 'Топилнята: откъм картата, отзад, отгоре и от три страни', 5.2, 'мачтата и трансформаторът', 'бункерът и лентата',
     [['kk/smelter', 'Топилнята в мащаба на картата', 4.15, 0], ['kk/furnace', 'Силициевата пещ, до която стои, в същия мащаб', 4.15, 0]]),
@@ -180,7 +188,7 @@ async function tile(name, fixedK, turn = 0, el = 36, fit = false) {
 const grid = document.getElementById('grid');
 for (const [name, label, k, turn, el, fit] of ONE ? TILES.filter(t => t[0] === ONE) : SET ? SET.tiles : PHONE ? PHONE_TILES : TILES) {
   const card = document.createElement('div'); card.className = 'card';
-  const img = new Image(); img.src = await tile(name, k || (SET && SET.k), turn || 0, el ?? 36, fit || 0); await img.decode();
+  const img = new Image(); img.src = await tile(name, k < 0 ? 0 : (k || (SET && SET.k)), turn || 0, el ?? 36, fit || 0);   // k < 0: fit the tile await img.decode();
   const cap = document.createElement('div'); cap.textContent = label;
   card.append(img, cap); grid.append(card);
 }

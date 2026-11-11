@@ -1773,6 +1773,91 @@ def b_canteen(p, lvl):
             dome(0.24, p['glass'], (px, HY - 0.1, RZ + 0.06), seg=32, sz=0.7)
 
 # ======================================================================================
+# the carbon drill (level 1, docs/levels.md): the second building of the tutorial, over the carbon the geolocator found;
+#    a geologist works it from level 3; the first study is "hardened drill bits". In our style instead of the CellCog one
+#    (11.11.2026). The way of the carbon: a tower over the borehole, the motor (top drive) turns the drill string and the
+#    auger brings the crushed black carbon up into the housing at the collar; a chute tips it into the bin, a screw
+#    conveyor lifts it into the silo, where a glass strip shows how full it is. Beside the tower the rack of drill rods
+#    and the spare bits with their orange (hardened) tips; at the front left the geologist's booth with a lit window.
+#    It grows with its level: the deeper it drills, the taller the tower and the more rods on the rack; the silo grows,
+#    and at level 20 there are two silos.
+# ======================================================================================
+def b_drill(p, lvl=10):
+    TH = {1: 1.3, 10: 1.7, 20: 2.0}[lvl]
+    nrods = {1: 3, 10: 6, 20: 9}[lvl]
+    HX, HY = -0.1, 0.15
+    rbox(0.8, 0.8, 0.05, 0.1, p['char'], (HX, HY, 0.0))                    # the dark base of the rig
+    # the tower: four soft legs leaning in, orange braces, the crown block with a light on top
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            tube([(HX + sx * 0.3, HY + sy * 0.3, 0.05), (HX + sx * 0.12, HY + sy * 0.12, TH)], 0.035, p['cream'])
+            cyl(0.06, 0.04, p['char'], (HX + sx * 0.3, HY + sy * 0.3, 0.04), bev=0.012)
+    for f in (0.33, 0.66):
+        hw = 0.3 - 0.18 * f; z = 0.05 + (TH - 0.05) * f
+        pts = [(HX - hw, HY - hw, z), (HX + hw, HY - hw, z), (HX + hw, HY + hw, z), (HX - hw, HY + hw, z), (HX - hw, HY - hw, z)]
+        tube(pts, 0.014, p['orange'])
+    rbox(0.34, 0.34, 0.1, 0.04, p['cream2'], (HX, HY, TH - 0.02))
+    light(p, (HX, HY, TH + 0.1), 0.026)
+    # the top drive half way down, on its cables from the crown; the drill string and the auger down to the collar
+    DZ = TH * 0.5
+    rbox(0.2, 0.2, 0.18, 0.05, p['cream'], (HX, HY, DZ))
+    rbox(0.205, 0.205, 0.025, 0.05, p['orange'], (HX, HY, DZ + 0.12))
+    light(p, (HX + 0.1, HY - 0.1, DZ + 0.09), 0.014)
+    for sx in (-1, 1): tube([(HX + sx * 0.06, HY, DZ + 0.18), (HX + sx * 0.06, HY, TH - 0.02)], 0.006, p['char'])
+    if lvl >= 20:
+        rbox(0.16, 0.16, 0.12, 0.04, p['cream'], (HX, HY, DZ + 0.2))
+        vent(p, (HX, HY, DZ + 0.31), 0.06)
+    cyl(0.035, DZ - 0.2, p['char'], (HX, HY, 0.2), bev=0.008, verts=20)
+    tube([(HX + 0.065 * math.cos(t / 6), HY + 0.065 * math.sin(t / 6), 0.22 + t * 0.0045) for t in range(0, 57)], 0.012, p['char'])
+    # the housing at the collar, carbon chips round it, the chute into the bin
+    cyl(0.15, 0.2, p['cream'], (HX, HY, 0.0), bev=0.04)
+    torus(0.151, 0.014, p['orange'], (HX, HY, 0.12))
+    for (dx, dy) in ((-0.22, -0.12), (-0.18, 0.2), (0.05, 0.3), (-0.28, 0.05)):
+        ball(0.03, p['char'], (HX + dx, HY + dy, 0.05), (1.2, 1, 0.7), seg=8)
+    BX, BY = 0.42, 0.05
+    S, E = Vector((HX + 0.13, HY - 0.03, 0.18)), Vector((BX - 0.06, BY + 0.0, 0.14))
+    dv = E - S; L_ = dv.length; yaw = math.atan2(dv.y, dv.x); pitch = math.atan2(dv.z, math.hypot(dv.x, dv.y)); mid = (S + E) / 2
+    rbox(L_, 0.08, 0.025, 0.012, p['orange'], (mid.x, mid.y, mid.z - 0.012), (0, -pitch, yaw), seg=2)
+    bin_ = rbox(0.24, 0.22, 0.13, 0.04, p['orange'], (BX, BY, 0.0))
+    cut(bin_, cutter(0.2, 0.18, 0.13, (BX, BY, 0.04), r=0.03))
+    ball(1.0, p['char'], (BX, BY, 0.11), (0.09, 0.08, 0.04), seg=12)
+    # the silo(s), the screw conveyor up from the bin, the glass strip that shows the carbon inside
+    SH = {1: 0.55, 10: 0.8, 20: 0.8}[lvl]
+    silos = [(0.85, 0.42)] if lvl < 20 else [(0.85, 0.55), (0.85, 0.12)]
+    for (sx_, sy_) in silos:
+        cyl(0.21, 0.05, p['char'], (sx_, sy_, 0.0), bev=0.015)
+        cyl(0.18, SH, p['cream'], (sx_, sy_, 0.04), bev=0.04)
+        torus(0.181, 0.012, p['orange'], (sx_, sy_, 0.04 + SH * 0.3))
+        cone(0.19, 0.05, 0.14, p['cream2'], (sx_, sy_, 0.04 + SH + 0.07))
+        cyl(0.03, 0.05, p['char'], (sx_, sy_, 0.04 + SH + 0.13), bev=0.01)
+        rbox(0.05, 0.012, SH * 0.8, 0.012, p['glass'], (sx_ - 0.04, sy_ - 0.177, 0.1), (0, 0, D2R(-12)), seg=1)
+        rbox(0.036, 0.006, SH * 0.55, 0.01, p['char'], (sx_ - 0.04, sy_ - 0.172, 0.11), (0, 0, D2R(-12)), seg=1)
+        light(p, (sx_ + 0.12, sy_ - 0.13, 0.04 + SH - 0.04), 0.014)
+        tube([(BX + 0.09, BY + 0.06, 0.08), (sx_ - 0.05, sy_ - 0.02, 0.04 + SH + 0.1), (sx_, sy_, 0.04 + SH + 0.1)], 0.03, p['char'])
+    # the rack of drill rods on the left, and the spare bits with their hardened orange tips
+    RX, RY = -0.82, 0.35
+    for yy in (RY - 0.18, RY + 0.18):
+        rbox(0.2, 0.035, 0.18, 0.012, p['char'], (RX, yy, 0.0), seg=2)
+    for k in range(nrods):
+        i, j = k % 3, k // 3
+        bpy.ops.mesh.primitive_cylinder_add(vertices=16, radius=0.022, depth=0.5, location=(RX - 0.05 + i * 0.05, RY, 0.2 + j * 0.045), rotation=(math.pi / 2, 0, 0))
+        _done(bpy.context.object, p['steel'])
+    for k in range(3):
+        bxk = RX - 0.06 + k * 0.06
+        cone(0.028, 0.006, 0.08, p['char'], (bxk, RY - 0.36, 0.06))
+        cyl(0.012, 0.02, p['orange'], (bxk, RY - 0.36, 0.09), bev=0.004)
+    rbox(0.22, 0.08, 0.02, 0.008, p['cream2'], (RX, RY - 0.36, 0.0), seg=2)
+    # the geologist's booth at the front left: a door and a lit window with a desk
+    CX, CY, CW, CD, CH = -0.74, -0.42, 0.38, 0.32, 0.52
+    rbox(CW + 0.06, CD + 0.06, 0.06, 0.11, p['char'], (CX, CY, 0.0))
+    booth = rbox(CW, CD, CH, 0.09, p['cream'], (CX, CY, 0.05), seg=5)
+    lit_room(p, booth, 0.15, 0.18, 0.15, CX + 0.09, CY - CD / 2 + 0.01, 0.24, 0.0, lambda cx, cy, fz: desk(p, frame(cx, cy, 0.0), 0.0, fz, 0.0, 0.0, 0.13))
+    rbox(CW + 0.02, CD + 0.02, 0.03, 0.09, p['orange'], (CX, CY, 0.16))
+    door(p, CX - 0.09, CY - CD / 2 - 0.02, 0.0, 0.16, 0.4, 0.05)
+    light(p, (CX + 0.1, CY + 0.05, 0.05 + CH + 0.01), 0.016)
+    tube([(CX + CW / 2 - 0.02, CY + 0.08, 0.1), (HX - 0.3, HY - 0.3, 0.06), (HX - 0.12, HY - 0.12, 0.06)], 0.012, p['char'])
+
+# ======================================================================================
 # the dock and the frame of the ship (levels 12-19, docs/levels.md): an open platform on the Ark's plot, in front of it on
 #    the right (the side of the crane), where the parts of the ship grow before the player's eyes. The Ark's fabricator
 #    makes the parts from steel and its crane lowers each one onto the marked pad in the corner of the dock nearest to it
@@ -2188,7 +2273,7 @@ BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open
          'arkdish-folded': lambda p: b_arkdish(p, 'folded'), 'arkdish-open': lambda p: b_arkdish(p, 'open'), 'dome': b_dome, 'kitchen': lambda p: b_kitchen(p, 10), **{f'kitchen-{l}': (lambda l: lambda p: b_kitchen(p, l))(l) for l in (1, 10, 20)}, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': b_greenhouse,
          'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': b_warehouse, 'furnace': b_furnace, 'mine': b_mine,
          'pump': b_pump, 'solar': lambda p: b_solar(p, 10), **{f'solar-{l}': (lambda l: lambda p: b_solar(p, l))(l) for l in (1, 10, 20)}, 'batteries': b_batteries, 'geolocator': b_geolocator, 'mine-portal': b_mine_portal,
-         'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover, 'smelter': b_smelter, 'claypit': b_claypit, 'brickkiln': b_brickkiln, 'copperworks': b_copperworks,
+         'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover, 'drill': lambda p: b_drill(p, 10), **{f'drill-{l}': (lambda l: lambda p: b_drill(p, l))(l) for l in (1, 10, 20)}, 'smelter': b_smelter, 'claypit': b_claypit, 'brickkiln': b_brickkiln, 'copperworks': b_copperworks,
          **{f'brickhome-{l}': (lambda l: lambda p: b_brickhome(p, l))(l) for l in (1, 10, 20)},
          **{f'canteen-{l}': (lambda l: lambda p: b_canteen(p, l))(l) for l in (1, 10, 20)},
          **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}}

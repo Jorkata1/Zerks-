@@ -113,7 +113,7 @@ await Promise.all(['ark-v1', 'carbon-drill-v1'].map(async n => {
 }));
 const smooth = n => { const g = new THREE.Group(); g.add(glb[n].clone(true)); return g; };
 // the soft buildings: Draco-compressed, glass stays see-through
-const KK = ['ark', 'home-10', 'kitchen', 'veglab', 'research-1', 'warehouse', 'solar', 'batteries', 'pump', 'greenhouse', 'processor', 'furnace', 'mine', 'geolocator'];
+const KK = ['ark', 'drill', 'home-10', 'kitchen', 'veglab', 'research-1', 'warehouse', 'solar', 'batteries', 'pump', 'greenhouse', 'processor', 'furnace', 'mine', 'geolocator'];
 if (ARK) KK.push('ideas/ark-' + ARK);
 const kkGlb = {};
 const draco = new DRACOLoader(); draco.setDecoderPath('node_modules/three/examples/jsm/libs/draco/'); gltf.setDRACOLoader(draco);
@@ -161,7 +161,8 @@ function futurePlot(b) {
 // (Joro, 05.11.2026), square to the street grid, so the camera sees it from its corner with the door on the left face.
 // No quarry: the mine replaced it (docs/levels.md, 03.11.2026).
 const built = {
-  '1,1': b => { add(smooth('carbon-drill-v1'), b.cx, 0.4, b.cz, 0, 1.2); for (let i = 0; i < 10; i++) add(new THREE.Mesh(new THREE.DodecahedronGeometry(0.3 + rnd() * 0.25, 0), M.carbon), b.cx - 4 + rnd() * 8, 0.55, b.cz + 4 + rnd()); },
+  // the carbon drill in our style (11.11.2026; before it, the CellCog one), at its level 10
+  '1,1': b => { add(kk('drill', 9.6), b.cx, 0.4, b.cz, 0); for (let i = 0; i < 10; i++) add(new THREE.Mesh(new THREE.DodecahedronGeometry(0.3 + rnd() * 0.25, 0), M.carbon), b.cx - 4 + rnd() * 8, 0.55, b.cz + 4 + rnd()); },
   '-1,1': b => { add(kk('pump', 8.2), b.cx, 0.4, b.cz, 0); },
   // the processor, the research station and the home moved when the Ark took the middle (06.11.2026)
   '0,4': b => { add(kk('processor', 7.6), b.cx, 0.4, b.cz); },
