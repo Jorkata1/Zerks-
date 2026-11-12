@@ -1,4 +1,4 @@
-<!-- Синхронизирано с документа „Предаване на екипа: Zerks-X6“ (https://claude.ai/artifact/UKt9X6dDdkwBrJkWmNEBKJ) при rev 54. -->
+<!-- Синхронизирано с документа „Предаване на екипа: Zerks-X6“ (https://claude.ai/artifact/UKt9X6dDdkwBrJkWmNEBKJ) при rev 57. -->
 
 # Предаване на екипа: Zerks-X6
 
