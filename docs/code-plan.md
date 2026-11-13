@@ -274,6 +274,8 @@ game/
 
 Редът се смени: числата (част от етап 2) са направени първи, по молба на Саламен; следва етап 1, скелетът и пробата на iPhone.
 
+**Етап 1 (13.11.2026):** готов за проба на телефон на линка [Zerks-X6 Stage 1](https://claude.ai/artifact/KRF6sLedzZKpDQKucnoWrd). Колонията на ниво 10 е по одобрения макет: ортографска камера под 36°, тоест изометричен изглед, както потвърди Саламен. Има плъзгане и приближаване, тап върху сграда, ден и нощ, дрона, робота и брояч на кадрите. В облака е 160–320 рисувания и около 700 хиляди триъгълника на кадър. Остава пробата на iPhone 13 и 14: 10 минути без да се затопли. Ако не върви гладко, първата стъпка е да се опростят най-тежките модели (Ковчегът е 147 хиляди триъгълника); ако и това не стигне, Godot.
+
 ## Източници
 
 - Apple: [Upcoming requirements](https://developer.apple.com/news/upcoming-requirements/), [App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/), [Enrollment](https://developer.apple.com/programs/enroll/), [D-U-N-S](https://developer.apple.com/help/account/membership/D-U-N-S/), [DSA trader requirements](https://developer.apple.com/help/app-store-connect/manage-compliance-information/manage-european-union-digital-services-act-trader-requirements), [TestFlight](https://developer.apple.com/help/app-store-connect/test-a-beta-version/testflight-overview), [Small Business Program](https://developer.apple.com/app-store/small-business-program/), [Age ratings](https://developer.apple.com/help/app-store-connect/reference/app-information/age-ratings-values-and-definitions)

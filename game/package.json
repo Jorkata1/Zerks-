@@ -8,12 +8,28 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "balance": "tsx tools/balance.ts",
-    "check": "npm run typecheck && npm run test"
+    "check": "npm run typecheck && npm run test && npm run build",
+    "models": "tsx tools/models.ts",
+    "dev": "vite",
+    "build": "vite build",
+    "prebuild": "tsx tools/models.ts",
+    "artifact": "node tools/artifact.mjs"
   },
   "devDependencies": {
+    "@gltf-transform/core": "^4.5.1",
+    "@gltf-transform/extensions": "^4.5.1",
+    "@gltf-transform/functions": "^4.5.1",
     "@types/node": "^26.6.6",
+    "@types/three": "^0.170.0",
+    "draco3dgltf": "^1.5.9",
+    "meshoptimizer": "^1.3.0",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
+    "vite": "^8.3.8",
+    "vite-plugin-singlefile": "^2.3.4",
     "vitest": "^5.1.0"
+  },
+  "dependencies": {
+    "three": "^0.170.0"
   }
 }
