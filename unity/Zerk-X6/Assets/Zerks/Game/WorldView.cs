@@ -53,6 +53,7 @@ namespace Zerks.Game
 
             // Light: the warm day of the mockup.
             Sun = new GameObject("sun").AddComponent<Light>();
+            Sun.transform.SetParent(transform, false); // a jump or a new game rebuilds the world: no old suns left
             Sun.type = LightType.Directional;
             Sun.transform.rotation = Quaternion.Euler(52, 150, 0);
             Sun.shadows = LightShadows.Soft;
@@ -288,7 +289,12 @@ namespace Zerks.Game
             foreach (var (zone, r, m, a) in dust)
             {
                 var opened = zone == 1 ? dustOpen1 : zone == 2 ? dustOpen2 : -1;
-                if (opened < 0) { m.SetFloat("_Alpha", a * (1 - 0.6f * NightK)); continue; }
+                if (opened < 0)
+                {
+                    m.SetFloat("_Alpha", a * (1 - 0.35f * NightK));
+                    m.SetColor("_Color", Color.Lerp(Look.Dust, Look.NightBounce, NightK * 0.85f));
+                    continue;
+                }
                 var k = Mathf.Clamp01((time - opened) / 2.5f);
                 m.SetFloat("_Alpha", a * (1 - k));
                 if (k >= 1 && r.gameObject.activeSelf) r.gameObject.SetActive(false);
@@ -353,10 +359,10 @@ namespace Zerks.Game
             var n = NightK;
             Rig.Cam.backgroundColor = Color.Lerp(Look.DayBg, Look.NightBg, n);
             Sun.color = Color.Lerp(Look.DaySun, Look.NightSun, n);
-            Sun.intensity = Mathf.Lerp(1.6f, 0.35f, n);
-            RenderSettings.ambientSkyColor = Color.Lerp(Look.DaySky, Look.NightSky * 0.6f, n) * 0.9f;
-            RenderSettings.ambientEquatorColor = Color.Lerp(Look.DayBounce, Look.NightBounce, n) * 0.8f;
-            RenderSettings.ambientGroundColor = Color.Lerp(Look.DayBounce * 0.6f, Look.NightBounce * 0.5f, n);
+            Sun.intensity = Mathf.Lerp(1.6f, 0.18f, n);
+            RenderSettings.ambientSkyColor = Color.Lerp(Look.DaySky * 0.9f, Look.NightSky * 0.32f, n);
+            RenderSettings.ambientEquatorColor = Color.Lerp(Look.DayBounce * 0.8f, Look.NightBounce * 0.7f, n);
+            RenderSettings.ambientGroundColor = Color.Lerp(Look.DayBounce * 0.5f, Look.NightBounce * 0.4f, n);
         }
 
         // ---------------------------------------------------------------- people

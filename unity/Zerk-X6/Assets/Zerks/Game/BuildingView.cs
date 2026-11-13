@@ -22,6 +22,9 @@ namespace Zerks.Game
         readonly List<(Renderer r, Material[] mats)> originals = new List<(Renderer, Material[])>();
         readonly List<Renderer> steam = new List<Renderer>();
         readonly List<(Material m, Color c)> glows = new List<(Material, Color)>();
+        /// <summary>Rooms and windows: dark by day, warm light at night (the mockup's lvl10-night).</summary>
+        readonly List<Material> rooms = new List<Material>();
+        static readonly Color RoomLight = new Color(1f, 0.78f, 0.45f);
         bool printing;
         float pulse;
 
@@ -47,7 +50,7 @@ namespace Zerks.Game
             if (model != null) Destroy(model);
             model = Models.Spawn(name, Family(Id), transform);
             modelName = name;
-            originals.Clear(); steam.Clear(); glows.Clear();
+            originals.Clear(); steam.Clear(); glows.Clear(); rooms.Clear();
             var instances = new Dictionary<Material, Material>();
             foreach (var r in model.GetComponentsInChildren<Renderer>())
             {
@@ -68,6 +71,7 @@ namespace Zerks.Game
                 {
                     if (m == null) continue;
                     if (m.name.StartsWith("steam")) steam.Add(r);
+                    if ((m.name.StartsWith("room") || m.name.StartsWith("window")) && m.HasProperty("emissiveFactor") && !rooms.Contains(m)) rooms.Add(m);
                     if (m.HasProperty("emissiveFactor"))
                     {
                         var e = m.GetColor("emissiveFactor");
@@ -120,6 +124,12 @@ namespace Zerks.Game
             foreach (var r in steam) if (r != null) r.enabled = smoke;
             // Windows and lamps glow brighter at night.
             foreach (var (m, e) in glows) if (m != null) m.SetColor("emissiveFactor", e * (1 + 1.6f * night));
+            foreach (var m in rooms)
+            {
+                if (m == null) continue;
+                if (night > 0.02f) m.EnableKeyword("_EMISSIVE"); else m.DisableKeyword("_EMISSIVE");
+                m.SetColor("emissiveFactor", RoomLight * (0.9f * night));
+            }
             // A soft breath while it is being upgraded (the work over the building is drawn by the screen).
             if (st.Upgrading)
             {

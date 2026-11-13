@@ -553,6 +553,8 @@ namespace Zerks.Game
             head.Add(B("✕", Close, "close"));
             sheetEl.Add(head);
             var body = new ScrollView(ScrollViewMode.Vertical);
+            body.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            body.verticalScrollerVisibility = ScrollerVisibility.Hidden;
             sheetEl.Add(body);
             switch (sheet)
             {
@@ -893,7 +895,11 @@ namespace Zerks.Game
             {
                 var label = $"{Content.B(sl.Building).Name}{(sl.Building == "mine" ? $" (place {sl.Slot + 1})" : "")} · {Texts.ProfessionName(sl.Profession)}{(sl.Recommended ? " · ECHO recommends" : "")}";
                 var s1 = sl;
-                sv.Add(B(label, () => { modalLayer.Clear(); Woke(C.Wake(s1.Building, s1.Slot)); }, sl.Recommended ? "btn teal" : "btn alt"));
+                var pick = B(label, () => { modalLayer.Clear(); Woke(C.Wake(s1.Building, s1.Slot)); }, sl.Recommended ? "btn teal" : "btn alt");
+                pick.style.height = StyleKeyword.Auto;
+                pick.style.whiteSpace = WhiteSpace.Normal;
+                pick.style.paddingTop = 8; pick.style.paddingBottom = 8;
+                sv.Add(pick);
             }
             m.Add(B("Not now", () => modalLayer.Clear(), "btn small alt"));
         }

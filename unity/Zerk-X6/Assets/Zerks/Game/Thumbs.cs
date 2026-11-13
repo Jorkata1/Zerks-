@@ -19,7 +19,7 @@ namespace Zerks.Game
             rt = new RenderTexture(160, 160, 16, RenderTextureFormat.ARGB32) { name = key };
             rt.Create();
             var root = new GameObject("thumb");
-            root.transform.position = new Vector3(0, -500, 0);
+            root.transform.position = new Vector3(cache.Count * 60, -500, 0);
             var m = Models.Spawn(model, id, root.transform);
             var black = silhouette ? Look.Unlit(new Color(0.09f, 0.09f, 0.12f)) : null;
             foreach (var t in root.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = Layer;
@@ -56,7 +56,7 @@ namespace Zerks.Game
                 UnityEngine.Rendering.RenderPipeline.SubmitRenderRequest(cam, req);
             else cam.Render();
             cam.targetTexture = null;
-            Object.Destroy(camGo); Object.Destroy(light.gameObject); Object.Destroy(root);
+            Object.DestroyImmediate(camGo); Object.DestroyImmediate(light.gameObject); Object.DestroyImmediate(root);
             cache[key] = rt;
             return rt;
         }

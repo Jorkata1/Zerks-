@@ -7,16 +7,16 @@
 /* ---------- top bar ---------- */
 .top { position: absolute; left: 8px; right: 8px; top: 6px; flex-direction: column; }
 .top-row { flex-direction: row; align-items: center; flex-wrap: wrap; }
-.air { background-color: rgba(251, 243, 230, 0.94); border-radius: 14px; padding: 5px 10px; margin-right: 6px; margin-bottom: 4px; min-width: 92px; border-bottom-width: 3px; border-color: #ff7a2e; }
+.air { background-color: rgba(251, 243, 230, 0.94); border-radius: 14px; padding: 4px 9px; margin-right: 5px; margin-bottom: 3px; min-width: 78px; border-bottom-width: 3px; border-color: #ff7a2e; }
 .air-label { font-size: 9px; -unity-font-style: bold; color: #8a7d6a; letter-spacing: 1px; }
 .air-value { font-size: 24px; -unity-font-style: bold; color: #2f3346; margin-top: -3px; }
 .air-bar { height: 4px; background-color: rgba(47, 51, 70, 0.15); border-radius: 2px; margin-top: 1px; }
 .air-fill { height: 4px; background-color: #5fe3d0; border-radius: 2px; width: 0; }
 .chips { flex-direction: row; flex-wrap: wrap; flex-shrink: 1; flex-grow: 1; }
-.chip { flex-direction: row; align-items: center; background-color: rgba(251, 243, 230, 0.92); border-radius: 11px; padding: 2px 8px 2px 4px; margin: 0 4px 4px 0; height: 22px; }
-.chip-dot { width: 14px; height: 14px; border-radius: 7px; margin-right: 4px; -unity-text-align: middle-center; font-size: 8px; color: white; -unity-font-style: bold; }
-.chip-text { font-size: 12px; -unity-font-style: bold; }
-.chip-cap { font-size: 9px; color: #8a7d6a; margin-left: 2px; }
+.chip { flex-direction: row; align-items: center; background-color: rgba(251, 243, 230, 0.92); border-radius: 10px; padding: 1px 6px 1px 3px; margin: 0 3px 3px 0; height: 20px; }
+.chip-dot { width: 13px; height: 13px; border-radius: 7px; margin-right: 3px; -unity-text-align: middle-center; font-size: 8px; color: white; -unity-font-style: bold; }
+.chip-text { font-size: 11px; -unity-font-style: bold; }
+.chip-cap { font-size: 8px; color: #8a7d6a; margin-left: 1px; }
 .chip.full .chip-text { color: #d9480f; }
 .ark-badge { background-color: #2f3346; color: #fbf3e6; border-radius: 11px; padding: 2px 9px; -unity-font-style: bold; font-size: 12px; height: 22px; -unity-text-align: middle-center; margin: 0 4px 4px 0; }
 .battery { width: 26px; height: 8px; border-radius: 2px; border-width: 1px; border-color: #2f3346; margin-left: 4px; }
