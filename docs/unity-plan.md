@@ -147,10 +147,29 @@ unity setup claude
 **Какво още липсва:**
 - истинските модели на Командира, колонистите и ЕХО. Сега са прости фигури; Жоро ги прави;
 - звукът (етап 5);
-- пробата на iPhone: трябват Xcode, след като се обнови macOS, и модулът iOS Build Support;
+- пробата на iPhone: започната на 14.11.2026, чака Xcode (виж „Пробата на iPhone“);
 - шрифтът засега е Roboto, временно;
 - прологът, решено засега без интро;
 - рекламите и ускоряването с реклама, решено засега без тях.
+
+## Пробата на iPhone (14.11.2026, Саламен, в работа)
+
+Саламен: „сега ще направим само пробата на телефон“. Първо на неговия iPhone 13, после и на iPhone 14 на Жоро.
+
+**Направено:**
+- модулът iOS Build Support в Unity 6.6 (6000.6.9f1), сложен с Unity CLI;
+- менюто **Zerks → Build for iPhone** (`Assets/Zerks/Editor/IosBuild.cs`; от терминала `unity build . --target iOS --execute-method Zerks.EditorTools.IosBuild.Build`): приложението `com.zerks.zerksx6`, само iPhone, вертикално, IL2CPP, автоматичен подпис;
+- Apple акаунтът не се пише в проекта, защото репото е публично: Xcode подписва с акаунта от Xcode → Settings → Accounts;
+- Xcode проектът е направен в `unity/Zerk-X6/Builds/iOS` (не е в git), без грешки, за 74 секунди;
+- на iPhone графиката е с мобилните настройки (`Mobile_RPAsset`: 80% резолюция, сенки 1024, без меки сенки), а в Unity на Mac-а с `PC_RPAsset`, затова на телефона е малко по-мека.
+
+**Остава:**
+1. Xcode от App Store (тегли се на 14.11.2026); отваря се веднъж, приема се лицензът и се избира iOS.
+2. Apple ID на Саламен в Xcode → Settings → Accounts. Безплатният акаунт стига: приложението работи 7 дни, после се слага пак. За TestFlight трябва платеният (етап 6).
+3. iPhone с кабел към Mac-а и „Trust“ на телефона.
+4. Компилиране и инсталиране (`xcodebuild` с `-allowProvisioningUpdates`, после `xcrun devicectl`), или от Xcode: `Builds/iOS/Unity-iPhone.xcodeproj`, Team, Run.
+5. На iPhone: Settings → Privacy & Security → Developer Mode (рестарт), после Settings → General → VPN & Device Management → доверие на профила.
+6. Проверка на телефона: кадрите, тапът, плъзгането, запазването при излизане, колко кадъра в секунда и колко топли.
 
 ## Втори компютър с Windows (по-късно)
 
