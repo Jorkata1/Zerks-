@@ -1,0 +1,19 @@
+{
+  "name": "zerks-x6-game",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Zerks-X6: the game code (three.js + Capacitor). For now only the balance model.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "balance": "tsx tools/balance.ts",
+    "check": "npm run typecheck && npm run test"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.0"
+  }
+}
