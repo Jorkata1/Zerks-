@@ -1,0 +1,96 @@
+/* The interface of the test version: minimal and futuristic, icons that hint, menus open on tap (02.11.2026).
+   Colours of the approved style: cream, orange band, navy, teal lights. */
+
+.root { flex-grow: 1; color: #2f3346; font-size: 13px; }
+.layer { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+
+/* ---------- top bar ---------- */
+.top { position: absolute; left: 8px; right: 8px; top: 6px; flex-direction: column; }
+.top-row { flex-direction: row; align-items: center; flex-wrap: wrap; }
+.air { background-color: rgba(251, 243, 230, 0.94); border-radius: 14px; padding: 5px 10px; margin-right: 6px; margin-bottom: 4px; min-width: 92px; border-bottom-width: 3px; border-color: #ff7a2e; }
+.air-label { font-size: 9px; -unity-font-style: bold; color: #8a7d6a; letter-spacing: 1px; }
+.air-value { font-size: 24px; -unity-font-style: bold; color: #2f3346; margin-top: -3px; }
+.air-bar { height: 4px; background-color: rgba(47, 51, 70, 0.15); border-radius: 2px; margin-top: 1px; }
+.air-fill { height: 4px; background-color: #5fe3d0; border-radius: 2px; width: 0; }
+.chips { flex-direction: row; flex-wrap: wrap; flex-shrink: 1; flex-grow: 1; }
+.chip { flex-direction: row; align-items: center; background-color: rgba(251, 243, 230, 0.92); border-radius: 11px; padding: 2px 8px 2px 4px; margin: 0 4px 4px 0; height: 22px; }
+.chip-dot { width: 14px; height: 14px; border-radius: 7px; margin-right: 4px; -unity-text-align: middle-center; font-size: 8px; color: white; -unity-font-style: bold; }
+.chip-text { font-size: 12px; -unity-font-style: bold; }
+.chip-cap { font-size: 9px; color: #8a7d6a; margin-left: 2px; }
+.chip.full .chip-text { color: #d9480f; }
+.ark-badge { background-color: #2f3346; color: #fbf3e6; border-radius: 11px; padding: 2px 9px; -unity-font-style: bold; font-size: 12px; height: 22px; -unity-text-align: middle-center; margin: 0 4px 4px 0; }
+.battery { width: 26px; height: 8px; border-radius: 2px; border-width: 1px; border-color: #2f3346; margin-left: 4px; }
+.battery-fill { height: 100%; background-color: #33c5a2; width: 0; }
+.energy-ok .chip-text { color: #2a9d6f; }
+.energy-short .chip-text { color: #d9480f; }
+
+/* ---------- bottom bar ---------- */
+.bottom { position: absolute; left: 0; right: 0; bottom: 8px; flex-direction: row; justify-content: center; }
+.nav { width: 64px; height: 58px; margin: 0 3px; border-radius: 16px; background-color: rgba(251, 243, 230, 0.95); border-width: 0; border-bottom-width: 3px; border-color: #e8b285; align-items: center; justify-content: center; padding: 0; }
+.nav-icon { width: 26px; height: 26px; border-radius: 13px; background-color: #2f3346; color: #fbf3e6; -unity-text-align: middle-center; -unity-font-style: bold; font-size: 13px; }
+.nav-label { font-size: 10px; -unity-font-style: bold; margin-top: 3px; color: #2f3346; }
+.nav.glow { border-color: #ff7a2e; background-color: #fff0de; }
+.nav.glow .nav-icon { background-color: #ff7a2e; }
+.nav.nav-echo .nav-icon { background-color: #5fe3d0; color: #2f3346; }
+
+/* ---------- ECHO ---------- */
+.echo { position: absolute; left: 12px; right: 12px; bottom: 76px; flex-direction: row; align-items: flex-start; }
+.echo-face { width: 34px; height: 34px; border-radius: 17px; background-color: #fbf3e6; border-width: 3px; border-color: #ff7a2e; margin-right: 6px; align-items: center; justify-content: center; }
+.echo-eye { width: 16px; height: 8px; border-radius: 4px; background-color: #5fe3d0; }
+.echo-text { flex-shrink: 1; background-color: rgba(47, 51, 70, 0.92); color: #fbf3e6; border-radius: 12px; padding: 8px 11px; font-size: 13px; white-space: normal; }
+
+/* ---------- sheets ---------- */
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; max-height: 72%; background-color: #fbf3e6; border-top-left-radius: 22px; border-top-right-radius: 22px; padding: 14px 16px 18px 16px; border-top-width: 4px; border-color: #ff7a2e; }
+.sheet-head { flex-direction: row; align-items: center; margin-bottom: 8px; }
+.sheet-title { font-size: 19px; -unity-font-style: bold; flex-grow: 1; }
+.sheet-sub { font-size: 12px; color: #8a7d6a; margin-bottom: 6px; white-space: normal; }
+.close { width: 32px; height: 32px; border-radius: 16px; background-color: #2f3346; color: #fbf3e6; -unity-font-style: bold; font-size: 15px; padding: 0; border-width: 0; }
+.section { font-size: 10px; -unity-font-style: bold; color: #8a7d6a; letter-spacing: 1px; margin: 10px 0 4px 0; }
+.line { flex-direction: row; align-items: center; justify-content: space-between; padding: 3px 0; }
+.line-text { white-space: normal; flex-shrink: 1; }
+.ok { color: #2a9d6f; -unity-font-style: bold; }
+.no { color: #d9480f; -unity-font-style: bold; }
+.muted { color: #8a7d6a; }
+.btn { background-color: #ff7a2e; color: white; -unity-font-style: bold; border-radius: 14px; border-width: 0; height: 40px; font-size: 14px; margin-top: 8px; padding: 0 14px; }
+.btn:disabled { background-color: #d8cbb8; color: #8a7d6a; }
+.btn.small { height: 28px; font-size: 12px; margin: 2px; border-radius: 10px; }
+.btn.alt { background-color: #2f3346; }
+.btn.teal { background-color: #33c5a2; }
+.btn.picked { background-color: #2f3346; }
+.row { flex-direction: row; flex-wrap: wrap; align-items: center; }
+.card { width: 31%; margin: 1%; background-color: white; border-radius: 14px; padding: 6px; align-items: center; border-width: 2px; border-color: rgba(0,0,0,0); }
+.card.can { border-color: #ff7a2e; }
+.card-img { width: 74px; height: 74px; border-radius: 10px; background-color: #f3e6d4; align-items: center; justify-content: center; }
+.card-lock { width: 22px; height: 22px; border-radius: 11px; background-color: #2f3346; color: #fbf3e6; -unity-text-align: middle-center; font-size: 11px; -unity-font-style: bold; }
+.card-name { font-size: 11px; -unity-font-style: bold; -unity-text-align: middle-center; white-space: normal; margin-top: 3px; }
+.card-info { font-size: 10px; color: #8a7d6a; -unity-text-align: middle-center; white-space: normal; }
+.bar { height: 6px; background-color: rgba(47, 51, 70, 0.15); border-radius: 3px; margin: 3px 0; }
+.bar-fill { height: 6px; background-color: #ff7a2e; border-radius: 3px; width: 0; }
+.item { background-color: white; border-radius: 12px; padding: 7px 9px; margin-bottom: 5px; }
+.item.done { opacity: 0.6; }
+.item.rec { border-width: 2px; border-color: #5fe3d0; }
+.item-name { -unity-font-style: bold; font-size: 13px; }
+.item-info { font-size: 11px; color: #8a7d6a; white-space: normal; }
+
+/* ---------- modal ---------- */
+.dim { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(29, 36, 66, 0.55); align-items: center; justify-content: center; }
+.modal { width: 86%; background-color: #fbf3e6; border-radius: 22px; padding: 18px; border-bottom-width: 5px; border-color: #ff7a2e; }
+.modal-title { font-size: 20px; -unity-font-style: bold; margin-bottom: 4px; white-space: normal; }
+.modal-text { font-size: 14px; white-space: normal; margin: 4px 0; }
+.quote { font-size: 15px; -unity-font-style: italic; color: #2f3346; white-space: normal; margin: 8px 0; padding-left: 8px; border-left-width: 3px; border-color: #5fe3d0; }
+.blueprint { height: 120px; background-color: #1d2442; border-radius: 12px; margin: 8px 0; }
+
+/* ---------- tags over the map ---------- */
+.tag { position: absolute; translate: -50% -100%; flex-direction: row; align-items: center; background-color: rgba(251, 243, 230, 0.96); border-radius: 12px; padding: 3px 8px 3px 4px; border-bottom-width: 2px; border-color: #e8b285; }
+.tag-text { font-size: 12px; -unity-font-style: bold; }
+.tag.bubble { border-color: #ff7a2e; }
+.tag.ready { background-color: #ff7a2e; border-color: #c2531c; }
+.tag.ready .tag-text { color: white; }
+.tag.action { background-color: #2f3346; border-color: #000; padding: 6px 12px; }
+.tag.action .tag-text { color: #fbf3e6; font-size: 14px; }
+.tag.timer { padding: 3px 7px; flex-direction: column; align-items: stretch; min-width: 64px; }
+.tag.timer .tag-text { font-size: 10px; -unity-text-align: middle-center; }
+.arrow { position: absolute; translate: -50% -100%; width: 0; height: 0; border-left-width: 12px; border-right-width: 12px; border-top-width: 18px; border-left-color: rgba(0,0,0,0); border-right-color: rgba(0,0,0,0); border-top-color: #ff7a2e; }
+
+.dev-btn { position: absolute; right: 6px; top: 64px; width: 30px; height: 30px; border-radius: 15px; background-color: rgba(47, 51, 70, 0.55); color: #fbf3e6; font-size: 11px; padding: 0; border-width: 0; -unity-font-style: bold; }
+.toast { position: absolute; left: 20%; right: 20%; top: 40%; background-color: rgba(47, 51, 70, 0.92); color: #fbf3e6; border-radius: 12px; padding: 8px; -unity-text-align: middle-center; white-space: normal; }

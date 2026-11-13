@@ -56,6 +56,11 @@ crashlytics-build.properties
 
 .DS_Store
 
+# The GLB models are copied from art/3d/buildings by Zerks > Sync from repo (docs/unity-plan.md, step 7:
+# moving them is Joro's decision), so the copy is not kept in git.
+/Assets/Zerks/Resources/Models/
+/Assets/Zerks/Resources/Models.meta
+
 # The unity-pipeline skill for Claude Code is copied from the Pipeline package
 # on each computer (docs/unity-plan.md, step 6), so it is not kept in git.
 /.claude/
