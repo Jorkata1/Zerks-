@@ -1,0 +1,36 @@
+# Only the Unity project (unity/) uses these rules (docs/unity-plan.md, step 4).
+# The rest of the repo stays as it is; old files are not moved to LFS.
+
+# Text files under unity/ are stored with LF, so nothing shows as changed
+# when the project moves between the Mac and the Windows computer.
+unity/** text=auto eol=lf
+
+# Large binary files under unity/ go through Git LFS.
+# 3D models
+unity/**/*.glb filter=lfs diff=lfs merge=lfs -text
+unity/**/*.gltf filter=lfs diff=lfs merge=lfs -text
+unity/**/*.fbx filter=lfs diff=lfs merge=lfs -text
+unity/**/*.obj filter=lfs diff=lfs merge=lfs -text
+unity/**/*.blend filter=lfs diff=lfs merge=lfs -text
+# Textures and images
+unity/**/*.png filter=lfs diff=lfs merge=lfs -text
+unity/**/*.jpg filter=lfs diff=lfs merge=lfs -text
+unity/**/*.jpeg filter=lfs diff=lfs merge=lfs -text
+unity/**/*.tga filter=lfs diff=lfs merge=lfs -text
+unity/**/*.tif filter=lfs diff=lfs merge=lfs -text
+unity/**/*.psd filter=lfs diff=lfs merge=lfs -text
+unity/**/*.exr filter=lfs diff=lfs merge=lfs -text
+unity/**/*.hdr filter=lfs diff=lfs merge=lfs -text
+# Sound
+unity/**/*.wav filter=lfs diff=lfs merge=lfs -text
+unity/**/*.mp3 filter=lfs diff=lfs merge=lfs -text
+unity/**/*.ogg filter=lfs diff=lfs merge=lfs -text
+unity/**/*.aif filter=lfs diff=lfs merge=lfs -text
+# Fonts
+unity/**/*.ttf filter=lfs diff=lfs merge=lfs -text
+unity/**/*.otf filter=lfs diff=lfs merge=lfs -text
+# Video and archives
+unity/**/*.mp4 filter=lfs diff=lfs merge=lfs -text
+unity/**/*.mov filter=lfs diff=lfs merge=lfs -text
+unity/**/*.webm filter=lfs diff=lfs merge=lfs -text
+unity/**/*.zip filter=lfs diff=lfs merge=lfs -text

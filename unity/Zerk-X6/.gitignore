@@ -1,0 +1,57 @@
+# Unity project Zerk-X6 (docs/unity-plan.md, step 4).
+# Unity makes these folders again on every computer, so they never go into git.
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+
+# Meta files are kept (they hold the asset GUIDs).
+!/[Aa]ssets/**/*.meta
+
+# IDE and solution files, made by the editor of each computer
+.vs/
+.vscode/
+.idea/
+.gradle/
+.consulo/
+ExportedObj/
+/[Aa]ssets/Plugins/Editor/JetBrains*
+*.csproj
+*.unityproj
+*.sln
+*.slnx
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+
+# Crash logs and build output
+sysinfo.txt
+mono_crash.*
+crashlytics-build.properties
+*.apk
+*.aab
+*.app
+*.unitypackage
+
+# Addressables build output
+/[Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*
+/[Aa]ssets/[Ss]treamingAssets/aa.meta
+/[Aa]ssets/[Ss]treamingAssets/aa/*
+
+.DS_Store
