@@ -33,8 +33,9 @@
 
 ### 1. Какво трябва да има
 
-- Unity Editor 6.6 (има го) и Unity CLI: `unity --version`.
-- git и Git LFS: `git --version`, `git lfs version` (ако липсва: `brew install git-lfs`).
+- Unity Editor 6.6 (има го) и Unity CLI: `unity --version`. CLI се слага с `curl -fsSL https://unity.com/install.sh | bash` в `~/.unity/bin`; в shell-а на Claude не винаги е в PATH, затова Claude го вика с пълния път `~/.unity/bin/unity`.
+- git и Git LFS: `git --version`, `git lfs version`. На Mac-а на Саламен няма Homebrew, затова Git LFS е сложен от официалния zip в GitHub (`git-lfs-darwin-arm64-v3.8.1.zip`, после `sudo ./install.sh`).
+- Вход в акаунта на Unity (Unity Hub → Sign in или `unity auth login`): без него пакетът Pipeline не се тегли.
 - Claude Code: десктоп приложението на Claude (раздел Code) или в терминала, със същия акаунт.
 
 ### 2. Репото на Mac-а
@@ -70,11 +71,11 @@ unity status --until-ready --project-path ~/Projects/Zerks-/unity/Zerk-X6 --form
 unity setup claude
 ```
 
-После, от папката на проекта, `unity skill install claude-code --local`, за да се вижда и скилът `unity-pipeline`.
+`unity setup claude` иска командата `claude` в терминала; в десктоп приложението на Claude плъгинът Unity вече идва и тази стъпка не трябва. После, от папката на проекта и при отворен Editor, `unity skill install claude-code --local --skill unity-pipeline`: така в `unity/Zerk-X6/.claude/skills/` влиза само `unity-pipeline` (без `--skill` се копират и всички 35 скила на Unity, които плъгинът вече има). Папката `.claude/` не е в git; на всеки компютър командата се пуска наново.
 
 ### 7. Моделите
 
-- Пакетите glTFast (`com.unity.cloud.gltfast`) и Draco (`com.unity.cloud.draco`) четат нашите GLB файлове. Добавят се със скила `unity-package-management`.
+- Пакетите glTFast (`com.unity.cloud.gltfast`) и Draco (`com.unity.cloud.draco`) четат нашите GLB файлове. Добавят се със скила `unity-package-management` (`unity command package add`, по един пакет, и след всеки се чака „ready“, защото Unity презарежда скриптовете). Draco трябва: и 57-те модела в `art/3d/buildings/` са компресирани с `KHR_draco_mesh_compression`, а 42 ползват и `KHR_materials_emissive_strength` за светещите прозорци.
 - **Решение за по-късно (пита се Жоро):** моделите да се преместят с `git mv` в `unity/Zerk-X6/Assets/Art/Buildings/` (историята им остава, без копие), а Blender скриптовете да изнасят там. Дотогава първите проби може да ползват копие, което не се commit-ва.
 
 ### 8. Проверка и commit
@@ -82,12 +83,23 @@ unity setup claude
 - Проектът се отваря без грешки, `unity status` е „ready“, в git няма `Library/`.
 - Commit в клона `unity-setup`; push и сливане в `main` само при „актуализирай и качи“.
 
+## Направено на Mac-а (13.11.2026, Саламен)
+
+Стъпките 1–8 са минали в клона `unity-setup`; не е качено в GitHub.
+
+- Unity CLI 1.0.0 и Git LFS 3.8.1 са сложени; Unity Editor 6000.6.9f1 (Unity 6.6).
+- Празният проект (Universal 3D) е копиран от `~/Zerk-X6` в `unity/Zerk-X6/`: само `Assets/`, `Packages/` и `ProjectSettings/`. „Visible Meta Files“ и „Force Text“ са по подразбиране. Старото копие в `~/Zerk-X6` Саламен го трие сам.
+- `.gitignore` на проекта и `.gitattributes` в корена (LFS само за `unity/`, текстът с LF); иконата `URP.png` от шаблона е в LFS, `Library/` не е в git.
+- Пакети: Pipeline 1.0.0, glTFast 6.21.0, Draco 5.6.0; скилът `unity-pipeline` е в `.claude/skills/` на проекта.
+- При първото отваряне Unity спря с „You are not signed in“ за пакета Pipeline: входът в Unity на Mac-а беше изтекъл. След вход в Unity Hub проектът се отвори и `unity status` е „ready“, без грешки при компилиране. В конзолата има две грешки, които не пречат: лицензът при старта (handshake) и Pipeline по време на презареждане след glTFast.
+- Не е проверено: внасяне на истински модел от `art/3d/buildings/` (идва с етап 1).
+
 ## Втори компютър с Windows (по-късно)
 
 Саламен ще работи и от Windows компютър (13.11.2026). Същото репо и същият Unity проект, по същия начин:
 
 1. Unity Editor **точно същата версия** като на Mac-а (иначе Unity обновява проекта и другият компютър трябва да го последва).
-2. Unity CLI за Windows: `irm https://unity.com/install.ps1 | iex` в PowerShell; после `unity setup claude`.
+2. Unity CLI за Windows: `irm https://unity.com/install.ps1 | iex` в PowerShell; после `unity setup claude` (ако има командата `claude`) и, при отворен проект, `unity skill install claude-code --local --skill unity-pipeline` (виж стъпка 6). Вход в Unity Hub преди първото отваряне.
 3. Git за Windows и Git LFS; репото се клонира; пакетът Pipeline вече е в `Packages/manifest.json` и идва с репото.
 4. Claude Code на Windows (десктоп приложението), отворен в папката на репото; после „обнови чат“.
 5. Редовете: правило в `.gitattributes`, за да не излизат файлове като променени при смяна на компютъра (Windows пише CRLF, Mac LF).
