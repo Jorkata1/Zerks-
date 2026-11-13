@@ -48,7 +48,7 @@ export const ATMO_START = 7
 /**
  * The Ark spends carbon, water and stone (concept.md: the resources "се харчат за ... нивата на Ковчега").
  * The rows that levels.md calls "в склада" (silicon, food, the new materials) are a stock the player must
- * have; the Ark does not take them (proposal, from how levels.md words the tables).
+ * have; the Ark does not take them (Salamen; approved by Joro on 13.11.2026, levels.md 2.4).
  */
 export const ARK_SPENDS: Res[] = ['carbon', 'water', 'stone']
 
