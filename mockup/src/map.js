@@ -13,11 +13,14 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import * as T from './textures.js';
 import * as K from './models.js';
 import * as B from './colony.js';
+import { addIdeas } from './map-ideas.js';
 
 const NIGHT = (location.hash || '#lvl10').includes('-night'); // #lvl10-night: the same map at night
 // #lvl10-ark-a, #lvl10-ark-b (also with -night): one of the two new ideas for the Ark (Joro, 06.11.2026) in place of the CellCog one
 const ARK = (location.hash.match(/ark-([ab])/) || [])[1];
 const ATM = 28;
+// ?ideas=all (or canyon,ground,ice,lines,rover,zone): the ideas for the map and its details (map-ideas.js, 14.11.2026)
+const IDEAS = new Set((new URLSearchParams(location.search).get('ideas') || '').split(',').filter(Boolean));
 const DPR = Number(new URLSearchParams(location.search).get('dpr') || 1);
 const W = 390, H = 844;
 T.seed(7);
@@ -250,6 +253,8 @@ add(person('Commander'), 2.4, 0.4, 2.4, Math.PI / 4, 1.4).name = 'commander';
 const echo = add(chGlb.echo.clone(true), 4.4, 2.6, 0.6, Math.PI / 4, 2.4); echo.name = 'echo';
 // zone II, which the research opens at level 10, still lies under dust
 for (const b of blocks) if (b.s < -REACH && Math.abs(b.d) <= 2) for (let k = 0; k < 2; k++) dust(b.cx - 4 + rnd() * 8, 2 + rnd() * 3, b.cz - 4 + rnd() * 8, 20 + rnd() * 8, 0xfde6d2, 0.85);
+
+if (IDEAS.size) await addIdeas({ scene, flat, glow, NIGHT, gltf, sun, blocks: builtBlocks, allBlocks: blocks }, IDEAS);
 
 // ---------- camera: angled top-down like a city builder, looking along the diagonal of the grid ----------
 const EL = THREE.MathUtils.degToRad(36); // angle above the ground

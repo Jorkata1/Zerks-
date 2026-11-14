@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="bg"><head><meta charset="utf-8"><meta name="viewport" content="width=390">
+<title>Zerks-X6: идеи за картата</title>
+<!-- The sheet of the ideas for the map (src/map-ideas.js, 14.11.2026): each idea as it is now and as proposed.
+     node shot-ideas.js writes the frames to out/, then node shot-sheet.js map-ideas p1 (and p2) saves the two pages
+     to out/map-ideas-p1.jpg and -p2.jpg (screens/map-ideas-1.jpg, -2.jpg). -->
+<style>
+  @font-face { font-family: Nunito; font-weight: 800; src: url(fonts/nunito-cyrillic-800-normal.woff2) format('woff2'); unicode-range: U+0400-045F; }
+  @font-face { font-family: Nunito; font-weight: 800; src: url(fonts/nunito-latin-800-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+2013-2014, U+201C-201E; }
+  @font-face { font-family: Nunito; font-weight: 900; src: url(fonts/nunito-cyrillic-900-normal.woff2) format('woff2'); unicode-range: U+0400-045F; }
+  @font-face { font-family: Nunito; font-weight: 900; src: url(fonts/nunito-latin-900-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+2013-2014, U+201C-201E; }
+  body { margin: 0; width: 390px; background: #fbf3e8; font-family: Nunito, sans-serif; font-weight: 800; color: #3b2618; }
+  h1 { font-size: 19px; font-weight: 900; margin: 0; padding: 14px 12px 2px; }
+  .lead { font-size: 12px; color: #9a7a62; padding: 0 12px 6px; line-height: 1.3; }
+  .idea { margin: 8px 8px 0; background: #fff; border-radius: 16px; box-shadow: 0 0 0 2px #ecdcc6; padding: 9px 9px 10px; }
+  .idea h2 { font-size: 15px; font-weight: 900; margin: 0 0 2px; display: flex; align-items: center; gap: 7px; }
+  .idea h2 b { width: 24px; height: 24px; border-radius: 50%; background: #ff8b3d; color: #fff; display: grid; place-items: center; font-size: 14px; flex: none; }
+  .idea p { font-size: 12px; line-height: 1.3; margin: 0 0 7px; color: #5b4433; }
+  .pair { display: flex; gap: 6px; }
+  .shot { flex: 1; position: relative; height: 236px; border-radius: 11px; overflow: hidden; background: #eecba6; }
+  .shot img { position: absolute; left: 0; width: 100%; }
+  .shot span { position: absolute; left: 6px; top: 6px; font-size: 10px; letter-spacing: .4px; padding: 1px 7px 2px; border-radius: 8px; background: rgba(59, 38, 24, .72); color: #fff; }
+  .shot.new span { background: #22c19b; }
+  .foot { font-size: 11px; color: #9a7a62; padding: 10px 12px 14px; line-height: 1.3; }
+</style></head>
+<body>
+<h1>Картата: седем предложения</h1>
+<div class="lead">Всяко е показано както е сега и както го предлагам, на картата на ниво 10. Нищо не е решено: кажи кои номера остават.</div>
+<div id="list"></div>
+<div class="foot">Всяко предложение се включва отделно (mockup/map.html?ideas=…). В играта в Unity нищо не е сменено.</div>
+<script>
+// [title, text, view, how far down the frame the picture looks (0 top … 1 bottom)]
+const IDEAS = [
+  ['Каньонът', 'Колонията е на дъното на каньон, но сега картата е равнина. Скали на пластове от двете страни и в горния му край, а над тях земята горе. Виждат се, когато отдалечиш или плъзнеш картата.', 'canyon', 0.42],
+  ['Скалата до мината', 'В пластовете до мината личи какво копае тя: светъл пласт кварц и тъмен пласт желязна руда. Сутрин лявата стена хвърля сянка върху дъното.', 'wall', 0.5],
+  ['Земята', 'Голата земя вече не е еднаква: вълнички от вятъра, сухи пукнатини, малки кратери и по-тъмна, камениста ивица под скалите.', 'ground', 0.55],
+  ['Ледената падина', 'Ледът, от който помпата тегли вода, се вижда: замръзнало езерце в ниския край на каньона, със скреж по брега. На ниво 13 на брега му идва глиненият изкоп.', 'ice', 0.52],
+  ['Сервизният канал', 'Водата и токът вървят в покрит канал покрай улиците, с кутия със светлинка при всяка сграда. Така се вижда как помпата, панелите и батериите стигат до сградите.', 'lines', 0.45],
+  ['Роботът и следите му', 'Роботът събирач се връща по своя път, а колелата му са оставили следи от базата към равнината, където търси.', 'rover', 0.5],
+  ['Границата на затворената зона', 'По ръба на построеното има колчета с оранжеви флагчета и табела коя зона следва и как се отваря. Прахът над зоната остава.', 'zone', 0.5],
+];
+const FRAME = 844 / 390;   // a frame is this many times taller than wide
+const PAGE = location.hash === '#p2' ? [4, 7] : location.hash === '#p1' ? [0, 4] : [0, 7];
+if (PAGE[0]) { document.querySelector('h1').textContent = 'Картата: предложенията 5–7'; document.querySelector('.lead').remove(); }
+else if (PAGE[1] < 7) document.querySelector('.foot').remove();
+document.getElementById('list').innerHTML = IDEAS.map(([t, p, v, y], i) => {
+  if (i < PAGE[0] || i >= PAGE[1]) return '';
+  const w = 183, h = w * FRAME, top = -(h - 236) * y;
+  const shot = (tag, cls, label) => `<div class="shot ${cls}"><img src="out/idea-${v}-${tag}.png" style="top:${top}px" alt=""><span>${label}</span></div>`;
+  return `<div class="idea"><h2><b>${i + 1}</b>${t}</h2><p>${p}</p><div class="pair">${shot('a', '', 'СЕГА')}${shot('b', 'new', 'ПРЕДЛОЖЕНИЕ')}</div></div>`;
+}).join('');
+Promise.all([...document.images].map(i => i.decode().catch(() => 0))).then(() => document.fonts.ready).then(() => { window.__ready = true; });
+</script>
+</body></html>
