@@ -20,10 +20,9 @@ const NIGHT = (location.hash || '#lvl10').includes('-night'); // #lvl10-night: t
 // #lvl10-ark-a, #lvl10-ark-b (also with -night): one of the two new ideas for the Ark (Joro, 06.11.2026) in place of the CellCog one
 const ARK = (location.hash.match(/ark-([ab])/) || [])[1];
 const ATM = 28;
-// The canyon and the details of the map (map-details.js; Joro, 14.11.2026) are always on. ?details=none shows the map
-// as it was before them, ?details=canyon,dust only some (for the comparison sheet, shot-ideas.js).
-const DQ = new URLSearchParams(location.search).get('details');
-const DETAILS = new Set(DQ === 'none' ? [] : (DQ || 'all').split(',').filter(Boolean));
+// The canyon, the ground and the details of the map (map-details.js; Joro, 14.11.2026) are always on.
+// ?details=none shows the map as it was before them (for the before-and-now sheet, shot-ideas.js).
+const DETAILS = new URLSearchParams(location.search).get('details') !== 'none';
 const DPR = Number(new URLSearchParams(location.search).get('dpr') || 1);
 const W = 390, H = 844;
 T.seed(7);
@@ -81,7 +80,7 @@ const rockGeo = new THREE.IcosahedronGeometry(1, 2);
   for (let i = 0; i < 220; i++) { x.fillStyle = `rgba(205,120,80,${0.2 + rnd() * 0.25})`; x.beginPath(); x.ellipse(rnd() * 1024, rnd() * 1024, 2 + rnd() * 5, 1.5 + rnd() * 3, rnd() * 3, 0, 7); x.fill(); }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(8, 8); t.anisotropy = 8;
   const g = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ map: t, roughness: 1 }));
-  g.rotation.x = -Math.PI / 2; g.receiveShadow = true; scene.add(g);
+  g.rotation.x = -Math.PI / 2; g.receiveShadow = true; g.name = 'ground'; scene.add(g);
 }
 
 // ---------- small builders: rocks and the colonists in their suits ----------
@@ -256,9 +255,9 @@ add(person('Commander'), 2.4, 0.4, 2.4, Math.PI / 4, 1.4).name = 'commander';
 const echo = add(chGlb.echo.clone(true), 4.4, 2.6, 0.6, Math.PI / 4, 2.4); echo.name = 'echo';
 // zone II, which the research opens at level 10, still lies under dust
 // (only with ?details=none: the blanket of map-details.js lies there now; nothing random comes after these, so nothing moves)
-if (!DETAILS.has('dust') && !DETAILS.has('all')) for (const b of blocks) if (b.s < -REACH && Math.abs(b.d) <= 2) for (let k = 0; k < 2; k++) dust(b.cx - 4 + rnd() * 8, 2 + rnd() * 3, b.cz - 4 + rnd() * 8, 20 + rnd() * 8, 0xfde6d2, 0.85);
+if (!DETAILS) for (const b of blocks) if (b.s < -REACH && Math.abs(b.d) <= 2) for (let k = 0; k < 2; k++) dust(b.cx - 4 + rnd() * 8, 2 + rnd() * 3, b.cz - 4 + rnd() * 8, 20 + rnd() * 8, 0xfde6d2, 0.85);
 
-if (DETAILS.size) await addDetails({ scene, flat, glow, NIGHT, gltf, sun, blocks: builtBlocks, allBlocks: blocks }, DETAILS);
+if (DETAILS) await addDetails({ scene, flat, glow, NIGHT, gltf, sun, blocks: builtBlocks, allBlocks: blocks });
 
 // ---------- camera: angled top-down like a city builder, looking along the diagonal of the grid ----------
 const EL = THREE.MathUtils.degToRad(36); // angle above the ground
