@@ -158,6 +158,32 @@ const PAGES = [
   ['Глава 2: докът на парцела на Ковчега', [['kk/ark-18+kk/dock-4@2.32,-1.82', 'Ковчегът и докът с готовата рама, в мащаба на картата', 4.15, 0, 36, 28], ['kk/ark-18+kk/dock-4@2.32,-1.82', 'Същото отгоре: кранът и мястото за частите', 4.15, 0, 88, 28]]],
 ];
 PAGES.forEach(([t, tiles], i) => { SETS['all' + (i + 1)] = { title: `Zerks-X6: модели · ${t} · ${i + 1}/${PAGES.length}`, cols: 2, big: true, tiles }; });
+// ---------- the characters (Joro, 14.11.2026): art/3d/characters ----------
+SETS.astroa = { title: 'Космонавтите · идея А · Стъкленият шлем', cols: 2, big: true, tiles: [
+  ['ch/astro-a-commander', 'Командирът отпред', 7, Math.PI / 4, 12], ['ch/astro-a-commander', 'Командирът отзад', 7, Math.PI / 4 + Math.PI, 12],
+  ['ch/astro-a-crew', 'Командирът и първите четирима: готвач, агроном, геолог, инженер', 2.9, Math.PI / 4, 14], ['ch/astro-a-crew', 'Същите отзад', 2.9, Math.PI / 4 + Math.PI, 14],
+  ['ch/astro-a-crew', 'Както ги вижда камерата на картата (36° отгоре)', 2.9, Math.PI / 4, 36], ['kk/kitchen-1+ch/astro-a-crew@1.25,-2.0*0.318', 'До кухнята, в размера в играта (1,4 пъти по-едри от истинските)', 4.4, 0, 36],
+] };
+SETS.astrob = { title: 'Космонавтите · идея Б · Класическият скафандър', cols: 2, big: true, tiles: [
+  ['ch/astro-b-commander', 'Командирът отпред', 7, Math.PI / 4, 12], ['ch/astro-b-commander', 'Командирът отзад', 7, Math.PI / 4 + Math.PI, 12],
+  ['ch/astro-b-crew', 'Командирът и първите четирима: готвач, агроном, геолог, инженер', 2.9, Math.PI / 4, 14], ['ch/astro-b-crew', 'Същите отзад', 2.9, Math.PI / 4 + Math.PI, 14],
+  ['ch/astro-b-crew', 'Както ги вижда камерата на картата (36° отгоре)', 2.9, Math.PI / 4, 36], ['kk/kitchen-1+ch/astro-b-crew@1.25,-2.0*0.318', 'До кухнята, в размера в играта (1,4 пъти по-едри от истинските)', 4.4, 0, 36],
+] };
+SETS.astroc = { title: 'Космонавтите · идея В · Работният костюм', cols: 2, big: true, tiles: [
+  ['ch/astro-c-commander', 'Командирът отпред', 7, Math.PI / 4, 12], ['ch/astro-c-commander', 'Командирът отзад', 7, Math.PI / 4 + Math.PI, 12],
+  ['ch/astro-c-crew', 'Командирът и първите четирима: готвач, агроном, геолог, инженер', 2.9, Math.PI / 4, 14], ['ch/astro-c-crew', 'Същите отзад', 2.9, Math.PI / 4 + Math.PI, 14],
+  ['ch/astro-c-crew', 'Както ги вижда камерата на картата (36° отгоре)', 2.9, Math.PI / 4, 36], ['kk/kitchen-1+ch/astro-c-crew@1.25,-2.0*0.318', 'До кухнята, в размера в играта (1,4 пъти по-едри от истинските)', 4.4, 0, 36],
+] };
+SETS.echo = { title: 'ЕХО · три идеи · отблизо и до Командира за размера', cols: 2, big: true, tiles: [
+  ['ch/echo-1^0.35', 'ЕХО 1 · Топчето: една широка перка в пръстен под главата', 15, Math.PI / 4, 14], ['ch/echo-1-size', 'ЕХО 1 до Командира (идея А)', 6.6, Math.PI / 4, 12],
+  ['ch/echo-2^0.35', 'ЕХО 2 · Двете перки: тяло като яйце между две перки в пръстени', 12, Math.PI / 4, 14], ['ch/echo-2-size', 'ЕХО 2 до Командира (идея Б)', 6.2, Math.PI / 4, 12],
+  ['ch/echo-3^0.35', 'ЕХО 3 · Малкият дрон: роднина на строителния дрон, четири перки', 15, Math.PI / 4, 14], ['ch/echo-3-size', 'ЕХО 3 до Командира (идея В)', 6.6, Math.PI / 4, 12],
+] };
+SETS.echoback = { title: 'ЕХО · трите идеи отзад и отгоре', cols: 2, big: true, tiles: [
+  ['ch/echo-1^0.35', 'ЕХО 1 отзад', 15, Math.PI / 4 + Math.PI, 14], ['ch/echo-1', 'ЕХО 1 отгоре', 15, Math.PI / 4, 88],
+  ['ch/echo-2^0.35', 'ЕХО 2 отзад', 12, Math.PI / 4 + Math.PI, 14], ['ch/echo-2', 'ЕХО 2 отгоре', 12, Math.PI / 4, 88],
+  ['ch/echo-3^0.35', 'ЕХО 3 отзад', 15, Math.PI / 4 + Math.PI, 14], ['ch/echo-3', 'ЕХО 3 отгоре', 15, Math.PI / 4, 88],
+] };
 const SET = SETS[(location.hash.match(/set=(\w+)/) || [])[1]];
 const PHONE = location.hash.includes('phone') || !!SET;
 if (SET && !SET.cols) document.body.classList.add('pair');
@@ -194,10 +220,12 @@ async function tile(name, fixedK, turn = 0, el = 36, fit = false) {
   plot.position.y = -0.01; plot.receiveShadow = true; scene.add(plot);
 
   // 'a+b@x,y': more models in one picture, b set at (x, y) Blender units from a (the dock on the Ark's plot)
-  const root = new THREE.Group();
+  const root = new THREE.Group(); let lift = 0;
   for (const part of name.split('+')) {
-    const [path, at] = part.split('@'), m = (await gltf.loadAsync('models/' + path + '.glb')).scene;
-    if (at) { const [x, y] = at.split(',').map(Number); m.position.set(x, 0, -y); }
+    // 'path^h': the model hovers h of its own units over the ground (ECHO); '@x,y*s': set at (x, y) and scaled by s
+    const [spec, at] = part.split('@'), [path, up] = spec.split('^'), m = (await gltf.loadAsync('models/' + path + '.glb')).scene;
+    if (at) { const [xy, sc] = at.split('*'), [x, y] = xy.split(',').map(Number); m.position.set(x, 0, -y); if (sc) m.scale.setScalar(+sc); }
+    if (up) lift = +up;
     root.add(m);
   }
   // a model dug into the ground (the clay pit) marks its opening with the material 'hole': it is not drawn, it only
@@ -221,12 +249,12 @@ async function tile(name, fixedK, turn = 0, el = 36, fit = false) {
   const b = new THREE.Box3().setFromObject(root), s = b.getSize(new THREE.Vector3()), c = b.getCenter(new THREE.Vector3());
   const k = fixedK || FOOT / Math.max(s.x, s.z);
   if (dug) { b.min.y = 0; s.y = b.max.y; }                 // dug in: keep its ground at the plot, not its floor
-  root.scale.setScalar(k); root.position.set(-c.x * k, -b.min.y * k, -c.z * k); scene.add(root);
+  root.scale.setScalar(k); root.position.set(-c.x * k, (lift - b.min.y) * k, -c.z * k); scene.add(root);
 
   // fit = the side of the first model's plot in metres (28 for the Ark's 2x2), drawn round its origin
   if (fit) { plot.scale.set(fit / PLOT, 1, fit / PLOT); plot.position.set(-c.x * k, -0.01, -c.z * k); sun.shadow.camera.left = sun.shadow.camera.bottom = -40; sun.shadow.camera.right = sun.shadow.camera.top = 40; sun.shadow.camera.updateProjectionMatrix(); }
   const h = s.y * k, cam = new THREE.OrthographicCamera(-VIEW / 2, VIEW / 2, VIEW / 2, -VIEW / 2, 1, 600);
-  const look = new THREE.Vector3(0, h * 0.36, 0);
+  const look = new THREE.Vector3(0, h * 0.36 + lift * k * 0.55, 0);
   cam.position.copy(look).addScaledVector(DIR, 300); cam.lookAt(look); cam.updateMatrixWorld();
   // a tall model (the carbon drill) gets a wider picture, so its top is not cut off
   const box = new THREE.Box3().setFromObject(root), top = new THREE.Vector3(0, box.max.y, 0).applyMatrix4(cam.matrixWorldInverse).y;
