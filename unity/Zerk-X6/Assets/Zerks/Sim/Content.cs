@@ -228,9 +228,6 @@ namespace Zerks.Sim
         /// <summary>Pods with power at an Ark level: four on 3, one more on every level (levels.md, chapter 1).</summary>
         public static int PodsPowered(int arkLevel) => arkLevel < 3 ? 0 : Math.Min(100, arkLevel + 1);
 
-        /// <summary>The Ark's reactor covers the demand to level 4, half on 5, a quarter on 6, nothing from 7 (balance model).</summary>
-        public static double ReactorShare(int arkLevel) => arkLevel <= 4 ? 1 : arkLevel == 5 ? 0.5 : arkLevel == 6 ? 0.25 : 0;
-
         /// <summary>The Ark holds 1000 of each resource; the store adds 1000 x 1.4^(n-1) to level 11 (levels.md).</summary>
         public static double StoreCapacity(int warehouseLevel)
         {

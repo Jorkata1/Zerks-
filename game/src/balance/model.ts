@@ -421,8 +421,10 @@ export function energyDemand(L: number): number {
 export const energyDemandEnd = (L: number) =>
   BUILDINGS.filter((b) => exists(b, L)).reduce((s, b) => s + energyUse(b, levelAt(b, L + 1)), 0)
 
-/** The Ark's reactor covers everything to level 4, half on level 5, a quarter on 6, nothing from 7 (levels.md). */
-export const reactorShare = (L: number) => (L <= 4 ? 1 : L === 5 ? 0.5 : L === 6 ? 0.25 : 0)
+/** kW the Ark's reactor keeps on levels 5-6: what the colony used when it reached level 5 (levels.md 2.5, Joro, 14.11.2026). */
+export const reactorCapKw = () => energyDemandEnd(4)
+/** The Ark's reactor: everything to level 4, the level-5 use on 5-6 (never more than the demand), nothing from 7 (levels.md 2.5). */
+export const reactorKw = (L: number, demand: number) => (L <= 4 ? demand : L <= 6 ? Math.min(demand, reactorCapKw()) : 0)
 /** Panels output wanted: production / demand of 1.1 on level 5, 1.6 on 6, 1.8 from 7 with the nights (proposal). */
 export const energyTarget = (L: number) => (L <= 4 ? 1 : L === 5 ? 1.1 : L === 6 ? 1.6 : 1.8)
 /** Night length in real minutes (levels.md: a day is about 20 minutes; proposal: 12 day, 8 night). */
@@ -488,7 +490,7 @@ export function report(curves: Curves): LevelReport[] {
       bottleneck: core === chain ? 'research and building' : core === atmo ? 'atmosphere' : worst.r,
       atmoMin: atmo,
       colonists: COLONISTS[L] ?? 0, atmo: REQ[L + 1]!.atmo, res,
-      energyRatio: (solar + reactorShare(L) * demand) / demand,
+      energyRatio: (solar + reactorKw(L, demand)) / demand,
     }
   })
 }
@@ -499,7 +501,7 @@ export function solarCurve(): Curve {
   const pts = LEVELS.filter((L) => L >= 6).map((L) => ({
     level: levelAt(panels, L),
     mult: availability(panels, L),
-    want: (energyTarget(L) - reactorShare(L)) * energyDemand(L),
+    want: energyTarget(L) * energyDemand(L) - reactorKw(L, energyDemand(L)),
   }))
   return fitCurve(pts)
 }
