@@ -1,6 +1,6 @@
-// Frames of the ideas for the map (src/map-ideas.js): node shot-ideas.js [day|night] [only these views, e.g. wall,zone]
+// Frames for the sheet of the map's details (src/map-details.js, decided on 14.11.2026): node shot-ideas.js [day|night] [only these views, e.g. wall,zone]
 // (server on 8777) -> out/idea-*.png
-// Each view is shot twice, without the ideas and with them.
+// Each view is shot twice: the map as it was before the details (?details=none) and with the ones named.
 const { chromium } = require('playwright');
 const path = require('path');
 // name, [view in metres across the screen, x, z], which ideas
@@ -17,7 +17,7 @@ const VIEWS = [
     if (pages[ideas]) return pages[ideas];
     const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3 });
     page.on('pageerror', e => console.log('ERR', ideas, String(e).slice(0, 300)));
-    await page.goto(`http://127.0.0.1:8777/map.html?dpr=3${ideas ? '&ideas=' + ideas : ''}#lvl10${night}`, { waitUntil: 'commit', timeout: 120000 });
+    await page.goto(`http://127.0.0.1:8777/map.html?dpr=3&details=${ideas || 'none'}#lvl10${night}`, { waitUntil: 'commit', timeout: 120000 });
     await page.waitForFunction(() => window.__ready === true, null, { timeout: 420000 });
     await page.evaluate(() => { document.getElementById('hud').style.display = 'none'; });
     return (pages[ideas] = page);

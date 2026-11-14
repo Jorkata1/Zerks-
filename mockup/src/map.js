@@ -2,6 +2,7 @@
 // top-down camera like a city builder. Only the buildings that docs/levels.md has by then, one of each (the panels are
 // the exception), in the round style of art/3d/buildings; atmosphere 28%. States (map.html): #lvl10 and #lvl10-night.
 // This is the only map we use (Joro, 06.11.2026); the older example maps at 20%, 50% and 85% are gone.
+// Since 14.11.2026 the colony lies in its canyon: the land, the dust, the stones and the other details are in map-details.js.
 // The streets run on a grid of 16 m: 12 m blocks with 4 m streets between them. The camera looks
 // along the grid's diagonal, so the streets cross the screen at an angle.
 // The random numbers are drawn in a fixed order: anything added or removed above a builder moves every rock after it.
@@ -13,14 +14,16 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import * as T from './textures.js';
 import * as K from './models.js';
 import * as B from './colony.js';
-import { addIdeas } from './map-ideas.js';
+import { addDetails } from './map-details.js';
 
 const NIGHT = (location.hash || '#lvl10').includes('-night'); // #lvl10-night: the same map at night
 // #lvl10-ark-a, #lvl10-ark-b (also with -night): one of the two new ideas for the Ark (Joro, 06.11.2026) in place of the CellCog one
 const ARK = (location.hash.match(/ark-([ab])/) || [])[1];
 const ATM = 28;
-// ?ideas=all (or canyon,ground,ice,lines,rover,zone): the ideas for the map and its details (map-ideas.js, 14.11.2026)
-const IDEAS = new Set((new URLSearchParams(location.search).get('ideas') || '').split(',').filter(Boolean));
+// The canyon and the details of the map (map-details.js; Joro, 14.11.2026) are always on. ?details=none shows the map
+// as it was before them, ?details=canyon,dust only some (for the comparison sheet, shot-ideas.js).
+const DQ = new URLSearchParams(location.search).get('details');
+const DETAILS = new Set(DQ === 'none' ? [] : (DQ || 'all').split(',').filter(Boolean));
 const DPR = Number(new URLSearchParams(location.search).get('dpr') || 1);
 const W = 390, H = 844;
 T.seed(7);
@@ -252,10 +255,10 @@ for (const b of builtBlocks) {
 add(person('Commander'), 2.4, 0.4, 2.4, Math.PI / 4, 1.4).name = 'commander';
 const echo = add(chGlb.echo.clone(true), 4.4, 2.6, 0.6, Math.PI / 4, 2.4); echo.name = 'echo';
 // zone II, which the research opens at level 10, still lies under dust
-// (with ?ideas=dust the blanket of map-ideas.js lies there instead; nothing random comes after these, so nothing moves)
-if (!IDEAS.has('dust') && !IDEAS.has('all')) for (const b of blocks) if (b.s < -REACH && Math.abs(b.d) <= 2) for (let k = 0; k < 2; k++) dust(b.cx - 4 + rnd() * 8, 2 + rnd() * 3, b.cz - 4 + rnd() * 8, 20 + rnd() * 8, 0xfde6d2, 0.85);
+// (only with ?details=none: the blanket of map-details.js lies there now; nothing random comes after these, so nothing moves)
+if (!DETAILS.has('dust') && !DETAILS.has('all')) for (const b of blocks) if (b.s < -REACH && Math.abs(b.d) <= 2) for (let k = 0; k < 2; k++) dust(b.cx - 4 + rnd() * 8, 2 + rnd() * 3, b.cz - 4 + rnd() * 8, 20 + rnd() * 8, 0xfde6d2, 0.85);
 
-if (IDEAS.size) await addIdeas({ scene, flat, glow, NIGHT, gltf, sun, blocks: builtBlocks, allBlocks: blocks }, IDEAS);
+if (DETAILS.size) await addDetails({ scene, flat, glow, NIGHT, gltf, sun, blocks: builtBlocks, allBlocks: blocks }, DETAILS);
 
 // ---------- camera: angled top-down like a city builder, looking along the diagonal of the grid ----------
 const EL = THREE.MathUtils.degToRad(36); // angle above the ground

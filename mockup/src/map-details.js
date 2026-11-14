@@ -1,15 +1,15 @@
-// Ideas for the map and its details (Joro, 14.11.2026: "now let's change the map, the details; propose some things").
-// Nothing here is decided. map.html?ideas=all#lvl10 turns every idea on; ?ideas=canyon,ground picks some:
-//   canyon  the walls of the canyon on both sides and at its head, in layers, with the quartz and iron the mine digs
-//   ground  the bare ground: wind ripples, dry cracks, small craters, loose stones under the walls
+// The canyon and the details of the map (decided by Joro on 14.11.2026: "I like it … yes, make them permanent").
+// They are always on. map.html?details=none#lvl10 shows the map as it was before them and ?details=canyon,dust only
+// some of them, which is how the sheet of mockup/screens/map-ideas-1 … 3 compares each one with the map before it.
+//   canyon  the canyon as land: a floor that winds, three terraces of layered rock up to the plain above, a round
+//           head, a mouth that opens to the plain; beside the mine the layers hold the iron ore and the quartz it digs
+//   ground  the bare ground: wind ripples, dry cracks, small craters, stony ground under the walls
 //   ice     the Ice Hollow at the low end of the canyon (the clay pit of level 13 stands on its shore)
 //   lines   a covered service channel along the streets for the water and the power, with a box at every building
-//   rover   the collector robot on its way back, and the tracks it has worn into the plain
+//   rover   the collector robot coming home, and the tracks it has worn out to the plain
 //   zone    the edge of the closed zone: stakes with flags and a sign
-//   dust    the dust over the closed zone as a blanket of soft layers that lies on the ground (instead of flat pictures)
-//   rocks   the stones of the map as lumpy boulders with flat faces, dust on top, pebbles round the big ones
-// canyon is the land itself, shaped: a floor that winds, walls in steps, the head, the mouth that opens to the plain.
-// canyon0 is the first try, made of stacked blocks; it stays only to be compared with.
+//   dust    the dust over the closed zone: a blanket of soft layers that lies on the ground
+//   rocks   the stones: lumpy boulders with flat faces, dust on top, pebbles round the big ones
 // The random numbers here are their own, so nothing of the map itself moves.
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
@@ -38,7 +38,7 @@ const clamp = (v, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, v));
 const smooth = v => { v = clamp(v); return v * v * (3 - 2 * v); };
 
 // The canyon: how wide its floor is on each side at a place along it, and how far outside the floor a point lies.
-// straight = the first try (walls 52 m from the middle); otherwise the floor winds, the head is round, the mouth opens.
+// straight = without the canyon (only some details shown): the dust and the stony ground keep to a straight 52 m.
 function canyonShape(straight) {
   const n = noise2(17), n2 = noise2(23), RH = 62;
   const halfW = straight ? () => FLOOR : (t, side) => {
@@ -55,50 +55,6 @@ function canyonShape(straight) {
   return { halfW, outside, n };
 }
 
-
-// ---------- the first try at the canyon (canyon0): cliffs of stacked blocks; kept only to compare with ----------
-function canyonBlocks({ scene, flat, sun }) {
-  const r = rng(11), layers = [flat(0xcf7a52), flat(0xe39a6a), flat(0xb9643f), flat(0xd98a5e)], top = flat(0xeaa878);
-  let n = 0;
-  // a stretch of cliff whose foot is at (a, t), facing (na, nt); its layers end at heights of their own, its top is the land
-  const quartz = flat(0xf1e6ff, { roughness: 0.45 }), iron = flat(0x8a4a36);
-  const piece = (a, t, na, nt, len, depth, h = TOP, low = false, ore = false) => {
-    const g = new THREE.Group(), y1 = h * (0.24 + r() * 0.12), y2 = y1 + h * (0.07 + r() * 0.06), y3 = y2 + h * (0.2 + r() * 0.12);
-    const cut = low ? [0, y1 + (h - y1) * 0.5, h] : [0, y1, y2, y3, h + (n++ % 7) * 0.03], back = [1, 0.95 - r() * 0.03, 0.87 - r() * 0.05, 0.76 - r() * 0.08];
-    for (let k = 0; k + 1 < cut.length; k++) {
-      const hh = cut[k + 1] - cut[k], last = k + 2 === cut.length, d = depth * back[k], l = len * (last && !low ? 1.28 : 1 - k * 0.04) * (0.96 + r() * 0.08);
-      const m = box(l, hh + 1.6, d, last && !low ? top : ore && k === 1 ? quartz : ore && k === 2 ? iron : layers[low ? k * 2 : k], Math.min(3, hh / 2.1), 4);
-      m.position.set((r() - 0.5) * 2, cut[k] + hh / 2 - 0.8, -depth + d / 2);   // the backs stay in line, the fronts step back
-      g.add(m);
-    }
-    const [x, z] = P(a, t), [wx, wz] = P(na, nt);
-    g.position.set(x, 0, z); g.rotation.y = Math.atan2(wx, wz) + (r() - 0.5) * 0.28; scene.add(g);
-  };
-  for (const side of [-1, 1]) for (let t = HEAD - 4; t < 150;) {
-    const len = 18 + r() * 16, a = side * (FLOOR + r() * 9);
-    piece(a, t + len / 2, -side, 0, len + 5, 34, TOP, false, side < 0 && t + len > -22 && t < 30);   // by the mine: what it digs
-    if (r() < 0.38) piece(a - side * (4 + r() * 5), t + len / 2 + (r() - 0.5) * 8, -side, 0, 9 + r() * 9, 14, 8 + r() * 7, true);   // a lower step in front
-    t += len;
-  }
-  for (let q = -86; q <= 86;) {
-    const th = q * Math.PI / 180, s = Math.sin(th), c = Math.cos(th), R = 58 + r() * 12;
-    piece(R * s, HEAD - R * c, -s, c, 28 + r() * 8, 34);
-    if (r() < 0.3) piece((R - 6) * s, HEAD - (R - 6) * c, -s, c, 12, 14, 9 + r() * 6, true);
-    q += 17 + r() * 8;
-  }
-  // the land above the canyon, behind the cliffs, and more ground beyond the edge of the map
-  const land = (a, t, w, d) => { const m = box(w, 24, d, top, 3, 3); const [x, z] = P(a, t); m.position.set(x, TOP - 12.3, z); m.rotation.y = Math.PI / 4; m.castShadow = false; scene.add(m); };
-  land(-(FLOOR + 28 + 300), 20, 600, 900); land(FLOOR + 28 + 300, 20, 600, 900); land(0, HEAD - 58 - 28 - 300, 900, 600);
-  const far = new THREE.Mesh(new THREE.PlaneGeometry(1600, 1600), flat(0xee9f66, { roughness: 1 })); far.rotation.x = -Math.PI / 2; far.position.y = -0.03; far.receiveShadow = true; scene.add(far);
-  // the morning shadow of the left wall reaches the floor: the sun's shadow has to see the walls too
-  Object.assign(sun.shadow.camera, { left: -190, right: 190, top: 190, bottom: -190, far: 520 }); sun.shadow.camera.updateProjectionMatrix();
-  // loose stones at the foot of the cliffs
-  const stone = new THREE.IcosahedronGeometry(1, 1);
-  for (let i = 0; i < 110; i++) {
-    const side = r() < 0.5 ? -1 : 1, s = 0.5 + r() * 1.6, m = new THREE.Mesh(stone, layers[r() < 0.5 ? 0 : 2]), [x, z] = P(side * (FLOOR - 1 - r() * 6), HEAD + r() * 240);
-    m.scale.set(s * (0.9 + r() * 0.4), s * (0.5 + r() * 0.3), s * (0.9 + r() * 0.4)); m.position.set(x, s * 0.2, z); m.rotation.y = r() * 6; m.castShadow = m.receiveShadow = true; m.userData.idea = true; scene.add(m);
-  }
-}
 
 // ---------- the bare ground, drawn once on a sheet that lies on it ----------
 // 8 pixels to the metre, 128 m across and 272 m along; the streets and the plots lie over it
@@ -403,10 +359,9 @@ function clearStones(scene, ice, tracks) {
   }
 }
 
-export async function addIdeas(ctx, on) {
+export async function addDetails(ctx, on) {
   const has = k => on.has('all') || on.has(k), r = rng(29);
   const shape = canyonShape(!has('canyon'));
-  if (on.has('canyon0')) canyonBlocks(ctx);
   if (has('canyon')) canyonLand(ctx, shape);
   clearStones(ctx.scene, has('ice'), has('rover'));
   const placed = has('rocks') ? betterRocks(ctx, shape, has('canyon')) : [];
