@@ -2,6 +2,7 @@
 // top-down camera like a city builder. Only the buildings that docs/levels.md has by then, one of each (the panels are
 // the exception), in the round style of art/3d/buildings; atmosphere 28%. States (map.html): #lvl10 and #lvl10-night.
 // This is the only map we use (Joro, 06.11.2026); the older example maps at 20%, 50% and 85% are gone.
+// Since 14.11.2026 the colony lies in its canyon: the land, the dust, the stones and the other details are in map-details.js.
 // The streets run on a grid of 16 m: 12 m blocks with 4 m streets between them. The camera looks
 // along the grid's diagonal, so the streets cross the screen at an angle.
 // The random numbers are drawn in a fixed order: anything added or removed above a builder moves every rock after it.
@@ -13,11 +14,15 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import * as T from './textures.js';
 import * as K from './models.js';
 import * as B from './colony.js';
+import { addDetails } from './map-details.js';
 
 const NIGHT = (location.hash || '#lvl10').includes('-night'); // #lvl10-night: the same map at night
 // #lvl10-ark-a, #lvl10-ark-b (also with -night): one of the two new ideas for the Ark (Joro, 06.11.2026) in place of the CellCog one
 const ARK = (location.hash.match(/ark-([ab])/) || [])[1];
 const ATM = 28;
+// The canyon, the ground and the details of the map (map-details.js; Joro, 14.11.2026) are always on.
+// ?details=none shows the map as it was before them (for the before-and-now sheet, shot-ideas.js).
+const DETAILS = new URLSearchParams(location.search).get('details') !== 'none';
 const DPR = Number(new URLSearchParams(location.search).get('dpr') || 1);
 const W = 390, H = 844;
 T.seed(7);
@@ -75,22 +80,36 @@ const rockGeo = new THREE.IcosahedronGeometry(1, 2);
   for (let i = 0; i < 220; i++) { x.fillStyle = `rgba(205,120,80,${0.2 + rnd() * 0.25})`; x.beginPath(); x.ellipse(rnd() * 1024, rnd() * 1024, 2 + rnd() * 5, 1.5 + rnd() * 3, rnd() * 3, 0, 7); x.fill(); }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(8, 8); t.anisotropy = 8;
   const g = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ map: t, roughness: 1 }));
-  g.rotation.x = -Math.PI / 2; g.receiveShadow = true; scene.add(g);
+  g.rotation.x = -Math.PI / 2; g.receiveShadow = true; g.name = 'ground'; scene.add(g);
 }
 
 // ---------- small builders: rocks and the colonists in their suits ----------
 function rock(x, z, s, mat = flat(rnd() < 0.5 ? C.rock : C.rock2)) { const m = new THREE.Mesh(rockGeo, mat); m.scale.set(s * (0.9 + rnd() * 0.4), s * (0.55 + rnd() * 0.3), s * (0.9 + rnd() * 0.4)); m.position.set(x, s * 0.25, z); m.rotation.y = rnd() * 6; m.castShadow = m.receiveShadow = true; scene.add(m); return m; }
-function colonist(stripe) {
-  const g = new THREE.Group(), s = flat(0xffffff), st = flat(stripe);
-  for (const x of [-0.13, 0.13]) g.add(at(new THREE.Mesh(new THREE.CapsuleGeometry(0.11, 0.35, 4, 8), s), x, 0.3, 0));
-  g.add(at(new THREE.Mesh(new THREE.CapsuleGeometry(0.27, 0.36, 6, 12), s), 0, 0.86, 0));
-  g.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.29, 0.29, 0.1, 16), st), 0, 0.74, 0));
-  g.add(at(new THREE.Mesh(new THREE.SphereGeometry(0.27, 16, 12), s), 0, 1.42, 0));
-  const visor = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.55), flat(0x3a6db5, { roughness: 0.2 })); visor.rotation.x = Math.PI / 2; visor.position.set(0, 1.44, 0.11); visor.scale.set(1, 1, 0.75); g.add(visor);
-  return shadowAll(g);
+// The people (Joro, 14.11.2026): the suit with the glass helmet, art/3d/characters/colonist.glb. One model for everyone:
+// the materials accent, skin and hair take the person's colours, one hair style is shown, the beard if he has one,
+// and the stripe and the aerial only on the Commander (art/3d/characters/looks.json).
+const OPTIONAL = ['hair_short', 'hair_bun', 'hair_full', 'beard', 'stripe', 'aerial'];
+let chGlb = {}, LOOKS = null;
+function person(name) {
+  const look = LOOKS.people[name], g = chGlb.colonist.clone(true);
+  const show = new Set(['hair_' + look.style, ...(look.beard ? ['beard'] : []), ...(look.profession === 'commander' ? ['stripe', 'aerial'] : [])]);
+  const tint = { accent: LOOKS.accent[look.profession], skin: look.skin, hair: look.hair }, own = {};
+  g.traverse(o => {
+    if (OPTIONAL.includes(o.name)) o.visible = show.has(o.name);
+    if (!o.isMesh) return;
+    const clear = o.material.transparent;
+    o.castShadow = !clear; o.receiveShadow = !clear;
+    if (tint[o.material.name]) { own[o.material.name] ??= Object.assign(o.material.clone(), { color: new THREE.Color(tint[o.material.name]) }); o.material = own[o.material.name]; }
+  });
+  return g;
 }
+// the ten awake at level 10, in the order they woke; the next one who walks outside
+const AWAKE = ['Maya Okafor', 'Lena Sorensen', 'Tomas Varga', 'Ravi Menon', 'Ana Lima', 'Kenji Mori', 'Pablo Herrera', 'Elif Kaya', 'Jonas Weber', 'Dr. Hana Sato'];
+let nextOut = 0;
+const OUTSIDE = [];   // who walks outside and where, for the close-ups (window.__state.people)
 const suits = [0x6fb7ff, 0x9a7cff, 0x33c5a2, 0xff8b3d, 0xff5d8a, 0xffc65c];
-function people(cx, cz, n, off = 6.7) { for (let i = 0; i < n; i++) { const side = rnd() < 0.5, t = (rnd() - 0.5) * 12, o = (rnd() < 0.5 ? -1 : 1) * off; add(colonist(pick(suits)), cx + (side ? o : t), 0.15, cz + (side ? t : o), rnd() * 6, 1.25); } }
+// pick(suits) stays only to draw the same random numbers as before, so no rock moves
+function people(cx, cz, n, off = 6.7) { for (let i = 0; i < n; i++) { const side = rnd() < 0.5, t = (rnd() - 0.5) * 12, o = (rnd() < 0.5 ? -1 : 1) * off; pick(suits); const who = AWAKE[nextOut++ % AWAKE.length], x = cx + (side ? o : t), z = cz + (side ? t : o); add(person(who), x, 0.15, z, rnd() * 6, 1.4); OUTSIDE.push([who, +x.toFixed(1), +z.toFixed(1)]); } }
 
 // ---------- the soft glow, dust and smoke sprites ----------
 const cloudT = T.cloudTex();
@@ -124,6 +143,13 @@ await Promise.all(KK.map(async n => {
 }));
 // a building standing on its plot, centred: either scaled so its footprint is `size` metres wide (kk), or at a fixed
 // scale (atScale) for the buildings that grow with their level, so a higher level stands bigger
+// the people and ECHO (art/3d/characters): the glass of the helmet stays see-through and casts no shadow
+await Promise.all(['colonist', 'echo'].map(async n => {
+  const root = (await gltf.loadAsync('models/ch/' + n + '.glb')).scene;
+  root.traverse(o => { if (o.isMesh) { const m = o.material; m.metalness = 0; o.castShadow = o.receiveShadow = !m.transparent; if (m.transparent) { m.depthWrite = false; o.renderOrder = 2; } else m.roughness = Math.max(0.5, m.roughness ?? 0.6); } });
+  chGlb[n] = root;
+}));
+LOOKS = await (await fetch('models/ch/looks.json')).json();
 const place = (n, k) => { const g = new THREE.Group(), m = kkGlb[n].clone(true); const b = new THREE.Box3().setFromObject(m), s = b.getSize(new THREE.Vector3()), c = b.getCenter(new THREE.Vector3()); k = k(s); m.scale.setScalar(k); m.position.set(-c.x * k, -b.min.y * k, -c.z * k); g.add(m); return g; };
 const kk = (n, size = 9.6) => place(n, s => size / Math.max(s.x, s.z));
 const HOME_K = 4.3;
@@ -224,9 +250,14 @@ for (const b of builtBlocks) {
     if ((h + side) % 3 === 0) { const [x, z] = at(0); add(B.bench(0), x, y, z, ax ? (ax > 0 ? Math.PI / 2 : -Math.PI / 2) : (az > 0 ? 0 : Math.PI)); }
   });
 }
-const echo = add(shadowAll(K.echoBot()), 6.5, 6.2, 9, -0.6, 1.25); echo.name = 'echo';
+// the Commander on the Ark's plot, by its front corner, with ECHO at his shoulder (ECHO is 2.4 times its real half metre, to be tapped)
+add(person('Commander'), 2.4, 0.4, 2.4, Math.PI / 4, 1.4).name = 'commander';
+const echo = add(chGlb.echo.clone(true), 4.4, 2.6, 0.6, Math.PI / 4, 2.4); echo.name = 'echo';
 // zone II, which the research opens at level 10, still lies under dust
-for (const b of blocks) if (b.s < -REACH && Math.abs(b.d) <= 2) for (let k = 0; k < 2; k++) dust(b.cx - 4 + rnd() * 8, 2 + rnd() * 3, b.cz - 4 + rnd() * 8, 20 + rnd() * 8, 0xfde6d2, 0.85);
+// (only with ?details=none: the blanket of map-details.js lies there now; nothing random comes after these, so nothing moves)
+if (!DETAILS) for (const b of blocks) if (b.s < -REACH && Math.abs(b.d) <= 2) for (let k = 0; k < 2; k++) dust(b.cx - 4 + rnd() * 8, 2 + rnd() * 3, b.cz - 4 + rnd() * 8, 20 + rnd() * 8, 0xfde6d2, 0.85);
+
+if (DETAILS) await addDetails({ scene, flat, glow, NIGHT, gltf, sun, blocks: builtBlocks, allBlocks: blocks });
 
 // ---------- camera: angled top-down like a city builder, looking along the diagonal of the grid ----------
 const EL = THREE.MathUtils.degToRad(36); // angle above the ground
@@ -238,10 +269,12 @@ function aim(view, x, z) { // view = metres across the screen width
 }
 // the close-ups: __aim(46, -6.5, 10.5) the left half, (46, 10.5, -6.5) the right half (both with the whole Ark), (20, -16, -32) the home, (40, -10, -10) the Ark
 window.__aim = (view, x, z) => { aim(view, x, z); renderer.render(scene, camera); };
+// where a point of the world is on the screen, in points (for the tags of menus.html)
+window.__screen = (x, y, z) => { const v = new THREE.Vector3(x, y, z).project(camera); return [+((v.x + 1) / 2 * W).toFixed(1), +((1 - v.y) / 2 * H).toFixed(1)]; };
 aim(68, 0, 0);
 renderer.render(scene, camera);
 for (const [x, z, s, c] of [[-32, -16, 8, 0x5fe3d0], [16, -16, 9, 0xffc77a], [16, 16, 8, 0xd38cff], [32, 32, 8, 0x5fe3d0], [-16, -32, 9, 0xffd58a], [-8, -8, 22, 0xffd58a]]) pool(x, z, s, c, 0.35);
-window.__state = { atm: ATM, night: NIGHT };
+window.__state = { atm: ATM, night: NIGHT, people: OUTSIDE };
 // #lvl10-build: the build sequence (build-seq.js, proposal 06.11.2026) on top of the same map
 if (location.hash.includes('build')) await (await import('./build-seq.js')).setup({ scene, renderer, camera, aim, gltf, NIGHT });
 window.dispatchEvent(new Event('scene-ready'));

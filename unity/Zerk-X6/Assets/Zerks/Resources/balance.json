@@ -141,9 +141,9 @@
   }
  },
  "solar": {
-  "a": 25.486,
-  "g1": 1.25,
-  "g2": 1.14
+  "a": 23.187,
+  "g1": 1.265,
+  "g2": 1.135
  },
  "battery": {
   "a": 1.861,
@@ -352,7 +352,7 @@
      "minutes": 113.646
     }
    ],
-   "energyRatio": 2.069,
+   "energyRatio": 2.031,
    "target": 120
   },
   {
@@ -406,7 +406,7 @@
      "minutes": 86.461
     }
    ],
-   "energyRatio": 2.008,
+   "energyRatio": 2.181,
    "target": 105
   },
   {
@@ -460,7 +460,7 @@
      "minutes": 85.717
     }
    ],
-   "energyRatio": 1.97,
+   "energyRatio": 1.948,
    "target": 135
   },
   {
@@ -514,7 +514,7 @@
      "minutes": 142.304
     }
    ],
-   "energyRatio": 1.87,
+   "energyRatio": 1.872,
    "target": 180
   },
   {
@@ -574,7 +574,7 @@
      "minutes": 135.385
     }
    ],
-   "energyRatio": 2.093,
+   "energyRatio": 2.12,
    "target": 150
   },
   {
@@ -634,7 +634,7 @@
      "minutes": 38.737
     }
    ],
-   "energyRatio": 2.336,
+   "energyRatio": 2.394,
    "target": 210
   },
   {
@@ -694,7 +694,7 @@
      "minutes": 270.964
     }
    ],
-   "energyRatio": 1.778,
+   "energyRatio": 1.814,
    "target": 300
   },
   {
@@ -754,7 +754,7 @@
      "minutes": 154.55
     }
    ],
-   "energyRatio": 1.826,
+   "energyRatio": 1.855,
    "target": 210
   },
   {
@@ -820,7 +820,7 @@
      "minutes": 190.937
     }
    ],
-   "energyRatio": 1.809,
+   "energyRatio": 1.83,
    "target": 225
   },
   {
@@ -892,7 +892,7 @@
      "minutes": 193.456
     }
    ],
-   "energyRatio": 1.845,
+   "energyRatio": 1.858,
    "target": 210
   },
   {
@@ -964,7 +964,7 @@
      "minutes": 255
     }
    ],
-   "energyRatio": 1.783,
+   "energyRatio": 1.787,
    "target": 300
   },
   {
@@ -1030,7 +1030,7 @@
      "minutes": 217.928
     }
    ],
-   "energyRatio": 1.782,
+   "energyRatio": 1.78,
    "target": 240
   },
   {
@@ -1108,7 +1108,7 @@
      "minutes": 306
     }
    ],
-   "energyRatio": 1.827,
+   "energyRatio": 1.816,
    "target": 360
   },
   {
@@ -1180,7 +1180,7 @@
      "minutes": 30.725
     }
    ],
-   "energyRatio": 1.872,
+   "energyRatio": 1.852,
    "target": 360
   },
   {
@@ -1270,7 +1270,7 @@
      "minutes": 306
     }
    ],
-   "energyRatio": 1.831,
+   "energyRatio": 1.804,
    "target": 360
   },
   {
@@ -1348,7 +1348,7 @@
      "minutes": 143.404
     }
    ],
-   "energyRatio": 1.866,
+   "energyRatio": 1.83,
    "target": 360
   },
   {
@@ -1420,7 +1420,7 @@
      "minutes": 333.927
     }
    ],
-   "energyRatio": 1.909,
+   "energyRatio": 1.865,
    "target": 360
   },
   {
@@ -1504,7 +1504,7 @@
      "minutes": 17.465
     }
    ],
-   "energyRatio": 1.872,
+   "energyRatio": 1.82,
    "target": 330
   },
   {
@@ -1576,7 +1576,7 @@
      "minutes": 260.063
     }
    ],
-   "energyRatio": 1.89,
+   "energyRatio": 1.83,
    "target": 330
   },
   {
@@ -1660,7 +1660,7 @@
      "minutes": 31.087
     }
    ],
-   "energyRatio": 1.92,
+   "energyRatio": 1.85,
    "target": 330
   },
   {
@@ -1732,7 +1732,7 @@
      "minutes": 220.95
     }
    ],
-   "energyRatio": 1.945,
+   "energyRatio": 1.867,
    "target": 330
   }
  ],
@@ -5865,7 +5865,7 @@
      "upgradeSeconds": 20,
      "energyKw": 0,
      "produces": {
-      "kW by day": 25
+      "kW by day": 23
      }
     },
     {
@@ -5880,7 +5880,7 @@
      "upgradeSeconds": 32,
      "energyKw": 0,
      "produces": {
-      "kW by day": 32
+      "kW by day": 29
      }
     },
     {
@@ -5895,7 +5895,7 @@
      "upgradeSeconds": 51,
      "energyKw": 0,
      "produces": {
-      "kW by day": 40
+      "kW by day": 37
      }
     },
     {
@@ -5910,7 +5910,7 @@
      "upgradeSeconds": 82,
      "energyKw": 0,
      "produces": {
-      "kW by day": 50
+      "kW by day": 47
      }
     },
     {
@@ -5925,7 +5925,7 @@
      "upgradeSeconds": 131,
      "energyKw": 0,
      "produces": {
-      "kW by day": 62
+      "kW by day": 59
      }
     },
     {
@@ -5940,7 +5940,7 @@
      "upgradeSeconds": 210,
      "energyKw": 0,
      "produces": {
-      "kW by day": 78
+      "kW by day": 75
      }
     },
     {
@@ -5955,7 +5955,7 @@
      "upgradeSeconds": 336,
      "energyKw": 0,
      "produces": {
-      "kW by day": 97
+      "kW by day": 95
      }
     },
     {
@@ -6030,7 +6030,7 @@
      "upgradeSeconds": 2375,
      "energyKw": 0,
      "produces": {
-      "kW by day": 270
+      "kW by day": 280
      }
     },
     {
@@ -6060,7 +6060,7 @@
      "upgradeSeconds": 2770,
      "energyKw": 0,
      "produces": {
-      "kW by day": 350
+      "kW by day": 360
      }
     },
     {
@@ -6135,7 +6135,7 @@
      "upgradeSeconds": 4070,
      "energyKw": 0,
      "produces": {
-      "kW by day": 680
+      "kW by day": 670
      }
     },
     {
@@ -6150,7 +6150,7 @@
      "upgradeSeconds": 4396,
      "energyKw": 0,
      "produces": {
-      "kW by day": 770
+      "kW by day": 760
      }
     },
     {
@@ -6165,7 +6165,7 @@
      "upgradeSeconds": 4748,
      "energyKw": 0,
      "produces": {
-      "kW by day": 880
+      "kW by day": 860
      }
     },
     {
@@ -6180,7 +6180,7 @@
      "upgradeSeconds": 5127,
      "energyKw": 0,
      "produces": {
-      "kW by day": 1000
+      "kW by day": 980
      }
     },
     {
@@ -6225,7 +6225,7 @@
      "upgradeSeconds": 6459,
      "energyKw": 0,
      "produces": {
-      "kW by day": 1500
+      "kW by day": 1400
      }
     }
    ]

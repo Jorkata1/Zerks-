@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=390">
+<title>Zerks-X6: the menus</title>
+<!-- The menus of the game in the friendly look of cartoon.html and map.html (Joro, 14.11.2026: "let's fix the look: the menus…").
+     A proposal, drawn at iPhone size over the level-10 map, at the start of level 11 (the same colony, before the smelter).
+     States: #main #build #place #building #ark #research #colonists #dossier #wake #goals #away
+     node shot.js 3 main,build,place,building,ark,research,colonists,dossier,wake,goals,away menus.html
+     The backgrounds and where the buildings are come from shot-bg.js (ui/bg-*.jpg, ui/anchors.json), the pictures of the
+     buildings and the people from shot-thumbs.js (ui/thumbs). The numbers are examples in the size of docs/balance. -->
+<style>
+  @font-face { font-family: 'Nunito'; font-weight: 800; src: url(fonts/nunito-latin-800-normal.woff2) format('woff2'); }
+  @font-face { font-family: 'Nunito'; font-weight: 900; src: url(fonts/nunito-latin-900-normal.woff2) format('woff2'); }
+  :root { --ink: #3b2618; --edge: #6b4226; --panel: #fffaf2; --line: #ecdcc6; --soft: #f6ead9; --orange: #ff8b3d; --teal: #22c19b; --blue: #4aa8ff; --purple: #8f6cff; --muted: #9a7a62; --red: #e5533d; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 390px; height: 844px; overflow: hidden; background: #f3b98a; font-family: 'Nunito', system-ui, sans-serif; font-weight: 800; color: var(--ink); }
+  #bg { position: absolute; inset: 0; width: 390px; height: 844px; }
+  #hud, #layer { position: absolute; inset: 0; }
+  .shade { position: absolute; left: 0; right: 0; top: 0; height: 190px; background: linear-gradient(rgba(120, 60, 30, .3), rgba(120, 60, 30, 0)); }
+  .dim { position: absolute; inset: 0; background: rgba(70, 38, 20, .5); }
+  .status { position: absolute; top: 14px; left: 28px; right: 22px; display: flex; justify-content: space-between; font-size: 16px; font-weight: 900; color: #fff; text-shadow: 0 1px 2px rgba(80, 40, 20, .35); }
+  .status .r { display: flex; gap: 6px; align-items: center; }
+  .card { background: var(--panel); border: 3px solid var(--edge); box-shadow: 0 3px 0 rgba(107, 66, 38, .45); }
+  svg { display: block; flex: none; }
+
+  /* ---------- the top of the screen ---------- */
+  .ark { position: absolute; top: 46px; left: 12px; width: 66px; text-align: center; }
+  .ark .c { width: 64px; height: 64px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ffb070, #ff7a2a 70%); border: 4px solid #fff; box-shadow: 0 0 0 3px var(--edge), 0 5px 0 rgba(107, 66, 38, .45); display: grid; place-items: center; color: #fff; font-size: 28px; font-weight: 900; text-shadow: 0 2px 0 rgba(150, 60, 10, .5); margin: 0 auto; }
+  .ark .t { display: inline-block; margin-top: 6px; padding: 1px 8px; border-radius: 10px; background: var(--edge); color: #fff; font-size: 11px; letter-spacing: .3px; }
+  .atm { position: absolute; top: 50px; left: 90px; right: 12px; height: 34px; border-radius: 17px; display: flex; align-items: center; padding: 0 12px 0 6px; gap: 8px; }
+  .atm .ic { width: 24px; height: 24px; border-radius: 50%; background: var(--teal); display: grid; place-items: center; }
+  .atm .bar { flex: 1; height: 12px; border-radius: 6px; background: #f1dfcb; position: relative; }
+  .atm .bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; background: linear-gradient(90deg, #22c19b, #6fe3c3); }
+  .atm .v { font-size: 16px; font-weight: 900; } .atm .v small { font-size: 11px; color: var(--muted); }
+  .res { position: absolute; top: 92px; left: 88px; right: 10px; display: flex; gap: 4px; }
+  .res2 { position: absolute; top: 131px; left: 88px; right: 10px; display: flex; gap: 4px; }
+  .res .pill, .res2 .pill { flex: 1 1 0; min-width: 0; padding: 0 4px 0 3px; gap: 3px; font-size: 13px; }
+  .res2 .pill { font-size: 12px; } .res2 .pill.wide { flex: 1.45 1 0; }
+  .pill { height: 32px; border-radius: 16px; display: flex; align-items: center; gap: 4px; padding: 0 9px 0 4px; font-size: 14px; font-weight: 900; white-space: nowrap; }
+  .pill .ic, .ico { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+  .pill small { font-size: 11px; color: var(--muted); font-weight: 800; }
+  .pill.s { height: 27px; font-size: 12.5px; padding: 0 8px 0 3px; border-width: 2.5px; box-shadow: 0 2px 0 rgba(107, 66, 38, .45); }
+  .pill.s .ic { width: 20px; height: 20px; }
+  .batt { width: 22px; height: 11px; border: 2px solid var(--ink); border-radius: 3px; position: relative; margin-left: 2px; }
+  .batt i { position: absolute; left: 1px; top: 1px; bottom: 1px; background: var(--teal); border-radius: 1px; }
+  .batt:after { content: ''; position: absolute; right: -4px; top: 2px; width: 2px; height: 3px; background: var(--ink); border-radius: 1px; }
+  .crew { position: absolute; top: 131px; left: 12px; }
+
+  /* ---------- the bar at the bottom ---------- */
+  .dock { position: absolute; left: 12px; right: 12px; bottom: 24px; height: 72px; border-radius: 26px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; }
+  .db { width: 52px; text-align: center; position: relative; }
+  .db .c { width: 46px; height: 46px; border-radius: 50%; margin: 0 auto; display: grid; place-items: center; border: 3px solid #fff; box-shadow: 0 0 0 2px var(--edge), 0 3px 0 rgba(107, 66, 38, .45); }
+  .db .l { font-size: 10.5px; margin-top: 3px; }
+  .db .dot { position: absolute; right: 0; top: -4px; min-width: 18px; height: 18px; border-radius: 9px; background: #ff5d5d; color: #fff; font-size: 11px; display: grid; place-items: center; border: 2px solid #fff; padding: 0 3px; }
+  .build { width: 86px; margin-top: -34px; text-align: center; position: relative; }
+  .build .c { width: 76px; height: 76px; border-radius: 50%; margin: 0 auto; background: radial-gradient(circle at 35% 30%, #ffb070, #ff7a2a 70%); border: 5px solid #fff; box-shadow: 0 0 0 3px var(--edge), 0 5px 0 rgba(107, 66, 38, .5); display: grid; place-items: center; }
+  .build .l { font-size: 14px; font-weight: 900; margin-top: 2px; }
+  .build.glow .c { box-shadow: 0 0 0 3px var(--edge), 0 5px 0 rgba(107, 66, 38, .5), 0 0 0 9px rgba(34, 193, 155, .55), 0 0 0 16px rgba(34, 193, 155, .25); }
+  .home { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 134px; height: 5px; border-radius: 3px; background: rgba(59, 38, 24, .75); }
+
+  /* ---------- ECHO speaks ---------- */
+  .bubble { position: absolute; left: 12px; right: 12px; bottom: 114px; border-radius: 18px; padding: 10px 12px 11px 56px; font-size: 14.5px; line-height: 1.3; }
+  .bubble .who { position: absolute; left: 8px; top: 9px; width: 40px; height: 40px; border-radius: 50%; background: #eaf7ff; border: 3px solid var(--edge); overflow: hidden; }
+  .bubble .who img { width: 46px; height: 46px; margin: -5px 0 0 -6px; }
+  .bubble .nm { font-size: 11px; color: var(--teal); letter-spacing: .6px; font-weight: 900; }
+
+  /* ---------- tags over the buildings ---------- */
+  .tag { position: absolute; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; }
+  .tag .b { height: 30px; border-radius: 15px; background: #fff; border: 3px solid var(--edge); display: flex; align-items: center; gap: 4px; padding: 0 9px 0 3px; box-shadow: 0 3px 0 rgba(107, 66, 38, .4); font-size: 13px; font-weight: 900; white-space: nowrap; }
+  .tag .b .ic { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; }
+  .tag .stem { width: 3px; height: 8px; background: var(--edge); border-radius: 2px; }
+  .tag.collect .b { border-color: #c2531c; background: #fff4e6; }
+  .tag.ready .b { background: var(--orange); color: #fff; border-color: #fff; box-shadow: 0 0 0 2px var(--edge), 0 3px 0 rgba(107, 66, 38, .45); padding: 0 11px; }
+  .tag.timer .b { flex-direction: column; height: auto; padding: 3px 9px 5px; gap: 2px; align-items: stretch; font-size: 11.5px; min-width: 74px; text-align: center; }
+  .tag.timer .bar { height: 5px; }
+  .tag.empty .b { width: 30px; padding: 0; justify-content: center; background: rgba(255, 255, 255, .8); border: 3px dashed var(--teal); box-shadow: 0 0 0 4px rgba(34, 193, 155, .3); }
+  .tag .b.go { background: var(--teal); color: #fff; border-color: #fff; box-shadow: 0 0 0 2px #138a6c, 0 3px 0 rgba(19, 138, 108, .5); height: 40px; border-radius: 20px; font-size: 16px; padding: 0 18px; }
+
+  /* ---------- a sheet from the bottom ---------- */
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--panel); border: 3px solid var(--edge); border-bottom: 0; border-radius: 28px 28px 0 0; box-shadow: 0 -4px 0 rgba(107, 66, 38, .25); display: flex; flex-direction: column; overflow: hidden; }
+  .sheet:after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 40px; background: linear-gradient(rgba(255, 250, 242, 0), var(--panel) 72%); }
+  .grab { width: 44px; height: 5px; border-radius: 3px; background: #dcc6ac; margin: 7px auto 2px; flex: none; }
+  .head { display: flex; align-items: center; gap: 10px; padding: 4px 14px 10px; flex: none; }
+  .head .hi { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; border: 3px solid #fff; box-shadow: 0 0 0 2px var(--edge), 0 3px 0 rgba(107, 66, 38, .4); flex: none; }
+  .head .pic { width: 58px; height: 58px; border-radius: 16px; background: var(--soft); border: 2.5px solid var(--line); flex: none; overflow: hidden; }
+  .head .pic img { width: 100%; height: 100%; }
+  .head .tt { flex: 1; min-width: 0; }
+  .head h1 { font-size: 21px; font-weight: 900; line-height: 1.1; display: flex; align-items: center; gap: 7px; }
+  .head p { font-size: 12px; color: var(--muted); line-height: 1.25; margin-top: 2px; }
+  .lv { display: inline-block; padding: 1px 8px 2px; border-radius: 10px; background: var(--orange); color: #fff; font-size: 12px; font-weight: 900; }
+  .x { width: 36px; height: 36px; border-radius: 50%; background: #fff; border: 3px solid var(--edge); display: grid; place-items: center; box-shadow: 0 3px 0 rgba(107, 66, 38, .35); flex: none; }
+  .body { flex: 1; padding: 0 14px; overflow: hidden; }
+  .sec { font-size: 11px; letter-spacing: .8px; color: var(--muted); font-weight: 900; margin: 10px 2px 6px; display: flex; justify-content: space-between; }
+  .box { background: #fff; border: 2.5px solid var(--line); border-radius: 16px; padding: 9px 11px; }
+  .box + .box { margin-top: 6px; }
+  .row { display: flex; align-items: center; gap: 8px; }
+  .grow { flex: 1; min-width: 0; }
+  .nm { font-size: 15px; font-weight: 900; line-height: 1.15; }
+  .info { font-size: 12px; color: var(--muted); line-height: 1.25; }
+  .ok { color: #189a7b; } .no { color: var(--red); }
+  .bar { height: 8px; border-radius: 4px; background: #f1dfcb; position: relative; overflow: hidden; }
+  .bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: linear-gradient(90deg, #ff9a4a, #ff7a2a); }
+  .bar.t i { background: linear-gradient(90deg, #22c19b, #6fe3c3); }
+  .cost { display: inline-flex; align-items: center; gap: 3px; font-size: 13px; font-weight: 900; margin-right: 8px; }
+  .cost .ic { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; }
+  .cost.no { color: var(--red); }
+  .btn { height: 46px; border-radius: 23px; background: linear-gradient(#ff9a4a, #ff7a2a); color: #fff; font-size: 16px; font-weight: 900; display: flex; align-items: center; justify-content: center; gap: 8px; border: 3px solid #fff; box-shadow: 0 0 0 2px var(--edge), 0 4px 0 rgba(107, 66, 38, .45); text-shadow: 0 1px 0 rgba(150, 60, 10, .4); padding: 0 16px; }
+  .btn.teal { background: linear-gradient(#35d3ad, #1fb592); box-shadow: 0 0 0 2px #138a6c, 0 4px 0 rgba(19, 138, 108, .5); text-shadow: none; }
+  .btn.off { background: #e9dccb; color: #a58f7a; box-shadow: 0 0 0 2px #cdb79e, 0 4px 0 rgba(160, 130, 100, .3); text-shadow: none; }
+  .btn.sm { height: 32px; border-radius: 16px; font-size: 13px; padding: 0 13px; border-width: 2.5px; box-shadow: 0 0 0 2px var(--edge), 0 3px 0 rgba(107, 66, 38, .4); }
+  .btn.sm.teal { box-shadow: 0 0 0 2px #138a6c, 0 3px 0 rgba(19, 138, 108, .5); }
+  .foot { flex: none; padding: 10px 14px 30px; border-top: 2.5px solid var(--line); background: var(--panel); }
+  .echo-tag { position: absolute; right: -3px; top: -9px; background: var(--teal); color: #fff; font-size: 10px; letter-spacing: .6px; padding: 1px 7px 2px; border-radius: 8px; border: 2px solid #fff; }
+  .chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px 2px 3px; border-radius: 10px; background: var(--soft); font-size: 11.5px; }
+  .chip i { width: 12px; height: 12px; border-radius: 50%; display: block; }
+  .stars { color: #f5a623; font-size: 13px; letter-spacing: 1px; white-space: nowrap; } .stars s { color: #e3d3bd; text-decoration: none; }
+
+  /* build menu */
+  .feat { position: relative; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(34, 193, 155, .22); padding: 10px 11px 11px; }
+  .feat .thumb { width: 96px; height: 96px; border-radius: 16px; background: var(--soft); flex: none; }
+  .thumb img { width: 100%; height: 100%; display: block; }
+  .later { display: flex; gap: 6px; }
+  .lock { flex: 1; background: #f3e7d6; border: 2.5px solid var(--line); border-radius: 14px; padding: 5px 4px 6px; text-align: center; position: relative; }
+  .lock img { width: 52px; height: 52px; margin: 0 auto; display: block; filter: brightness(0); opacity: .78; }
+  .lock .pl { position: absolute; left: 50%; top: 20px; transform: translateX(-50%); width: 24px; height: 24px; border-radius: 50%; background: var(--edge); display: grid; place-items: center; border: 2px solid #fff; }
+  .lock .l { font-size: 11px; font-weight: 900; color: var(--muted); margin-top: 1px; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .mini { background: #fff; border: 2.5px solid var(--line); border-radius: 14px; padding: 4px 3px 6px; text-align: center; position: relative; }
+  .mini img { width: 58px; height: 58px; margin: 0 auto; display: block; }
+  .mini .l { font-size: 10.5px; line-height: 1.1; font-weight: 900; height: 23px; display: grid; place-items: center; }
+  .mini .lvl { position: absolute; right: 4px; top: 4px; background: var(--soft); border-radius: 8px; font-size: 10px; padding: 0 5px 1px; color: var(--muted); }
+
+  /* building panel */
+  .prod { display: grid; grid-template-columns: 26px 1fr auto; gap: 3px 8px; align-items: center; }
+  .prod .n { font-size: 14px; font-weight: 900; } .prod .v { font-size: 14px; font-weight: 900; text-align: right; } .prod .v small { color: var(--muted); font-size: 11px; }
+  .prod .v b { color: #189a7b; }
+  .face { width: 42px; height: 42px; border-radius: 50%; background: var(--soft); border: 2.5px solid var(--line); overflow: hidden; flex: none; }
+  .face img { width: 54px; height: 54px; margin: -4px 0 0 -6px; display: block; }
+  .seg { display: flex; background: var(--soft); border-radius: 13px; padding: 2px; gap: 2px; }
+  .seg span { font-size: 11px; font-weight: 900; padding: 3px 6px 4px; border-radius: 11px; color: var(--muted); display: flex; align-items: center; gap: 3px; }
+  .seg span.on { background: #fff; color: var(--ink); box-shadow: 0 1px 0 rgba(107, 66, 38, .3), 0 0 0 1.5px var(--edge); }
+  .seg .d { width: 9px; height: 9px; border-radius: 50%; }
+  .hint { display: flex; gap: 8px; align-items: center; background: var(--soft); border-radius: 13px; padding: 7px 10px; font-size: 12px; line-height: 1.25; margin-top: 6px; }
+
+  /* the Ark */
+  .req { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 2px solid var(--soft); font-size: 13.5px; line-height: 1.2; }
+  .req:first-child { border-top: 0; padding-top: 2px; } .req:last-child { padding-bottom: 2px; }
+  .req .m { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; flex: none; background: #f1dfcb; }
+  .req.done .m { background: var(--teal); } .req.done { color: #8a7a68; }
+  .req .h { font-size: 12.5px; font-weight: 900; white-space: nowrap; }
+
+  /* research */
+  .slot { position: relative; }
+  .slot.free { border-style: dashed; background: transparent; color: var(--muted); text-align: center; font-size: 13px; padding: 12px; }
+  .branch .top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .branch .bi { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+  .branch .steps { display: flex; gap: 3px; flex: 1; justify-content: flex-end; }
+  .branch .steps i { width: 9px; height: 9px; border-radius: 50%; background: #eadbc6; display: block; }
+  .branch .steps i.d { background: var(--teal); } .branch .steps i.c { background: var(--orange); box-shadow: 0 0 0 2px rgba(255, 139, 61, .3); }
+  .branch.rec { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(34, 193, 155, .22); position: relative; }
+
+  /* a card in the middle */
+  .modal { position: absolute; left: 22px; right: 22px; top: 50%; transform: translateY(-50%); border-radius: 26px; padding: 16px 16px 16px; text-align: center; }
+  .modal .port { width: 150px; height: 150px; border-radius: 50%; margin: -70px auto 6px; background: radial-gradient(circle at 50% 35%, #fff, #f3e3cd); border: 4px solid #fff; box-shadow: 0 0 0 3px var(--edge), 0 5px 0 rgba(107, 66, 38, .4); overflow: hidden; }
+  .modal .port img { width: 142px; height: 142px; display: block; }
+  .modal h2 { font-size: 23px; font-weight: 900; line-height: 1.1; }
+  .modal .sub { font-size: 13px; color: var(--muted); margin: 5px 0 0; }
+  .quote { text-align: left; background: var(--soft); border-left: 4px solid var(--teal); border-radius: 0 12px 12px 0; padding: 8px 11px; font-size: 14.5px; line-height: 1.3; margin: 12px 0 0; }
+  .stat { display: flex; gap: 6px; margin-top: 12px; }
+  .stat div { flex: 1; background: #fff; border: 2.5px solid var(--line); border-radius: 14px; padding: 6px 4px 7px; }
+  .stat b { display: block; font-size: 15px; font-weight: 900; } .stat span { font-size: 11px; color: var(--muted); }
+  .gain { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 12px; text-align: left; }
+  .gain div { display: flex; align-items: center; gap: 7px; background: #fff; border: 2.5px solid var(--line); border-radius: 14px; padding: 6px 9px; font-size: 15px; font-weight: 900; }
+  .news { text-align: left; margin-top: 8px; }
+  .news div { display: flex; gap: 8px; align-items: center; font-size: 13px; line-height: 1.25; padding: 6px 2px; border-top: 2px solid var(--soft); }
+  .plot { position: absolute; transform: translate(-50%, -50%); }
+</style>
+</head>
+<body>
+<img id="bg" alt="">
+<div id="hud"></div>
+<div id="layer"></div>
+<script>
+// ---------- icons ----------
+const S = (d, c = '#fff', w = 2.2, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const F = (d, s = 16, vb = 16) => `<svg width="${s}" height="${s}" viewBox="0 0 ${vb} ${vb}">${d}</svg>`;
+const ICON = {
+  carbon: s => F('<path d="M8 1.5 14 5.3v5.4L8 14.5 2 10.7V5.3z" fill="#3a3540" stroke="#fff" stroke-width="1.3"/>', s),
+  water: s => F('<path d="M8 1.4s-4.8 5.6-4.8 8.6a4.8 4.8 0 0 0 9.6 0C12.8 7 8 1.4 8 1.4z" fill="#fff"/>', s),
+  food: s => F('<path d="M8 14.6c-4 0-5.4-4-4.4-7S8 4 8 4s3.4-1 4.4 3-.4 7.6-4.4 7.6z" fill="#fff"/><path d="M8 4c0-1.6 1-2.6 2.6-2.8" stroke="#fff" stroke-width="1.6" fill="none"/>', s),
+  stone: s => F('<path d="M2 11.5 4.6 4.6 10 3l4 4.6-1.4 5.4H4.6z" fill="#fff"/>', s),
+  quartz: s => F('<path d="M8 1.5 12.5 6 8 14.5 3.5 6z" fill="#fff"/><path d="M3.5 6h9M8 1.5 6.3 6 8 14.5 9.7 6z" stroke="#b79cff" stroke-width=".9" fill="none"/>', s),
+  iron: s => F('<path d="M2.5 11 5 5.5 9.5 4l4 3.5-1 4.5H4.5z" fill="#fff"/><circle cx="6.3" cy="8" r="1.1" fill="#b5563a"/><circle cx="10" cy="9.3" r="1" fill="#b5563a"/>', s),
+  silicon: s => F('<rect x="3" y="3" width="10" height="10" rx="2" fill="#fff"/><path d="M6 1.5v2M10 1.5v2M6 12.5v2M10 12.5v2M1.5 6h2M1.5 10h2M12.5 6h2M12.5 10h2" stroke="#fff" stroke-width="1.3"/>', s),
+  steel: s => F('<path d="M2 10.5 4.5 6h9L11 10.5z" fill="#fff"/><path d="M4.5 6 6 3.5h9L13.5 6" fill="#fff" opacity=".7"/>', s),
+  bolt: s => F('<path d="M9.2 1 3.5 9h3.8L6.3 15 12.5 6.6H8.6z" fill="#fff"/>', s),
+  leaf: S('<path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/><path d="M5 19l7-7"/>', '#fff', 2.4, 16),
+  person: (c = '#3b2618', s = 18) => S('<circle cx="12" cy="8" r="4"/><path d="M4.5 21c0-4.2 3.4-7 7.5-7s7.5 2.8 7.5 7"/>', c, 2.4, s),
+  check: (c = '#fff', s = 12) => S('<path d="M5 12.5l4.2 4L19 7"/>', c, 3.6, s),
+  dots: S('<path d="M6 12h.01M12 12h.01M18 12h.01"/>', '#b89f84', 4, 14),
+  plus: S('<path d="M12 5v14M5 12h14"/>', '#22c19b', 3.2, 18),
+  close: S('<path d="M6 6l12 12M18 6 6 18"/>', '#3b2618', 3, 16),
+  lock: (s = 11) => F('<rect x="2" y="5.2" width="8" height="6" rx="1.4" fill="#fff"/><path d="M3.8 5.2V3.8a2.2 2.2 0 0 1 4.4 0v1.4" stroke="#fff" stroke-width="1.5" fill="none"/>', s, 12),
+  lockd: F('<rect x="2" y="5.2" width="8" height="6" rx="1.4" fill="#9a7a62"/><path d="M3.8 5.2V3.8a2.2 2.2 0 0 1 4.4 0v1.4" stroke="#9a7a62" stroke-width="1.5" fill="none"/>', 13, 12),
+  clock: (c = '#9a7a62', s = 14) => S('<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>', c, 2.6, s),
+  up: (c = '#fff', s = 16) => S('<path d="M12 19V6M6 11.5 12 5.5l6 6"/>', c, 3.4, s),
+  hammer: (s = 36) => `<svg width="${s}" height="${s}" viewBox="0 0 36 36"><path d="M9 27 21 15" stroke="#fff" stroke-width="5" stroke-linecap="round"/><path d="M17.5 8.5l6-3 7 7-3 6-3.4-3.4-2.6 2.6-3.6-3.6 2.6-2.6z" fill="#fff"/><circle cx="27.5" cy="27.5" r="6.5" fill="#22c19b" stroke="#fff" stroke-width="2.2"/><path d="M27.5 24.3v6.4M24.3 27.5h6.4" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>`,
+  flask: (s = 20) => S('<path d="M9 3h6M10 3v6L4.8 18.3A1.8 1.8 0 0 0 6.3 21h11.4a1.8 1.8 0 0 0 1.5-2.7L14 9V3"/><path d="M7.5 15h9"/>', '#fff', 2.2, s),
+  map: S('<path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20z"/><path d="M9 4v13.5M15 6.5V20"/>'),
+  people: (s = 20) => S('<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.6 2.7-5.6 6-5.6s6 2 6 5.6"/><path d="M16 4.8a3 3 0 0 1 0 6M18.5 14.6c1.6.7 2.5 2.4 2.5 5.4"/>', '#fff', 2.2, s),
+  echo: (s = 30) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8.5" fill="#fff" stroke="#3b2618" stroke-width="1.6"/><rect x="6.2" y="9.6" width="11.6" height="6.4" rx="3.2" fill="#1e2440"/><ellipse cx="9.6" cy="12.8" rx="1.2" ry="1.9" fill="#3fe0d0"/><ellipse cx="14.4" cy="12.8" rx="1.2" ry="1.9" fill="#3fe0d0"/><path d="M12 4.5V2.8" stroke="#3b2618" stroke-width="1.6"/><circle cx="12" cy="2.3" r="1.4" fill="#ff7a2e"/></svg>`,
+  smile: (c = '#189a7b', s = 14) => S('<circle cx="12" cy="12" r="8.5"/><path d="M8.5 14c1 1.4 2.2 2 3.5 2s2.5-.6 3.5-2M9 9.5h.01M15 9.5h.01"/>', c, 2.4, s),
+  bed: (c = '#3b2618', s = 16) => S('<path d="M3 18V8M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5"/><circle cx="7" cy="11" r="1.8"/>', c, 2.2, s),
+  pod: (c = '#fff', s = 16) => S('<rect x="7" y="3" width="10" height="18" rx="5"/><path d="M7 12h10"/>', c, 2.4, s),
+  moon: (c = '#fff', s = 14) => S('<path d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/>', c, 2.4, s),
+  rocket: (c = '#fff', s = 15) => S('<path d="M12 3c3 2.5 4.5 6 4.5 9.5L14 15h-4l-2.5-2.5C7.500 9 9 5.500 12 3z"/><path d="M10 15l-1 4 3-1.500 3 1.500-1-4"/><circle cx="12" cy="9" r="1.500"/>', c, 2.2, s),
+  hand: `<svg width="46" height="52" viewBox="0 0 46 52"><path d="M17 6.5c0-2.6 4.6-2.6 4.6 0v15.3l1.6-.3V16c0-2.5 4.5-2.5 4.5 0v6.3l1.4.1v-4.6c0-2.4 4.400-2.400 4.400 0v5.600l1.200.300V21c0-2.300 4.200-2.300 4.200 0v13c0 8-5.400 13.400-12.600 13.400-6.200 0-9.400-3.300-12.300-8.400l-5.700-9.900c-1.300-2.300 2.200-4.600 4-2.400l4.700 5.600z" fill="#fff" stroke="#3b2618" stroke-width="2.6" stroke-linejoin="round"/></svg>`,
+};
+// the resources: colour of the round badge and the icon
+const RES = { carbon: ['#3a3540', 'carbon', 'Carbon'], water: ['#4aa8ff', 'water', 'Water'], stone: ['#c98b55', 'stone', 'Stone'], food: ['#6cc94f', 'food', 'Food'],
+  quartz: ['#b79cff', 'quartz', 'Quartz'], iron: ['#b5563a', 'iron', 'Iron ore'], silicon: ['#5f7fb8', 'silicon', 'Silicon'], steel: ['#8fa0b3', 'steel', 'Steel'], power: ['#ffb020', 'bolt', 'Power'] };
+const ico = (r, s = 24, i = 15) => `<span class="ic ico" style="background:${RES[r][0]};width:${s}px;height:${s}px">${ICON[RES[r][1]](i)}</span>`;
+const pill = (r, val, small = '') => `<div class="pill card">${ico(r, 22, 14)}${val}${small ? `<small>${small}</small>` : ''}</div>`;
+const spill = (r, val, extra = '', cls = '') => `<div class="pill card s ${cls}">${ico(r, 20, 12)}${val}${extra}</div>`;
+const cost = (r, v, no = false) => `<span class="cost${no ? ' no' : ''}">${ico(r, 18, 11)}${v}</span>`;
+const time = t => `<span class="cost" style="color:var(--muted)">${ICON.clock()}${t}</span>`;
+const thumb = n => `ui/thumbs/${n}.webp`;
+const slug = n => n.toLowerCase().replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '');
+const face = n => `<span class="face"><img src="ui/thumbs/face-${slug(n)}.webp" alt=""></span>`;
+const stars = n => `<span class="stars">${'★'.repeat(n)}<s>${'★'.repeat(5 - n)}</s></span>`;
+const PROF = { cook: ['#ffc65c', 'Cook'], agronomist: ['#4fc06a', 'Agronomist'], geologist: ['#9a7cff', 'Geologist'], engineer: ['#5aa9ff', 'Engineer'], scientist: ['#33c5a2', 'Scientist'] };
+const chip = p => `<span class="chip"><i style="background:${PROF[p][0]}"></i>${PROF[p][1]}</span>`;
+
+// ---------- the colony at the start of level 11 (examples in the size of docs/balance) ----------
+const CREW = [
+  ['Maya Okafor', 'cook', 'Kitchen', 4, 92], ['Lena Sorensen', 'agronomist', 'Greenhouse', 3, 86], ['Tomas Varga', 'geologist', 'Mine', 4, 81], ['Ravi Menon', 'engineer', 'Silicon furnace', 3, 88],
+  ['Ana Lima', 'geologist', 'Mine', 3, 84], ['Kenji Mori', 'engineer', 'Solar panels', 2, 90], ['Pablo Herrera', 'agronomist', 'Vegetable lab', 2, 79], ['Elif Kaya', 'engineer', 'Water pump', 2, 87],
+  ['Jonas Weber', 'geologist', 'Mine', 1, 83], ['Dr. Hana Sato', 'scientist', 'Research station', 1, 91], ['Marek Novak', 'engineer', 'Processor', 0, 94],
+];
+
+function topBar() {
+  let h = '<div class="shade"></div>';
+  h += `<div class="status"><span>9:41</span><span class="r"><svg width="18" height="11" viewBox="0 0 18 11" fill="#fff"><rect x="0" y="7" width="3" height="4" rx=".8"/><rect x="5" y="5" width="3" height="6" rx=".8"/><rect x="10" y="2.5" width="3" height="8.5" rx=".8"/><rect x="15" y="0" width="3" height="11" rx=".8"/></svg><svg width="27" height="13" viewBox="0 0 27 13"><rect x=".7" y=".7" width="22.6" height="11.6" rx="3.4" fill="none" stroke="#fff"/><rect x="2.4" y="2.4" width="17" height="8.2" rx="1.8" fill="#fff"/></svg></span></div>`;
+  h += `<div class="ark"><div class="c">11</div><span class="t">ARK</span></div>`;
+  h += `<div class="atm card"><span class="ic">${ICON.leaf}</span><div class="bar"><i style="width:100%"></i></div><span class="v">30%<small> / 30%</small></span></div>`;
+  h += `<div class="res">${pill('carbon', '6.2k')}${pill('water', '4.1k')}${pill('stone', '2.3k')}${pill('food', '4.6k')}</div>`;
+  h += `<div class="crew"><div class="pill card s"><span class="ic" style="background:#8f6cff">${ICON.person('#fff', 13)}</span>11</div></div>`;
+  h += `<div class="res2">${spill('quartz', '1.4k')}${spill('iron', '860')}${spill('silicon', '2.4k')}${spill('power', '<span class="ok">+14</span>', '<span class="batt"><i style="width:72%"></i></span>', 'wide')}</div>`;
+  return h;
+}
+function dock(glow = '') {
+  return `<div class="dock card">
+    <div class="db"><div class="c" style="background:#8f6cff">${ICON.people()}</div><div class="l">Colonists</div><span class="dot">!</span></div>
+    <div class="db"><div class="c" style="background:#4aa8ff">${ICON.flask()}</div><div class="l">Research</div></div>
+    <div class="build ${glow}"><div class="c">${ICON.hammer()}</div><div class="l">Build</div></div>
+    <div class="db"><div class="c" style="background:#c98b55">${ICON.map}</div><div class="l">Map</div></div>
+    <div class="db"><div class="c" style="background:#22c19b">${ICON.echo()}</div><div class="l">Goals</div><span class="dot">4</span></div>
+  </div><div class="home"></div>`;
+}
+const bubble = (text, bottom = 114) => `<div class="bubble card" style="bottom:${bottom}px"><div class="who"><img src="${thumb('echo')}" alt=""></div><div class="nm">ECHO</div>${text}</div>`;
+const tag = (a, cls, inner, dy = 0) => `<div class="tag ${cls}" style="left:${a[0]}px;top:${a[1] + dy}px"><div class="b">${inner}</div><div class="stem"></div></div>`;
+const sheet = (topPx, head, body, foot = '') => `<div class="sheet" style="top:${topPx}px"><div class="grab"></div><div class="head">${head}<div class="x">${ICON.close}</div></div><div class="body">${body}</div>${foot ? `<div class="foot">${foot}</div>` : ''}</div><div class="home"></div>`;
+const hicon = (bg, svg) => `<div class="hi" style="background:${bg}">${svg}</div>`;
+
+// ---------- the screens ----------
+const SCREENS = {
+  // the colony with what floats over it: something to collect, an upgrade running, a part ready to be printed, a free place
+  main: A => ({ bg: 'main', hud: topBar() + dock('glow'), layer:
+    tag(A.drill, 'collect', `${ico('carbon', 20, 12)}+320`) +
+    tag(A.warehouse, 'timer', `<span>${ICON.up('#ff7a2a', 11).replace('<svg', '<svg style="display:inline;vertical-align:-1px"')} Lv 12 · 21:40</span><div class="bar"><i style="width:42%"></i></div>`) +
+    tag(A.home, 'ready', 'Ready') +
+    bubble('The smelter blueprint is ready. Open <b>Build</b> and I will show you its spot.') }),
+
+  // Build: what can be built now, what comes later (black shapes with a padlock and the level, no names), what stands
+  build: A => ({ bg: 'mine', hud: topBar(), layer: sheet(206,
+    hicon('linear-gradient(#ff9a4a,#ff7a2a)', ICON.hammer(26)) + `<div class="tt"><h1>Build</h1><p>The drone prints one building at a time, on its own plot.</p></div>`,
+    `<div class="sec"><span>READY TO BUILD</span></div>
+     <div class="box feat"><span class="echo-tag">ECHO</span><div class="row" style="align-items:flex-start">
+       <div class="thumb"><img src="${thumb('smelter')}" alt=""></div>
+       <div class="grow"><div class="nm" style="font-size:17px">Smelter</div><div class="info" style="margin:2px 0 6px">Iron ore + carbon + power make steel. A place for an engineer.</div>
+       <div>${cost('carbon', '700')}${cost('water', '140')}${cost('stone', '200')}</div><div style="margin-top:3px">${time('7 min')}${cost('power', '20 kW')}</div></div></div>
+       <div class="btn" style="margin-top:9px">Choose the spot</div></div>
+     <div class="sec"><span>LATER</span></div>
+     <div class="later">${[['claypit', 13], ['brickkiln', 15], ['copperworks', 19], ['brickhome-1', 20], ['canteen-1', 20]].map(([n, l]) => `<div class="lock"><img src="${thumb(n)}" alt=""><span class="pl">${ICON.lock(11)}</span><div class="l">Level ${l}</div></div>`).join('')}</div>
+     <div class="sec"><span>BUILT</span><span>14</span></div>
+     <div class="grid">${[['geolocator', 'Geolocator', 10], ['drill', 'Carbon drill', 10], ['pump', 'Water pump', 10], ['processor', 'Processor', 10], ['veglab', 'Vegetable lab', 10], ['mine', 'Mine', 10], ['home-10', 'Home', 10], ['kitchen', 'Kitchen', 10],
+       ['warehouse', 'Store', 11], ['furnace', 'Silicon furnace', 10], ['solar', 'Solar panels', 10], ['batteries', 'Batteries', 10]].map(([n, l, v]) => `<div class="mini"><span class="lvl">${v}</span><img src="${thumb(n)}" alt=""><div class="l">${l}</div></div>`).join('')}</div>`) }),
+
+  // after "Choose the spot": the plot lights up, ECHO says why there, one tap builds
+  place: A => ({ bg: 'build', hud: topBar() + dock(), layer:
+    `<svg class="plot" style="left:${A.empty[0]}px;top:${A.empty[1]}px" width="240" height="150" viewBox="-120 -75 240 150"><path d="M0-63 107 0 0 63-107 0z" fill="rgba(34,193,155,.28)" stroke="#fff" stroke-width="5" stroke-linejoin="round"/><path d="M0-63 107 0 0 63-107 0z" fill="none" stroke="#22c19b" stroke-width="2.5" stroke-dasharray="9 7" stroke-linejoin="round"/></svg>` +
+    `<img src="${thumb('smelter')}" alt="" style="position:absolute;left:${A.empty[0] - 66}px;top:${A.empty[1] - 104}px;width:132px;height:132px;opacity:.6">` +
+    `<div class="tag" style="left:${A.empty[0]}px;top:${A.empty[1] - 100}px"><div class="b" style="padding:0 10px 0 4px;margin-bottom:6px">${ico('carbon', 20, 12)}700&nbsp; ${ico('water', 20, 12)}140&nbsp; ${ico('stone', 20, 12)}200</div><div class="b go">Build here</div><div class="stem"></div></div>` +
+    `<div style="position:absolute;left:${A.empty[0] + 38}px;top:${A.empty[1] - 132}px;transform:rotate(-12deg)">${ICON.hand}</div>` +
+    bubble('Here, on the free plot by the panels: the smelter needs a lot of power, and its smoke stays away from the home.') }),
+
+  // a building: what it gives now and on the next level, what the next levels unlock, who works there, the upgrade
+  building: A => ({ bg: 'mine', hud: topBar(), layer: sheet(190,
+    `<div class="pic"><img src="${thumb('mine')}" alt=""></div><div class="tt"><h1>Mine <span class="lv">Lv 10</span></h1><p>Stone, quartz and iron ore from the canyon wall.</p></div>`,
+    `<div class="sec"><span>EACH MINER DIGS</span><span>NOW → LEVEL 11</span></div>
+     <div class="box"><div class="prod">
+       ${ico('stone', 24, 14)}<span class="n">Stone</span><span class="v">48 → <b>56</b> <small>/min</small></span>
+       ${ico('quartz', 24, 14)}<span class="n">Quartz</span><span class="v">8.8 → <b>9.3</b> <small>/min</small></span>
+       ${ico('iron', 24, 14)}<span class="n">Iron ore</span><span class="v">4.4 → <b>5.1</b> <small>/min</small></span>
+       ${ico('power', 24, 14)}<span class="n">Power</span><span class="v">8.3 → 9.1 <small>kW</small></span></div></div>
+     <div class="hint">${ICON.lockd}<span><b>Level 15:</b> copper ore and a fourth miner. Needs the Ark on level 14.</span></div>
+     <div class="sec"><span>MINERS</span><span>3 / 3</span></div>
+     ${[['Tomas Varga', 4, 0], ['Ana Lima', 3, 2], ['Jonas Weber', 1, 1]].map(([n, st, dig]) => `<div class="box" style="padding:5px 9px"><div class="row">${face(n)}<div class="grow"><div class="nm" style="white-space:nowrap">${n}</div>${stars(st)}</div>
+       <div class="seg">${['stone', 'quartz', 'iron'].map((r, i) => `<span class="${i === dig ? 'on' : ''}"><i class="d" style="background:${RES[r][0]}"></i>${['Stone', 'Quartz', 'Iron'][i]}</span>`).join('')}</div></div></div>`).join('')}`,
+    `<div class="row" style="margin-bottom:8px"><div class="grow"><div class="nm">Level 10 → 11</div><div style="margin-top:3px">${cost('carbon', '1.3k')}${cost('water', '250')}${cost('stone', '360')}${time('23 min')}</div></div></div>
+     <div class="btn">${ICON.up()} Upgrade</div>`) }),
+
+  // the Ark: what the next level asks for, each line done or how far it is
+  ark: A => ({ bg: 'ark', hud: topBar(), layer: sheet(206,
+    `<div class="pic"><img src="${thumb('ark')}" alt=""></div><div class="tt"><h1>The Ark <span class="lv">Lv 11</span></h1><p>The ship we came in. Its level is the level of the game.</p></div>`,
+    `<div class="sec"><span>FOR LEVEL 12</span><span>4 OF 10</span></div>
+     <div class="bar t" style="margin:0 2px 8px"><i style="width:40%"></i></div>
+     <div class="box" style="padding:7px 11px">${[
+       [1, 'Air 30%', ''], [0, 'Smelter on level 5, with its filter', 'not built'], [0, 'Steel in the store: 200', '0'],
+       [1, 'One night without a shortage', ''], [0, 'A bed and a seat for all, every workplace filled', '11 / 14'],
+       [0, 'Store on level 12', 'level 11'], [0, 'First greenhouse on level 11', 'level 10'], [1, 'Silicon in the store: 2 200', ''], [1, 'Food in the store: 4 300', '']].map(([d, t, h]) =>
+       `<div class="req ${d ? 'done' : ''}"><span class="m">${d ? ICON.check() : ICON.dots}</span><span class="grow">${t}</span>${h ? `<span class="h no">${h}</span>` : ''}</div>`).join('')}
+</div>`,
+    `<div class="info" style="margin-bottom:4px">The upgrade uses (in the store now / needed)</div>
+     <div style="margin-bottom:9px;white-space:nowrap">${cost('carbon', '6.2k<small style="color:var(--muted)">/23.5k</small>', true)}${cost('water', '4.1k<small style="color:var(--muted)">/15.1k</small>', true)}${cost('stone', '2.3k<small style="color:var(--muted)">/6.6k</small>', true)}</div>
+     <div class="btn off">6 things left for level 12</div>`) }),
+
+  // research: what runs in the two slots, then each branch with how far it is and its next project
+  research: A => ({ bg: 'ark', hud: topBar(), layer: sheet(206,
+    hicon('#4aa8ff', ICON.flask(24)) + `<div class="tt"><h1>Research</h1><p>Two projects at once. Dr. Hana Sato makes them shorter.</p></div>`,
+    `<div class="sec"><span>RUNNING</span><span>1 OF 2</span></div>
+     <div class="box slot"><div class="row"><div class="grow"><div class="nm">Smelter filter</div><div class="info">No more smoke from the smelter</div></div><span class="cost" style="margin:0">${ICON.clock('#3b2618')}38 min</span></div><div class="bar t" style="margin-top:7px"><i style="width:37%"></i></div></div>
+     <div class="box slot free">Free slot · pick a project below</div>
+     <div class="sec"><span>BRANCHES</span></div>
+     ${[
+       ['Industry', '#ff8b3d', ICON.hammer(18), 11, 15, 'Good steel', '+20% steel', '3 h', 'Level 12', 0],
+       ['Life', '#6cc94f', ICON.leaf, 3, 6, 'Double glazing', 'Greenhouses use 20% less power at night', '2 h', '', 1],
+       ['Colony', '#8f6cff', ICON.people(15), 6, 10, "Builder's console", 'The drone and the upgrades work faster', '2 h', 'Level 13', 0],
+       ['Space', '#4aa8ff', ICON.rocket(), 2, 3, "The Ark's antenna", 'The map of the planet', '5 h', 'Level 18', 0],
+     ].map(([n, c, i, done, all, nm, eff, t, lock, rec]) => `<div class="box branch ${rec ? 'rec' : ''}">${rec ? '<span class="echo-tag">ECHO</span>' : ''}<div class="top"><span class="bi" style="background:${c}">${i}</span><span class="nm">${n}</span>
+        <span class="steps">${Array.from({ length: all }, (_, k) => `<i class="${k < done ? 'd' : k === done ? 'c' : ''}"></i>`).join('')}</span></div>
+        <div class="row"><div class="grow"><div class="nm" style="font-size:14px">${nm}</div><div class="info">${eff}</div><div class="info" style="display:flex;align-items:center;gap:3px;margin-top:1px">${ICON.clock()}${t}</div></div>${lock ? `<span class="chip" style="padding-left:6px">${ICON.lockd}${lock}</span>` : '<div class="btn sm">Start</div>'}</div></div>`).join('')}`) }),
+
+  // the colonists: who is awake, the work, the experience and the mood of each; a pod that waits
+  colonists: A => ({ bg: 'ark', hud: topBar(), layer: sheet(206,
+    hicon('#8f6cff', ICON.people(24)) + `<div class="tt"><h1>Colonists</h1><p>11 awake · 12 beds · 12 seats · 89 still asleep</p></div>`,
+    `<div class="box" style="border-color:var(--teal);box-shadow:0 0 0 3px rgba(34,193,155,.22);margin-top:2px"><div class="row"><span class="ico" style="background:var(--teal);width:34px;height:34px">${ICON.pod('#fff', 18)}</span><div class="grow"><div class="nm">A pod is glowing</div><div class="info">The carbon drill has a free place: a geologist will wake.</div></div><div class="btn sm teal">Wake</div></div></div>
+     <div class="sec"><span>AWAKE</span><span>EXPERIENCE · MOOD</span></div>
+     ${CREW.slice(0, 8).map(([n, p, w, st, mood]) => `<div class="box" style="padding:6px 10px"><div class="row">${face(n)}<div class="grow"><div class="nm">${n}</div><div style="margin-top:2px">${chip(p)} <span class="info">${w}</span></div></div>
+       <div style="text-align:right">${stars(st)}<div class="info" style="display:flex;gap:3px;justify-content:flex-end;align-items:center;color:#189a7b;font-weight:900">${ICON.smile()}${mood}%</div></div></div></div>`).join('')}`) }),
+
+  // one colonist: the face behind the glass, the work, the experience, the story and the sentence about Earth
+  dossier: A => ({ bg: 'ark', hud: topBar() + dock(), layer: `<div class="dim"></div><div class="modal card">
+     <div class="port"><img src="ui/thumbs/face-lena-sorensen.webp" alt=""></div>
+     <h2>Lena Sorensen</h2><div style="margin-top:6px">${chip('agronomist')}</div>
+     <div class="stat"><div><b>Greenhouse</b><span>works at</span></div><div><b class="stars">★★★<s>★★</s></b><span>+20% faster</span></div><div><b style="color:#189a7b">86%</b><span>mood</span></div></div>
+     <div class="sub" style="text-align:left;margin-top:12px">Grew wheat on the last farm in Jutland. Awake since level 3.</div>
+     <div class="quote">“We had a field so big the sky ended in it.”</div>
+     <div class="btn off" style="margin-top:14px;background:#fff;color:var(--ink);box-shadow:0 0 0 2px var(--edge),0 4px 0 rgba(107,66,38,.35)">Close</div></div>` }),
+
+  // a colonist wakes: who, for which work, the first words
+  wake: A => ({ bg: 'ark', hud: topBar() + dock(), layer: `<div class="dim"></div><div class="modal card">
+     <div class="port"><img src="ui/thumbs/face-sofia-ruiz.webp" alt=""></div>
+     <div class="info" style="letter-spacing:.8px;font-weight:900;color:var(--teal)">POD 12 OPENS</div>
+     <h2 style="margin-top:2px">Sofia Ruiz wakes up</h2><div style="margin-top:6px">${chip('geologist')} <span class="info">for the Carbon drill</span></div>
+     <div class="sub" style="text-align:left;margin-top:12px">Looked for water under the Sahara.</div>
+     <div class="quote">“The desert at dawn was blue, not yellow.”</div>
+     <div class="btn teal" style="margin-top:14px">Welcome</div></div>` }),
+
+  // the goals: what leads to the next level, each with how far it is; ECHO's notes under them
+  goals: A => ({ bg: 'ark', hud: topBar(), layer: sheet(206,
+    hicon('#22c19b', ICON.echo(34)) + `<div class="tt"><h1>Goals</h1><p>What leads the Ark to level 12.</p></div>`,
+    `<div class="sec"><span>NOW</span></div>
+     ${[
+       ['smelter', 'Build the smelter', 'The blueprint is ready', 'Build', 1, null],
+       ['research-1', 'Research the smelter filter', '38 min left', '', 0, 37],
+       ['warehouse', 'Store to level 12', 'Level 11 now', 'Show', 0, null],
+       ['face-sofia-ruiz', 'Wake a geologist', 'A pod is glowing: the carbon drill is free', 'Wake', 0, null],
+     ].map(([pic, n, i, b, rec, pr]) => `<div class="box ${rec ? 'branch rec' : ''}" style="padding:7px 10px">${rec ? '<span class="echo-tag">ECHO</span>' : ''}<div class="row"><span class="face" style="border-radius:13px;${pic.startsWith('face') ? '' : 'background:var(--soft)'}"><img src="${thumb(pic)}" alt="" style="${pic.startsWith('face') ? '' : 'width:42px;height:42px;margin:-2px 0 0 -2px'}"></span>
+        <div class="grow"><div class="nm">${n}</div><div class="info">${i}</div>${pr != null ? `<div class="bar t" style="margin-top:5px"><i style="width:${pr}%"></i></div>` : ''}</div>${b ? `<div class="btn sm ${b === 'Wake' ? 'teal' : ''}">${b}</div>` : ''}</div></div>`).join('')}
+     <div class="sec"><span>THEN</span></div>
+     <div class="box" style="padding:7px 11px">${['Smelter on level 5', 'Make 200 steel for the first part of the frame', 'First greenhouse on level 11', 'Fill the stores: 23.5k carbon, 15.1k water, 6.6k stone'].map(t => `<div class="req"><span class="m">${ICON.dots}</span><span class="grow">${t}</span></div>`).join('')}</div>
+     <div class="sec"><span>ECHO'S NOTES</span></div>
+     <div class="info" style="padding:0 3px;font-size:12.5px">· We have air and food. What is left is the iron.<br>· Zone II is open: the south slope has room for a second greenhouse.<br>· The sketch of the frame is on the Ark.</div>`) }),
+
+  // back in the game: how long, what the workers gathered, what happened
+  away: A => ({ bg: 'main', hud: topBar() + dock(), layer: `<div class="dim"></div><div class="modal card">
+     <div class="port" style="background:radial-gradient(circle at 50% 35%,#fff,#dff3ff)"><img src="${thumb('echo')}" alt="" style="width:150px;height:150px;margin:2px 0 0 -2px"></div>
+     <div class="info" style="letter-spacing:.8px;font-weight:900;color:var(--teal)">ECHO</div>
+     <h2 style="margin-top:2px">Welcome back, Commander</h2><div class="sub">You were away 2 h 14 min. The colony kept working.</div>
+     <div class="gain"><div>${ico('carbon', 24, 14)}+9.6k</div><div>${ico('water', 24, 14)}+5.2k</div><div>${ico('stone', 24, 14)}+3.1k</div><div>${ico('food', 24, 14)}+640</div><div>${ico('quartz', 24, 14)}+410</div><div>${ico('iron', 24, 14)}+230</div></div>
+     <div class="news"><div><span class="ico" style="background:#4aa8ff">${ICON.flask(14)}</span><span class="grow"><b>Blueprint: Smelter</b> is researched.</span></div>
+       <div><span class="ico" style="background:#c98b55">${ICON.stone(14)}</span><span class="grow">The robot is back and waits to be unloaded.</span></div>
+       <div><span class="ico" style="background:#1e2440">${ICON.moon()}</span><span class="grow">The batteries lasted the whole night.</span></div></div>
+     <div class="btn" style="margin-top:12px">Collect</div></div>` }),
+};
+
+(async () => {
+  const state = (location.hash || '#main').slice(1);
+  const anchors = await (await fetch('ui/anchors.json')).json();
+  const BG = { main: 'main', build: 'mine', place: 'build', building: 'mine', ark: 'ark', research: 'ark', colonists: 'ark', dossier: 'ark', wake: 'ark', goals: 'ark', away: 'main' };
+  document.getElementById('bg').src = `ui/bg-${BG[state]}.jpg`;
+  const A = anchors[BG[state]], scr = SCREENS[state](A);
+  document.getElementById('hud').innerHTML = scr.hud;
+  document.getElementById('layer').innerHTML = scr.layer;
+  await Promise.all([...document.images].map(i => i.decode().catch(() => 0)));
+  await document.fonts.ready;
+  window.__ready = true;
+})();
+</script>
+</body>
+</html>

@@ -27,6 +27,11 @@ cp ../art/3d/buildings/*.glb models/kk/
 # the ideas, for the comparison sheets in catalog.html#set=…
 mkdir -p models/kk/ideas
 cp ../art/3d/buildings/ideas/*.glb models/kk/ideas/
+# the people in suits and ECHO (art/3d/characters), for catalog.html#set=astroa … echo
+mkdir -p models/ch
+cp ../art/3d/characters/ideas/*.glb models/ch/
+# the chosen ones (colonist.glb, echo.glb) and how each person looks, used by map.html#lvl10
+cp ../art/3d/characters/*.glb ../art/3d/characters/looks.json models/ch/
 
 # Poly Haven: colour, normal and roughness maps, plus one sky
 UA='Mozilla/5.0'
