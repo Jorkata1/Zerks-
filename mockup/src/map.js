@@ -261,6 +261,8 @@ function aim(view, x, z) { // view = metres across the screen width
 }
 // the close-ups: __aim(46, -6.5, 10.5) the left half, (46, 10.5, -6.5) the right half (both with the whole Ark), (20, -16, -32) the home, (40, -10, -10) the Ark
 window.__aim = (view, x, z) => { aim(view, x, z); renderer.render(scene, camera); };
+// where a point of the world is on the screen, in points (for the tags of menus.html)
+window.__screen = (x, y, z) => { const v = new THREE.Vector3(x, y, z).project(camera); return [+((v.x + 1) / 2 * W).toFixed(1), +((1 - v.y) / 2 * H).toFixed(1)]; };
 aim(68, 0, 0);
 renderer.render(scene, camera);
 for (const [x, z, s, c] of [[-32, -16, 8, 0x5fe3d0], [16, -16, 9, 0xffc77a], [16, 16, 8, 0xd38cff], [32, 32, 8, 0x5fe3d0], [-16, -32, 9, 0xffd58a], [-8, -8, 22, 0xffd58a]]) pool(x, z, s, c, 0.35);

@@ -453,12 +453,12 @@ def person(p, accent='#5aa9ff', sk='#f2c6a0', hr='#4a3326', options=None):
         ring(0.215, 0.03, p['orange'], (0, 0, 1.065), seg=16, mseg=5)
         keep(ball(0.337, p['cream'], (0, 0, 1.36), seg=20), lambda c: c.y > 0.03)
         ball(0.028, p['teal'], (0, 0.18, 1.655), seg=6)
-        ball(0.2, skn, (0, -0.01, 1.3), (1, 0.95, 1.05), seg=14)
+        ball(0.2, skn, (0, -0.01, 1.3), (1, 0.95, 1.05), seg=20)
         for s in (1, -1):
-            ball(0.024, x['eye'], (s * 0.07, -0.192, 1.315), seg=6)
+            ball(0.024, x['eye'], (s * 0.07, -0.192, 1.315), seg=10)
             disc(0.05, 0.035, p['char'], (s * 0.2, 0.0, 1.3), 'x')
     def cap():
-        h = dome(0.214, har, (0, 0.012, 1.33), seg=14, sz=0.95); h.rotation_euler = (-0.5, 0, 0)
+        h = dome(0.214, har, (0, 0.012, 1.33), seg=20, sz=0.95); h.rotation_euler = (-0.5, 0, 0)
     if want('hair_short'):
         with into('hair_short'): cap()
     if want('hair_bun'):
