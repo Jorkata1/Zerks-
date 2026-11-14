@@ -1,0 +1,125 @@
+{
+  "note": "A proposal (14.11.2026): the colours of the professions and how each named person looks. The model is colonist.glb: materials accent, skin, hair; show one of hair_short, hair_bun, hair_full, beard if true, stripe and aerial for the Commander only.",
+  "accent": {
+    "commander": "#ef7433",
+    "cook": "#ffc65c",
+    "agronomist": "#4fc06a",
+    "geologist": "#9a7cff",
+    "engineer": "#5aa9ff",
+    "scientist": "#33c5a2"
+  },
+  "people": {
+    "Commander": {
+      "profession": "commander",
+      "skin": "#eebf98",
+      "hair": "#4a3326",
+      "style": "short",
+      "beard": false
+    },
+    "Maya Okafor": {
+      "profession": "cook",
+      "skin": "#7a4a30",
+      "hair": "#1f1b1a",
+      "style": "bun",
+      "beard": false
+    },
+    "Lena Sorensen": {
+      "profession": "agronomist",
+      "skin": "#f6d3b3",
+      "hair": "#e0b860",
+      "style": "full",
+      "beard": false
+    },
+    "Tomas Varga": {
+      "profession": "geologist",
+      "skin": "#eebf98",
+      "hair": "#5a3a26",
+      "style": "short",
+      "beard": true
+    },
+    "Ravi Menon": {
+      "profession": "engineer",
+      "skin": "#a8704a",
+      "hair": "#1f1b1a",
+      "style": "short",
+      "beard": false
+    },
+    "Ana Lima": {
+      "profession": "geologist",
+      "skin": "#c98f62",
+      "hair": "#2a211d",
+      "style": "full",
+      "beard": false
+    },
+    "Kenji Mori": {
+      "profession": "engineer",
+      "skin": "#f0c9a0",
+      "hair": "#1f1b1a",
+      "style": "short",
+      "beard": false
+    },
+    "Pablo Herrera": {
+      "profession": "agronomist",
+      "skin": "#d99a6c",
+      "hair": "#2a211d",
+      "style": "short",
+      "beard": true
+    },
+    "Elif Kaya": {
+      "profession": "engineer",
+      "skin": "#e0aa80",
+      "hair": "#3a2a22",
+      "style": "bun",
+      "beard": false
+    },
+    "Jonas Weber": {
+      "profession": "geologist",
+      "skin": "#f2c6a0",
+      "hair": "#b5651d",
+      "style": "short",
+      "beard": true
+    },
+    "Dr. Hana Sato": {
+      "profession": "scientist",
+      "skin": "#f0c9a0",
+      "hair": "#1f1b1a",
+      "style": "full",
+      "beard": false
+    },
+    "Sofia Ruiz": {
+      "profession": "geologist",
+      "skin": "#d99a6c",
+      "hair": "#3a2a22",
+      "style": "bun",
+      "beard": false
+    },
+    "Marek Novak": {
+      "profession": "engineer",
+      "skin": "#f6d3b3",
+      "hair": "#a8a29a",
+      "style": "short",
+      "beard": true
+    },
+    "Grace Mensah": {
+      "profession": "engineer",
+      "skin": "#6e4530",
+      "hair": "#1f1b1a",
+      "style": "bun",
+      "beard": false
+    },
+    "Nadia Petrova": {
+      "profession": "agronomist",
+      "skin": "#f6d3b3",
+      "hair": "#d8d0c4",
+      "style": "bun",
+      "beard": false
+    },
+    "Luca Bianchi": {
+      "profession": "cook",
+      "skin": "#e8b890",
+      "hair": "#4a3326",
+      "style": "short",
+      "beard": false
+    }
+  }
+}
