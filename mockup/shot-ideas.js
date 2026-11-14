@@ -1,11 +1,13 @@
-// Frames of the ideas for the map (src/map-ideas.js): node shot-ideas.js [night]   (server on 8777) -> out/idea-*.png
+// Frames of the ideas for the map (src/map-ideas.js): node shot-ideas.js [day|night] [only these views, e.g. wall,zone]
+// (server on 8777) -> out/idea-*.png
 // Each view is shot twice, without the ideas and with them.
 const { chromium } = require('playwright');
 const path = require('path');
 // name, [view in metres across the screen, x, z], which ideas
 const VIEWS = [
-  ['whole', [68, 0, 0], 'all'], ['canyon', [150, -6, -6], 'all'], ['wall', [52, -30, 30], 'canyon,ground'], ['ground', [40, 81, 53], 'ground'],
-  ['ice', [46, 34, 68], 'ice'], ['lines', [30, 12, 10], 'lines'], ['rover', [34, 56, 52], 'rover'], ['zone', [22, -27, -41], 'zone'], ['head', [90, -70, -70], 'all'],
+  ['whole', [68, 0, 0], 'all'], ['canyon', [170, -6, -6], 'all'], ['wall', [60, -36, 36], 'canyon,ground,rocks,dust'], ['ground', [40, 81, 53], 'ground'],
+  ['ice', [46, 34, 68], 'ice'], ['lines', [30, 12, 10], 'lines'], ['rover', [34, 56, 52], 'rover'], ['zone', [22, -27, -41], 'zone,dust'], ['head', [100, -70, -70], 'all'],
+  ['dust', [46, -34, -34], 'dust'], ['rocks', [34, 56, 52], 'rocks'],
 ];
 (async () => {
   const night = process.argv[2] === 'night' ? '-night' : '';
@@ -20,7 +22,9 @@ const VIEWS = [
     await page.evaluate(() => { document.getElementById('hud').style.display = 'none'; });
     return (pages[ideas] = page);
   };
+  const only = process.argv[3] ? process.argv[3].split(',') : null;
   for (const [name, aim, ideas] of VIEWS) for (const [tag, set] of [['a', ''], ['b', ideas]]) {
+    if (only && !only.includes(name)) continue;
     const page = await open(set);
     await page.evaluate(a => window.__aim(...a), aim);
     await page.screenshot({ path: path.join(__dirname, 'out', `idea-${name}-${tag}${night}.png`) });

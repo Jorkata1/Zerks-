@@ -252,7 +252,8 @@ for (const b of builtBlocks) {
 add(person('Commander'), 2.4, 0.4, 2.4, Math.PI / 4, 1.4).name = 'commander';
 const echo = add(chGlb.echo.clone(true), 4.4, 2.6, 0.6, Math.PI / 4, 2.4); echo.name = 'echo';
 // zone II, which the research opens at level 10, still lies under dust
-for (const b of blocks) if (b.s < -REACH && Math.abs(b.d) <= 2) for (let k = 0; k < 2; k++) dust(b.cx - 4 + rnd() * 8, 2 + rnd() * 3, b.cz - 4 + rnd() * 8, 20 + rnd() * 8, 0xfde6d2, 0.85);
+// (with ?ideas=dust the blanket of map-ideas.js lies there instead; nothing random comes after these, so nothing moves)
+if (!IDEAS.has('dust') && !IDEAS.has('all')) for (const b of blocks) if (b.s < -REACH && Math.abs(b.d) <= 2) for (let k = 0; k < 2; k++) dust(b.cx - 4 + rnd() * 8, 2 + rnd() * 3, b.cz - 4 + rnd() * 8, 20 + rnd() * 8, 0xfde6d2, 0.85);
 
 if (IDEAS.size) await addIdeas({ scene, flat, glow, NIGHT, gltf, sun, blocks: builtBlocks, allBlocks: blocks }, IDEAS);
 
