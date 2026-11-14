@@ -147,14 +147,14 @@ unity setup claude
 **Какво още липсва:**
 - истинските модели на Командира, колонистите и ЕХО. Сега са прости фигури; Жоро ги прави;
 - звукът (етап 5);
-- пробата на iPhone: започната на 14.11.2026, Xcode е инсталиран и тегли платформата iOS (виж „Пробата на iPhone“);
+- проверката на iPhone: играта е на iPhone 13 Pro на Саламен от 15.11.2026, проверката тече (виж „Пробата на iPhone“);
 - шрифтът засега е Roboto, временно;
 - прологът, решено засега без интро;
 - рекламите и ускоряването с реклама, решено засега без тях.
 
-## Пробата на iPhone (14.11.2026, Саламен, в работа)
+## Пробата на iPhone (14–15.11.2026, Саламен, в работа)
 
-Саламен: „сега ще направим само пробата на телефон“. Първо на неговия iPhone 13, после и на iPhone 14 на Жоро.
+Саламен: „сега ще направим само пробата на телефон“. Първо на неговия iPhone 13 Pro, после и на iPhone 14 на Жоро.
 
 **Направено:**
 - модулът iOS Build Support в Unity 6.6 (6000.6.9f1), сложен с Unity CLI;
@@ -163,13 +163,15 @@ unity setup claude
 - Xcode проектът е направен в `unity/Zerk-X6/Builds/iOS` (не е в git), без грешки, за 74 секунди;
 - на iPhone графиката е с мобилните настройки (`Mobile_RPAsset`: 80% резолюция, сенки 1024, без меки сенки), а в Unity на Mac-а с `PC_RPAsset`, затова на телефона е малко по-мека.
 
-**Остава:**
-1. Xcode от App Store: инсталиран на 14.11.2026 (Xcode 27.2, macOS 26.7.3). Саламен го отвори и прие лиценза същия ден; Xcode тегли платформата iOS 27.2 (8,3 GB, симулаторът) и Metal Toolchain. Докато лицензът не беше приет, `/usr/bin/git`, `python3` и `xcodebuild` спираха с грешка (тогава git-ът на GitHub Desktop върши работа: `GIT_EXEC_PATH` към неговия `libexec/git-core`).
-2. Apple ID на Саламен в Xcode → Settings → Accounts. Безплатният акаунт стига: приложението работи 7 дни, после се слага пак. За TestFlight трябва платеният (етап 6).
-3. iPhone с кабел към Mac-а и „Trust“ на телефона.
-4. Компилиране и инсталиране (`xcodebuild` с `-allowProvisioningUpdates`, после `xcrun devicectl`), или от Xcode: `Builds/iOS/Unity-iPhone.xcodeproj`, Team, Run.
-5. На iPhone: Settings → Privacy & Security → Developer Mode (рестарт), после Settings → General → VPN & Device Management → доверие на профила.
-6. Проверка на телефона: кадрите, тапът, плъзгането, запазването при излизане, колко кадъра в секунда и колко топли.
+**Играта е на телефона (15.11.2026):** Zerks-X6 0.1.0 е подписан, инсталиран и пуснат на iPhone 13 Pro на Саламен (iOS 26.7.1) и върви. Как стана, по ред:
+1. Xcode 27.2 от App Store (macOS 26.7.3), инсталиран на 14.11.2026. Докато лицензът му не беше приет, `/usr/bin/git`, `python3` и `xcodebuild` спираха с грешка (тогава git-ът на GitHub Desktop върши работа: `GIT_EXEC_PATH` към неговия `libexec/git-core`). Xcode свали и симулатора iOS 27.2 (два пакета, 15,5 GB); за телефона той не трябва. Metal Toolchain не потрябва.
+2. Apple ID на Саламен в Xcode → Settings → Accounts, отбор „(Personal Team)“. Безплатният акаунт стига: приложението работи 7 дни, после се слага пак. За TestFlight трябва платеният (етап 6). Team ID и акаунтът не се пишат в репото; отборът е избран в генерирания Xcode проект (Signing & Capabilities → Team), който не е в git, затова при нов Xcode проект от Unity се избира пак или се подава `DEVELOPMENT_TEAM=<Team ID>` на `xcodebuild`.
+3. iPhone с кабел: Trust стана през Finder (при първото свързване Finder почва резервно копие; спира се със Skip Backup). Xcode не виждаше телефона, докато връзката „iPhone USB“ не се вдигна след рестарт на телефона. В Xcode 27 прозорецът Devices and Simulators е заменен с Device Hub (списъкът с устройства → Manage Devices…).
+4. Developer Mode на iPhone: Settings → Privacy & Security → Developer Mode, рестарт, Turn On. Не изключва защитите на iOS; само разрешава приложения, подписани за разработка, от компютър с Trust. Може да се изключи след пробата.
+5. Компилиране: `xcodebuild -project Unity-iPhone.xcodeproj -scheme Unity-iPhone -configuration Release -destination 'id=<UDID>' -derivedDataPath Builds/iOS-DerivedData -allowProvisioningUpdates -allowProvisioningDeviceRegistration DEVELOPMENT_TEAM=<Team ID> build` (първото без подпис 3,5 минути, после с подписа 69 секунди; приложението е 161 MB).
+6. Инсталиране и пускане: `xcrun devicectl device install app --device <UDID> Builds/iOS-DerivedData/Build/Products/Release-iphoneos/Zerks-X6.app` (10 секунди), после `xcrun devicectl device process launch --device <UDID> com.zerks.zerksx6`. Първия път iOS отказва, докато на телефона не се даде доверие: Settings → General → VPN & Device Management → Developer App → Trust.
+
+**Остава:** проверката на телефона (кадрите, тапът, плъзгането, запазването при излизане, колко кадъра в секунда и колко топли), после същото на iPhone 14 на Жоро (неговият телефон се записва в същия акаунт или той ползва свой).
 
 ## Втори компютър с Windows (по-късно)
 
