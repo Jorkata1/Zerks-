@@ -1,5 +1,7 @@
-// Zerks-X6, stage 1: the colony at Ark level 10 on the phone. The map, the camera (pan and pinch), tapping a building,
-// day and night, the drone and the robot moving, and a frame counter, to see that it runs smoothly on an iPhone.
+// Zerks-X6 on the phone: the colony at the level of layout.ts (stage 2, the default: level 20, the end of chapter 2;
+// stage 1: level 10, VITE_ZERKS_LEVEL=10). The canyon with its details, the people and ECHO, the camera (pan and
+// pinch), tapping a building, day and night, the drone, the robot and the walkers moving, and a frame counter, to see
+// that it runs smoothly on an iPhone.
 // URL options for testing: ?t=0..1 fixes the time of day, ?at=seconds the moment of the drone and robot,
 // ?still stops time, ?shot renders only on request (screenshots), ?day=seconds sets the length of a day (default 120), ?dpr=1..3, ?view=metres.
 import * as THREE from 'three'
@@ -10,7 +12,8 @@ import { attachInput } from './view/input'
 import { loadModels } from './view/models'
 import { addMovers } from './view/movers'
 import { mergeGroup, mergeProps } from './view/merge'
-import { MODEL_NAMES, buildWorld, type Placed } from './view/world'
+import { buildingModels, layoutFor } from './view/layout'
+import { buildWorld, type Placed } from './view/world'
 import { createHud } from './ui/hud'
 
 const q = new URLSearchParams(location.search)
@@ -19,11 +22,13 @@ const DAY_SECONDS = num('day', 120)
 const STILL = q.has('still')
 const DPR = num('dpr', Math.min(window.devicePixelRatio || 1, 2))
 
+const LAYOUT = layoutFor(import.meta.env.VITE_ZERKS_LEVEL)
 const view = document.getElementById('view')!
-const hud = createHud(document.getElementById('hud')!, { arkLevel: 10, atmo: 28, atmoNext: 30 })
+const hud = createHud(document.getElementById('hud')!, { arkLevel: LAYOUT.level, atmo: LAYOUT.atmo, atmoNext: LAYOUT.atmoNext, colonists: LAYOUT.colonists, tag: LAYOUT.tag })
 
 // ---------- renderer, scene, light ----------
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: q.has('shot') })
+// the stencil keeps the ground from covering a dug building (the clay pit)
+const renderer = new THREE.WebGLRenderer({ antialias: true, stencil: true, powerPreference: 'high-performance', preserveDrawingBuffer: q.has('shot') })
 renderer.setPixelRatio(DPR)
 renderer.toneMapping = THREE.NeutralToneMapping
 renderer.toneMappingExposure = 0.98
@@ -42,20 +47,22 @@ sun.shadow.mapSize.set(2048, 2048)
 sun.shadow.bias = -0.0004
 sun.shadow.normalBias = 0.04
 sun.shadow.radius = 4
-Object.assign(sun.shadow.camera, { left: -85, right: 85, top: 85, bottom: -85, near: 1, far: 260 })
+// the shadow box holds the colony and the near walls of the canyon (the sun stands 180 m away, daynight.ts)
+Object.assign(sun.shadow.camera, { left: -120, right: 120, top: 120, bottom: -120, near: 1, far: 480 })
 sun.shadow.camera.updateProjectionMatrix()
 scene.add(hemi, sun, sun.target)
 
 renderer.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); hud.lost(true) })
 
 // ---------- the world ----------
-await loadModels(MODEL_NAMES)
-const world = buildWorld(scene)
+await loadModels([...buildingModels(LAYOUT), 'colonist', 'echo'])
+const world = buildWorld(scene, LAYOUT)
 const movers = addMovers(scene, world)
 // fewer draw calls: the buildings' parts by material inside each building, the props of the map all together
 for (const b of world.buildings) mergeGroup(b.group)
-mergeProps(scene, new Set<THREE.Object3D>([...world.buildings.map((b) => b.group), world.ground, world.echo, ...world.people, ...world.pools, ...movers.objects, sun.target]))
-const cam = new IsoCamera(num('view', 68), 0, 0, { minView: 22, maxView: 120, ...world.bounds })
+mergeProps(scene, new Set<THREE.Object3D>([...world.buildings.map((b) => b.group), ...world.keep, world.echo, ...world.people, ...world.walkers.map((w) => w.body), ...world.pools, ...movers.objects, sun.target]))
+const [view0, x0, z0] = LAYOUT.view
+const cam = new IsoCamera(num('view', view0), x0, z0, { minView: 22, maxView: 150, ...world.bounds })
 
 // ---------- picking a building ----------
 const ring = new THREE.Mesh(new THREE.RingGeometry(6.6, 7.4, 48), new THREE.MeshBasicMaterial({ color: 0x5fe3d0, transparent: true, opacity: 0.9, depthWrite: false }))
@@ -69,7 +76,7 @@ function select(b: Placed | null) {
   selectedAt = clock
   ring.visible = !!b
   if (b) { ring.position.set(b.cx, 0.62, b.cz); const s = b.half / 6; ring.scale.setScalar(s) }
-  hud.select(b?.name ?? null, b?.level)
+  hud.select(b?.name ?? null, b?.level, b?.sub)
 }
 function pick(sx: number, sy: number): Placed | null {
   const hits = cam.rayAt(sx, sy).intersectObjects(world.buildings.map((b) => b.group), true)

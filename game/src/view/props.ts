@@ -1,5 +1,5 @@
 // The small things built in code, as in the approved map (mockup/src/map.js, colony.js, models.js):
-// the flat cartoon materials, lamps, planters, benches, colonists in suits and ECHO.
+// the flat cartoon materials, lamps, planters and benches. The people and ECHO are models (people.ts).
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { rng } from './soft'
@@ -82,46 +82,4 @@ export function bench(): THREE.Group {
   box(g, 1.5, 0.4, 0.1, M.cream, 0, 0.75, -0.22, 0.05)
   for (const x of [-0.6, 0.6]) box(g, 0.1, 0.45, 0.45, M.navy, x, 0.22, 0, 0.03)
   return done(g)
-}
-
-export const SUITS = [0x6fb7ff, 0x9a7cff, 0x33c5a2, 0xff8b3d, 0xff5d8a, 0xffc65c]
-const suitWhite = flat(0xffffff), visorMat = flat(0x3a6db5, { roughness: 0.2 })
-/** A colonist in a white suit with a coloured stripe and a blue visor (mockup/src/map.js). */
-export function colonist(stripe: number): THREE.Group {
-  const g = new THREE.Group(), st = flat(stripe)
-  const legs = new THREE.Group()
-  for (const x of [-0.13, 0.13]) legs.add(at(new THREE.Mesh(new THREE.CapsuleGeometry(0.11, 0.35, 4, 8), suitWhite), x, 0.3, 0))
-  legs.name = 'legs'
-  g.add(legs)
-  g.add(at(new THREE.Mesh(new THREE.CapsuleGeometry(0.27, 0.36, 6, 12), suitWhite), 0, 0.86, 0))
-  g.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.29, 0.29, 0.1, 16), st), 0, 0.74, 0))
-  g.add(at(new THREE.Mesh(new THREE.SphereGeometry(0.27, 16, 12), suitWhite), 0, 1.42, 0))
-  const visor = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.55), visorMat)
-  visor.rotation.x = Math.PI / 2
-  visor.position.set(0, 1.44, 0.11)
-  visor.scale.set(1, 1, 0.75)
-  g.add(visor)
-  return done(g)
-}
-
-/** ECHO: the small flying robot, the Ark's computer in a small body (concept.md). */
-export function echoBot(): THREE.Group {
-  const g = new THREE.Group()
-  ball(g, 0.5, M.white, 0, 0, 0)
-  box(g, 0.6, 0.22, 0.2, M.darkGlass, 0, 0.05, 0.42, 0.1)
-  box(g, 0.4, 0.08, 0.05, M.teal, 0, 0.05, 0.53, 0.03)
-  band(g, 0.68, 0.05, M.teal, 0, -0.12, 0)
-  for (const s of [-1, 1]) box(g, 0.12, 0.35, 0.3, M.hull2, s * 0.55, 0, 0, 0.05)
-  cyl(g, 0.02, 0.02, 0.4, M.steel, 0.15, 0.6, 0, 4)
-  ball(g, 0.06, M.teal, 0.15, 0.82, 0)
-  return done(g)
-}
-
-const rockGeo = new THREE.IcosahedronGeometry(1, 1)
-export function rock(s: number): THREE.Mesh {
-  const m = new THREE.Mesh(rockGeo, rng() < 0.5 ? M.rock : M.rock2)
-  m.scale.set(s * (0.9 + rng() * 0.4), s * (0.55 + rng() * 0.3), s * (0.9 + rng() * 0.4))
-  m.rotation.y = rng() * 6
-  m.castShadow = m.receiveShadow = true
-  return m
 }

@@ -1,6 +1,6 @@
 // Turns the one-file build (dist/index.html) into the page for the preview link: Claude wraps a published page in
 // its own <!doctype>, <html>, <head> and <body>, so those and the viewport meta come off; the rest stays as built.
-//   npm run artifact   (after npm run build) -> dist/artifact.html
+//   npm run artifact   (after npm run build) -> dist/artifact-stage2.html (level 20), dist/artifact.html (level 10)
 import { readFileSync, writeFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -15,5 +15,6 @@ const scripts = pick(/<script[\s\S]*?<\/script>/g)
 const body = (html.match(/<body>([\s\S]*?)<\/body>/) ?? [])[1] ?? ''
 const bodyNoScripts = body.replace(/<script[\s\S]*?<\/script>/g, '').trim()
 const page = [title, ...metas, ...styles, bodyNoScripts, ...scripts].join('\n')
-writeFileSync(resolve(here, '../dist/artifact.html'), page)
-console.log(`dist/artifact.html ${(page.length / 1e6).toFixed(1)} MB; ${scripts.length} script, ${styles.length} style`)
+const name = Number(process.env.VITE_ZERKS_LEVEL ?? 20) === 10 ? 'artifact.html' : 'artifact-stage2.html'
+writeFileSync(resolve(here, '../dist', name), page)
+console.log(`dist/${name} ${(page.length / 1e6).toFixed(1)} MB; ${scripts.length} script, ${styles.length} style`)

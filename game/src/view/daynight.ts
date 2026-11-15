@@ -3,6 +3,7 @@
 // at night a pale moon stays put, and the lamps, windows and light pools carry the light.
 import * as THREE from 'three'
 import { GLOWS } from './props'
+import { DUST_NIGHT } from './canyon'
 import { MODEL_GLOWS } from './models'
 import type { World } from './world'
 
@@ -44,7 +45,7 @@ export function applyTime(t: number, scene: THREE.Scene, L: Lights, world: World
   const sunDir = new THREE.Vector3(Math.cos(el) * Math.sin(az), Math.sin(el), Math.cos(el) * Math.cos(az))
   const moonDir = new THREE.Vector3(-30, 80, 50).normalize()
   const dir = sunDir.lerp(moonDir, n).normalize()
-  L.sun.position.copy(dir).multiplyScalar(100)
+  L.sun.position.copy(dir).multiplyScalar(180)   // far enough that the shadow box holds the canyon's walls
 
   for (const [m, d, nt] of GLOWS) m.emissiveIntensity = THREE.MathUtils.lerp(d, nt, n)
   for (const [m, d] of MODEL_GLOWS) m.emissiveIntensity = d * (1 + 0.9 * n)
@@ -54,6 +55,8 @@ export function applyTime(t: number, scene: THREE.Scene, L: Lights, world: World
     p.visible = op > 0.01
   }
   for (const s of world.dust) (s.material as THREE.SpriteMaterial).color.setScalar(THREE.MathUtils.lerp(1, 0.32, n))
+  for (const m of world.dustMats) m.color.copy(m.userData.day as THREE.Color).lerp(c2.copy(m.userData.day as THREE.Color).multiply(DUST_NIGHT), n)
+  for (const [m, d, nt] of world.glows) m.emissiveIntensity = THREE.MathUtils.lerp(d, nt, n)
 
   const moved = dir.angleTo(last.dir) > THREE.MathUtils.degToRad(1.5) // the shadows are redrawn only when the sun has moved a little
   if (moved) last.dir.copy(dir)

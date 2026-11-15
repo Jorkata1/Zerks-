@@ -15,13 +15,24 @@ const out = resolve(process.argv[3] || resolve(here, '../shots'))
 mkdirSync(out, { recursive: true })
 const url = pathToFileURL(resolve(here, '../dist/index.html')).href
 
-const SHOTS = [
+// the level the build shows (src/view/layout.ts): 20 by default, 10 for stage 1
+const LEVEL = Number(process.env.VITE_ZERKS_LEVEL ?? 20)
+const SHOTS = LEVEL === 10 ? [
   { name: 'day', set: { t: 0.25, at: 4 } },
   { name: 'night', set: { t: 0.8, at: 4 } },
   { name: 'dusk', set: { t: 0.6, at: 9 } },
   { name: 'select-greenhouse', set: { t: 0.3, at: 10, select: 'greenhouse' } },
   { name: 'zoom-ark', set: { t: 0.3, at: 14, view: 34, x: -8, z: -8 } },
   { name: 'zoom-out', set: { t: 0.3, at: 18, view: 120 } },
+] : [
+  { name: 'day', set: { t: 0.25, at: 4 } },
+  { name: 'night', set: { t: 0.8, at: 4 } },
+  { name: 'dusk', set: { t: 0.6, at: 9 } },
+  { name: 'select-smelter', set: { t: 0.3, at: 10, select: 'smelter' } },
+  { name: 'zoom-ark', set: { t: 0.3, at: 14, view: 36, x: -6, z: -4 } },
+  { name: 'zoom-slope', set: { t: 0.3, at: 16, view: 44, x: -34, z: -38 } },
+  { name: 'zoom-shore', set: { t: 0.3, at: 22, view: 40, x: 28, z: 52 } },
+  { name: 'zoom-out', set: { t: 0.3, at: 18, view: 150, x: -10, z: -10 } },
 ]
 
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] })
