@@ -217,12 +217,30 @@ unity setup claude
 
 **Ковчегът без радиатори (Жоро, 15.11.2026).** Двете плоскости отстрани на долната част бяха радиаторите на реактора и висяха във въздуха, без връзка с корпуса; Жоро реши да се махнат. `art/3d/buildings/ark.glb` и `ark-18.glb` са направени наново. В Unity: Zerks → Sync from repo (сам копира моделите само когато ги няма).
 
-## Втори компютър с Windows (по-късно)
+## Втори компютър с Windows (15.11.2026, Саламен)
 
-Саламен ще работи и от Windows компютър (13.11.2026). Същото репо и същият Unity проект, по същия начин:
+Саламен: „дай всичко, което бяхме направили на Mac-а, системи, скилове… да го направим и тука да е функционално“. Направено на 15.11.2026 на неговия компютър с Windows 11:
+
+- **Репото** е в `D:\Projects\Zerks-` (преместено от C: по молба на Саламен). Git 2.56 и Git LFS 3.8.1 вече ги имаше; файловете от LFS са свалени.
+- **Unity:** Unity CLI 1.0.0 (`%LOCALAPPDATA%\Unity\bin\unity.exe`) и Unity Editor 6000.6.9f1, същият като на Mac-а, в `D:\Unity\Hub\Editor` (`unity install-path --set`), зададен по подразбиране. С него е модулът Android Build Support с OpenJDK 17, NDK r27c, SDK Build Tools 36, SDK Platforms 34, 36 и 37, Command Line Tools и CMake. Вход в акаунта на Unity с `unity auth login` (без Unity Hub), лицензът Unity Personal и условията на Editor-а са приети с изричното „Да“ на Саламен (`unity license activate --personal --accept-eula`, `unity terms accept 6000.6.9f1 --yes`).
+- **Скиловете:** Unity скиловете идват с плъгина в десктоп приложението; `unity-pipeline` е сложен в `unity/Zerk-X6/.claude/skills/` (не е в git).
+- **Инструментите на репото:** npm пакетите в корена, `game/` и `mockup/`; Playwright 1.65.1 с Chromium за кадрите в размер на телефон, сложен глобално (`npm install -g playwright`), а `%USERPROFILE%\.node_modules` е връзка към глобалните пакети, за да го намират `game/tools/shots.mjs` и `mockup/shot.js`. `npm run check` в `game/` минава.
+- **Не е сложено:** Blender като модул на Python (`bpy` не върви с Python 3.12, който е тук; моделите се правят в облачния чат), ffmpeg и Unity Hub (CLI-то стига).
+- **Проверка (15.11.2026):** проектът се отваря без грешки при компилиране (`unity status` е „ready“); Zerks → Sync from repo копира 57-те модела (Ковчегът е без радиатори, същият като в `art/3d/buildings`) и `balance.json`; 13-те теста минават (13 от 13); в Play сцената Colony върви в размер на iPhone 14 (1170×2532), от кацането до „Build here: Geolocator“ с ЕХО, без грешки в конзолата. Не е пробван build за Android и не е пробвана играта на телефон с Android.
+
+**Капанът на Windows: десктоп приложението на Claude е пакетирано (MSIX).** Каквото Claude инсталира от своя шел в `%LOCALAPPDATA%` или `%APPDATA%`, отива в `%LOCALAPPDATA%\Packages\Claude_…\LocalCache` и другите програми не го виждат, а прозорецът на Windows за права (UAC) не излиза („ELEVATION_FAILED“). Затова Unity CLI, Editor-ът, входът, лицензът и отварянето на Editor-а се пускат от терминала до чата (Terminal панела), който работи в истинския Windows. После Claude управлява отворения Editor от своя шел с `unity status` и `unity command`. Дисковете C: и D: извън AppData са едни и същи и за двете.
+
+Други особености на Windows:
+- **Smart App Control** на Windows не дава да се заредят временните DLL на Burst в `Library/BurstCache` (7 предупреждения при първото отваряне); Unity ги компилира наново и играта върви. Smart App Control не е пипан.
+- **Редовете:** git тук връща `docs/` с CRLF (`core.autocrlf=true`), а `unity/` е с LF по `.gitattributes`. Затова Sync from repo вече пише `balance.json` с LF (`Assets/Zerks/Editor/RepoSync.cs`); иначе копието в Unity излизаше променено при всяко копиране.
+- **`Assets/Settings/UniversalRenderPipelineGlobalSettings.asset`:** при първото отваряне Unity изпразни списъка `m_RuntimeSettings`, който build-ът пълни (на Mac-а е записан след build за iPhone). Ако файлът излезе като променен, без да сме пипали настройките на URP, се връща с `git checkout --` и не се качва.
+- **`unity/Zerk-X6/.vsconfig`** е файлът, който Unity прави на Windows за Visual Studio; безвреден е.
+- **Тестовете:** `unity test` не върви, докато Editor-ът е отворен; тогава се пускат през него: `unity command test run --mode EditMode`.
+
+Как се прави на нов компютър с Windows (същото репо и същият Unity проект, по същия начин):
 
 1. Unity Editor **точно същата версия** като на Mac-а (иначе Unity обновява проекта и другият компютър трябва да го последва).
-2. Unity CLI за Windows: `irm https://unity.com/install.ps1 | iex` в PowerShell; после `unity setup claude` (ако има командата `claude`) и, при отворен проект, `unity skill install claude-code --local --skill unity-pipeline` (виж стъпка 6). Вход в Unity Hub преди първото отваряне.
+2. Unity CLI за Windows: `irm https://unity.com/install.ps1 | iex` в PowerShell **в терминала до чата**, не от шела на Claude (виж капана по-горе). После там: `unity install-path --set <папка>`, `unity auth login` (вход в браузъра), `unity install <версията> --module android --child-modules --set-default`, `unity license activate --personal --accept-eula` и `unity terms accept <версията> --yes` (условията ги приема човекът) и `unity open <проекта>`. При отворен проект, от папката му: `unity skill install claude-code --local --skill unity-pipeline` (виж стъпка 6). `unity setup claude` в десктоп приложението не трябва.
 3. Git за Windows и Git LFS; репото се клонира; пакетът Pipeline вече е в `Packages/manifest.json` и идва с репото.
 4. Claude Code на Windows (десктоп приложението), отворен в папката на репото; после „обнови чат“.
 5. Редовете: правило в `.gitattributes`, за да не излизат файлове като променени при смяна на компютъра (Windows пише CRLF, Mac LF).

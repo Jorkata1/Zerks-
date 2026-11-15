@@ -43,11 +43,17 @@ namespace Zerks.EditorTools
                 File.Copy(f, dst, true);
                 n++;
             }
+            // balance.json is compared and written with LF line endings: on Windows git checks docs/ out with CRLF,
+            // and a plain copy would show the Unity copy as changed on every sync (docs/unity-plan.md, Windows).
             var bal = Path.Combine(RepoRoot, "docs", "balance", "balance.json");
-            if (File.Exists(bal) && (!File.Exists(BalanceDst) || File.ReadAllText(bal) != File.ReadAllText(BalanceDst)))
+            if (File.Exists(bal))
             {
-                File.Copy(bal, BalanceDst, true);
-                n++;
+                var text = File.ReadAllText(bal).Replace("\r\n", "\n");
+                if (!File.Exists(BalanceDst) || File.ReadAllText(BalanceDst) != text)
+                {
+                    File.WriteAllText(BalanceDst, text);
+                    n++;
+                }
             }
             AssetDatabase.Refresh();
             Debug.Log($"[Zerks] Synced {n} files from the repo.");
