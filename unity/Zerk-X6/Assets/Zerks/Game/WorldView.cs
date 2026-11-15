@@ -22,6 +22,8 @@ namespace Zerks.Game
         public readonly Dictionary<int, Figure> People = new Dictionary<int, Figure>();
         public Light Sun;
         public float NightK;
+        /// <summary>For checks with pictures: 0 = always day, 1 = always night, below 0 = the clock of the game.</summary>
+        [System.NonSerialized] public float ForceNight = -1;
 
         /// <summary>Plot the build menu asks for ("Build here"), or null.</summary>
         public string PlacingId;
@@ -30,20 +32,32 @@ namespace Zerks.Game
 
         readonly Dictionary<string, GameObject> plotPick = new Dictionary<string, GameObject>();
         readonly Dictionary<string, GameObject> plotGlow = new Dictionary<string, GameObject>();
-        readonly List<(int zone, Renderer r, Material m, float a)> dust = new List<(int, Renderer, Material, float)>();
         readonly List<(int zone, GameObject g)> zoneThings = new List<(int, GameObject)>();
+        /// <summary>The canyon, the ground, the ice, the channel, the edge of the closed zone and the dust over it.</summary>
+        public Canyon Land;
         readonly List<Material> nightPools = new List<Material>();
         GameObject debris, carbonDeposit, iceDeposit, podGlow, containers;
         Material podMat, carbonSpark;
-        float dustOpen1 = -1, dustOpen2 = -1, debrisGone = -1;
+        float debrisGone = -1;
         float time;
         Colony colony;
         string reprintId;
         float reprintLeft;
 
-        // The street blocks of the level 10 map: (d, s) and their zone (0 open, 1 Zone I, 2 Zone II).
-        static readonly (int d, int s, int zone)[] EmptyBlocks = { (-2, 4, 1), (2, 4, 1), (-1, 5, 2), (1, 5, 2), (-2, 6, 2), (0, 6, 2), (2, 6, 2) };
+        // The street blocks of the level 10 map: (d, s) and their zone (0 open, 1 Zone I, 2 Zone II). Zone II, the South
+        // Slope, lies at the back, up the canyon, where the approved map has the closed zone with its dust and the sign
+        // "ZONE II" (Joro, 14.11.2026; the plots of stage 2): the front is the canyon's low end with the Ice Hollow.
+        static readonly (int d, int s, int zone)[] EmptyBlocks = { (-2, 4, 1), (2, 4, 1), (-2, -4, 2), (0, -4, 2), (2, -4, 2), (-1, -5, 2), (1, -5, 2) };
         static readonly (int d, int s)[] ArkBlocks = { (0, -2), (-1, -1), (1, -1), (0, 0) };
+        const float ArkHalf = 13.8f;
+        // The service channel along the streets (three.js metres, game/src/view/layout.ts, level 10): it runs this far
+        // inside the edge of the street.
+        const float O = 1.35f;
+        static readonly float[][] Lines =
+        {
+            new[] { 8 - O, -24 - O, 8 - O, 40 }, new[] { -24 - O, 8 - O, 40, 8 - O }, new[] { 24 - O, 8 - O, 24 - O, 24 },
+            new[] { -24 - O, -24 - O, 8 - O, -24 - O }, new[] { -24 - O, -24 - O, -24 - O, 8 - O },
+        };
 
         public void Build(Colony c)
         {
@@ -60,31 +74,10 @@ namespace Zerks.Game
             Sun.shadowStrength = 0.55f;
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
 
-            // Ground and the canyon walls.
-            var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
-            Destroy(ground.GetComponent<Collider>());
-            ground.transform.SetParent(env, false);
-            ground.transform.localScale = new Vector3(80, 1, 80);
-            ground.GetComponent<Renderer>().sharedMaterial = Look.Lit(Look.Ground, 0.05f);
-            var rng = new System.Random(11);
-            for (int i = 0; i < 26; i++)
-            {
-                foreach (var side in new[] { -1, 1 })
-                {
-                    var at = Look.Plot(side * (4 + (int)(rng.NextDouble() * 2)) + (i % 2 == 0 ? 0 : side), -8 + i);
-                    var s = 6 + (float)rng.NextDouble() * 6;
-                    var rock = Look.Prim(PrimitiveType.Sphere, env, at + new Vector3((float)rng.NextDouble() * 6 - 3, s * 0.1f, (float)rng.NextDouble() * 6 - 3),
-                        new Vector3(s * 1.4f, s * (0.5f + (float)rng.NextDouble() * 0.5f), s * 1.2f), Look.Lit(rng.NextDouble() < 0.5 ? Look.Rock : Look.Rock2, 0.05f));
-                    rock.transform.rotation = Quaternion.Euler(0, (float)rng.NextDouble() * 360, 0);
-                }
-            }
-            // Back wall behind the Ark and the research station.
-            for (int d = -4; d <= 4; d++)
-            {
-                var at = Look.Plot(d, -7 - (d & 1));
-                var s = 8 + (float)rng.NextDouble() * 5;
-                Look.Prim(PrimitiveType.Sphere, env, at + new Vector3(0, s * 0.05f, 0), new Vector3(s * 1.6f, s * 0.7f, s * 1.3f), Look.Lit(Look.Rock2, 0.05f));
-            }
+            // The canyon round the colony (Joro, 14.11.2026): relief, layered walls, the Ice Hollow, the stones, the
+            // service channel, the stakes and the sign at the edge of the closed zone and the dust over it.
+            Land = Canyon.Make(transform, Blocks(), c.S.Zone, Kerbs(), Lines);
+            if (Rig != null) Rig.Limits = new Rect(-75, -70, 145, 145);
 
             // Streets and plots.
             var road = Look.Lit(Look.Road, 0.1f);
@@ -103,13 +96,11 @@ namespace Zerks.Game
                     Look.Prim(PrimitiveType.Cube, g.transform, new Vector3(0, 0.1f, 0), new Vector3(12f, 0.1f, 12f), pad);
                 }
                 zoneThings.Add((zone, g));
-                if (zone > 0) { Dust(env, at, zone, 5); g.SetActive(false); }
+                if (zone > c.S.Zone) g.SetActive(false);
             }
             foreach (var def in Content.Buildings) Block(def.D, def.S, def.Zone, true);
             foreach (var (d, s, z) in EmptyBlocks) Block(d, s, z, true);
             foreach (var (d, s) in ArkBlocks) Block(d, s, 0, false);
-            // Dust also lies beyond the map, where the canyon goes on.
-            for (int s = 7; s <= 10; s++) for (int d = -3; d <= 3; d++) if (((d + s) & 1) == 0) Dust(env, Look.Plot(d, s), 3, 2);
 
             // The Ark on its 2x2 plot, with the containers next to it.
             var ark = new GameObject("ark");
@@ -190,36 +181,49 @@ namespace Zerks.Game
 
             // Movers.
             DroneBot = Drone.Make(transform, DronePad);
+            // The robot drives along the streets to the front corner of the colony, then on its tracks out through the
+            // mouth of the canyon to the plain (Joro, 14.11.2026); it keeps to the ground of the canyon.
             var park = Look.ArkAt + new Vector3(-12, 0, 12);
-            var route = new[] { park, Look.Plot(0, 1) + new Vector3(8, 0, 8), Look.Plot(0, 5) + new Vector3(8, 0, 8), Look.Plot(0, 9) + new Vector3(8, 0, 8), Look.Plot(2, 12) };
-            Robot = Rover.Make(transform, park, route);
+            var route = new List<Vector3>(Route(park, U3.V(40, 0, 40)));
+            route.Insert(0, park);
+            for (int i = 1; i < CanyonShape.TRACK.Length; i++) route.Add(U3.At(CanyonShape.TRACK[i][0], CanyonShape.TRACK[i][1], 0));
+            Robot = Rover.Make(transform, park, route.ToArray());
+            Robot.Ground = Land.GroundY;
             Echo = EchoBot.Make(transform);
             Echo.transform.position = Look.ArkAt + new Vector3(-12, 10, 12);
-            Commander = Figure.Make(transform, Look.Orange, "commander", 1.05f);
+            Commander = Figure.Make(transform, Zerks.Game.People.Looks.For("Commander", Profession.None), "commander");
             Commander.transform.position = Look.ArkAt + new Vector3(-10, 0, 10);
             if (c.S.Tutorial == Colony.TStep.Landing) StartLanding();
         }
 
-        void Dust(Transform parent, Vector3 at, int zone, int n)
+        /// <summary>
+        /// Every block of the grid (|d| &lt;= 3, |s| &lt;= 10, as on the mockup) with its zone: the plots of the colony and
+        /// the Ark's (0), zone I (1), zone II at the back (2), the rest of the back up the canyon (3, closed for all of
+        /// chapter 1), and the blocks beside and in front of the colony that are never plots (-1).
+        /// </summary>
+        static Block[] Blocks()
         {
-            var r = new System.Random(at.GetHashCode());
-            for (int i = 0; i < n; i++)
-            {
-                var q = GameObject.CreatePrimitive(PrimitiveType.Quad);
-                Destroy(q.GetComponent<Collider>());
-                q.name = "dust";
-                q.transform.SetParent(parent, false);
-                var s = 13 + (float)r.NextDouble() * 6;
-                q.transform.localPosition = at + new Vector3((float)r.NextDouble() * 6 - 3, 1.2f + (float)r.NextDouble() * 2.5f, (float)r.NextDouble() * 6 - 3);
-                q.transform.localScale = new Vector3(s, s * 0.62f, 1);
-                q.transform.rotation = Rig != null ? Rig.transform.rotation : Quaternion.Euler(36, 135, 0);
-                var a = 0.82f + (float)r.NextDouble() * 0.15f;
-                var m = Look.Glow(Look.Dust, a, false, 0.55f);
-                var rend = q.GetComponent<Renderer>();
-                rend.sharedMaterial = m;
-                rend.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                dust.Add((zone, rend, m, a));
-            }
+            var zones = new Dictionary<(int, int), int>();
+            foreach (var def in Content.Buildings) zones[(def.D, def.S)] = def.Zone;
+            foreach (var (d, s, z) in EmptyBlocks) zones[(d, s)] = z;
+            foreach (var (d, s) in ArkBlocks) zones[(d, s)] = 0;
+            var list = new List<Block>();
+            for (int i = -7; i <= 7; i++)
+                for (int j = -7; j <= 7; j++)
+                {
+                    int d = i - j, s = i + j;
+                    if (Mathf.Abs(d) > 3 || Mathf.Abs(s) > 10) continue;
+                    var z = zones.TryGetValue((d, s), out var known) ? known : Mathf.Abs(d) <= 2 && s < -5 ? 3 : -1;
+                    list.Add(new Block { D = d, S = s, Cx = i * Content.Pitch, Cz = j * Content.Pitch, Zone = z });
+                }
+            return list.ToArray();
+        }
+
+        /// <summary>The plots that get a box on the service channel: every building and the Ark (three.js metres).</summary>
+        static IEnumerable<(string id, float cx, float cz, float half)> Kerbs()
+        {
+            yield return ("ark", -Look.ArkAt.x, Look.ArkAt.z, ArkHalf);
+            foreach (var def in Content.Buildings) yield return (def.Id, def.X, def.Z, 6.3f);
         }
 
         // ---------------------------------------------------------------- the landing
@@ -270,7 +274,7 @@ namespace Zerks.Game
             time += dt;
             var s = c.S;
             UpdateLanding(dt);
-            NightK = Mathf.MoveTowards(NightK, NightTarget(c), dt * 0.5f);
+            NightK = ForceNight >= 0 ? ForceNight : Mathf.MoveTowards(NightK, NightTarget(c), dt * 0.5f);
             Lighting();
 
             foreach (var kv in Views)
@@ -281,24 +285,14 @@ namespace Zerks.Game
             }
             for (int i = 0; i < nightPools.Count; i++) nightPools[i].SetFloat("_Alpha", 0.28f * NightK);
 
-            // Zones open with their research: the dust settles.
-            if (s.Zone >= 1 && dustOpen1 < 0) dustOpen1 = time;
-            if (s.Zone >= 2 && dustOpen2 < 0) dustOpen2 = time;
+            // Zones open with their research: the dust settles, the ground under the plots is made flat, the plots show.
             foreach (var (zone, g) in zoneThings)
                 if (zone > 0 && zone <= s.Zone && !g.activeSelf) g.SetActive(true);
-            foreach (var (zone, r, m, a) in dust)
-            {
-                var opened = zone == 1 ? dustOpen1 : zone == 2 ? dustOpen2 : -1;
-                if (opened < 0)
-                {
-                    m.SetFloat("_Alpha", a * (1 - 0.35f * NightK));
-                    m.SetColor("_Color", Color.Lerp(Look.Dust, Look.NightBounce, NightK * 0.85f));
-                    continue;
-                }
-                var k = Mathf.Clamp01((time - opened) / 2.5f);
-                m.SetFloat("_Alpha", a * (1 - k));
-                if (k >= 1 && r.gameObject.activeSelf) r.gameObject.SetActive(false);
-            }
+            Land.SetZone(s.Zone);
+            Land.Sync(dt, NightK);
+            // a box on the channel at every building that stands (or is being printed), and always at the Ark
+            foreach (var kv in Land.Kerbs)
+                if (kv.Key != "ark" && Views.TryGetValue(kv.Key, out var bv) && kv.Value.activeSelf != bv.Visible) kv.Value.SetActive(bv.Visible);
 
             // Debris over the research station.
             if (s.DebrisCleared && debris.activeSelf)
@@ -377,7 +371,8 @@ namespace Zerks.Game
                 var col = s.Colonists[i];
                 if (!People.TryGetValue(col.Id, out var f))
                 {
-                    f = Figure.Make(transform, Look.Suits[i % Look.Suits.Length], col.Name);
+                    // the look comes from the name and the profession (looks.json, a proposal)
+                    f = Figure.Make(transform, Zerks.Game.People.Looks.For(col.Name, col.Profession), col.Name);
                     f.ColonistId = col.Id;
                     f.transform.position = Look.ArkAt + new Vector3(-8, 0, 8); // out of the pod, down the ramp
                     People[col.Id] = f;

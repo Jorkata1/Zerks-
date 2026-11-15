@@ -21,6 +21,8 @@ namespace Zerks.Game
         static readonly Dictionary<string, float> Fixed = new Dictionary<string, float>
         {
             ["research"] = 4.3f, ["home"] = 4.3f, ["ark"] = 4.15f, ["drone"] = 1.1f * 4.15f,
+            // the people and ECHO (art/3d/characters): real metres times 1.4 and 2.4, as on the mockup (a proposal)
+            ["colonist"] = People.PersonScale, ["echo"] = People.EchoScale,
         };
 
         /// <summary>The model whose size sets the scale of a family (drill-1, drill-10, drill-20 share drill's).</summary>

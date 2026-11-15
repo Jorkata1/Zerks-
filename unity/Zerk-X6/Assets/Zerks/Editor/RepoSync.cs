@@ -5,8 +5,9 @@ using UnityEngine;
 namespace Zerks.EditorTools
 {
     /// <summary>
-    /// Copies what the game needs from the rest of the repo: the GLB models of art/3d/buildings (a copy that is not
-    /// committed, docs/unity-plan.md step 7: whether to move them is Joro's decision) and docs/balance/balance.json.
+    /// Copies what the game needs from the rest of the repo: the GLB models of art/3d/buildings and of
+    /// art/3d/characters with looks.json (a copy that is not committed, docs/unity-plan.md step 7: whether to move
+    /// them is Joro's decision) and docs/balance/balance.json.
     /// Runs by itself when the models are missing, and from the menu Zerks > Sync from repo.
     /// </summary>
     [InitializeOnLoad]
@@ -21,7 +22,8 @@ namespace Zerks.EditorTools
         {
             EditorApplication.delayCall += () =>
             {
-                if (!Directory.Exists(ModelsDir) || Directory.GetFiles(ModelsDir, "*.glb").Length == 0) Sync();
+                if (!Directory.Exists(ModelsDir) || Directory.GetFiles(ModelsDir, "*.glb").Length == 0
+                    || !File.Exists(Path.Combine(ModelsDir, "colonist.glb")) || !File.Exists(Path.Combine(ModelsDir, "looks.json"))) Sync();
             };
         }
 
@@ -36,12 +38,24 @@ namespace Zerks.EditorTools
             }
             Directory.CreateDirectory(ModelsDir);
             int n = 0;
-            foreach (var f in Directory.GetFiles(src, "*.glb"))
+            // The buildings, then the people and ECHO (Joro, 14.11.2026: "A and ECHO 2").
+            var people = Path.Combine(RepoRoot, "art", "3d", "characters");
+            var files = new System.Collections.Generic.List<string>(Directory.GetFiles(src, "*.glb"));
+            if (Directory.Exists(people)) files.AddRange(Directory.GetFiles(people, "*.glb"));
+            foreach (var f in files)
             {
                 var dst = Path.Combine(ModelsDir, Path.GetFileName(f));
                 if (File.Exists(dst) && File.GetLastWriteTimeUtc(dst) >= File.GetLastWriteTimeUtc(f)) continue;
                 File.Copy(f, dst, true);
                 n++;
+            }
+            // How each person looks (a proposal): written with LF, as balance.json below.
+            var looks = Path.Combine(people, "looks.json");
+            var looksDst = Path.Combine(ModelsDir, "looks.json");
+            if (File.Exists(looks))
+            {
+                var text = File.ReadAllText(looks).Replace("\r\n", "\n");
+                if (!File.Exists(looksDst) || File.ReadAllText(looksDst) != text) { File.WriteAllText(looksDst, text); n++; }
             }
             // balance.json is compared and written with LF line endings: on Windows git checks docs/ out with CRLF,
             // and a plain copy would show the Unity copy as changed on every sync (docs/unity-plan.md, Windows).

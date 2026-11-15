@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Zerks.Sim;
 
 namespace Zerks.Game
 {
@@ -83,6 +84,8 @@ namespace Zerks.Game
     {
         public Vector3 Park;
         public Vector3[] Route;
+        /// <summary>The height of the ground under a point (the canyon's relief), or null for flat ground.</summary>
+        public System.Func<Vector3, float> Ground;
         GameObject body, fullLight;
         float along;
 
@@ -119,6 +122,7 @@ namespace Zerks.Game
             var p = Along(s);
             var dir = Along(Mathf.Min(1, s + 0.01f)) - p;
             if (trip > 0.7f) dir = -dir;
+            if (Ground != null) p.y = Ground(p);
             transform.position = p;
             if (dir.sqrMagnitude > 1e-4f) transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(dir), 8 * Time.deltaTime);
         }
@@ -139,7 +143,10 @@ namespace Zerks.Game
         }
     }
 
-    /// <summary>A person in a suit (simple shapes until Joro's models are ready, 13.11.2026), walking on the streets.</summary>
+    /// <summary>
+    /// A person in a suit with the glass helmet (art/3d/characters/colonist.glb, Joro 14.11.2026), walking on the
+    /// streets. The simple shapes of 13.11.2026 stay only as a fallback when the model has not been synced.
+    /// </summary>
     public sealed class Figure : MonoBehaviour
     {
         readonly Queue<Vector3> path = new Queue<Vector3>();
@@ -148,6 +155,32 @@ namespace Zerks.Game
         public float Speed = 3.2f;
         public bool Walking => path.Count > 0;
         public int ColonistId;
+
+        /// <summary>A person as looks.json describes them (the Commander has the profession "commander").</summary>
+        public static Figure Make(Transform parent, PersonLook look, string name)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            var model = People.Person(go.transform, look);
+            if (model == null)
+            {
+                Object.Destroy(go);
+                var accent = People.Looks.Accent.TryGetValue(look.Profession, out var hex) && ColorUtility.TryParseHtmlString(hex, out var c) ? c : Look.Orange;
+                return Make(parent, accent, name, look.Profession == "commander" ? 1.05f : 1);
+            }
+            var f = go.AddComponent<Figure>();
+            f.bodyT = model.transform.GetChild(0); // the model under its holder: it bobs while walking
+            f.armL = People.Find(model, "arm_l"); f.armR = People.Find(model, "arm_r");
+            f.legL = People.Find(model, "leg_l"); f.legR = People.Find(model, "leg_r");
+            f.bob = 0.05f;
+            var col = go.AddComponent<CapsuleCollider>();
+            col.center = new Vector3(0, 1.3f, 0); col.height = 3; col.radius = 0.9f;
+            return f;
+        }
+
+        float bob = 0.06f;
+        Vector3 bodyRest;
+        bool rested;
 
         public static Figure Make(Transform parent, Color suit, string name, float scale = 1)
         {
@@ -216,23 +249,43 @@ namespace Zerks.Game
                 if (armR) armR.localRotation = Quaternion.Euler(0, 0, 150 + Mathf.Sin(wave * 14) * 20);
             }
             else if (armR) armR.localRotation = Quaternion.Euler(sw * 0.7f, 0, 0);
-            if (bodyT) bodyT.localPosition = new Vector3(0, Mathf.Abs(Mathf.Sin(walk)) * 0.06f, 0);
+            if (bodyT)
+            {
+                if (!rested) { bodyRest = bodyT.localPosition; rested = true; }
+                bodyT.localPosition = bodyRest + new Vector3(0, Mathf.Abs(Mathf.Sin(walk)) * bob, 0);
+            }
         }
     }
 
-    /// <summary>ECHO, the little guide robot (simple shapes for now): floats where it points.</summary>
+    /// <summary>
+    /// ECHO (art/3d/characters/echo.glb, Joro 14.11.2026: "ECHO 2", the two fans): floats where it points, the fans
+    /// spin and the eyes blink. The simple shapes stay only as a fallback when the model has not been synced.
+    /// </summary>
     public sealed class EchoBot : MonoBehaviour
     {
         public Vector3 Goal;
         Vector3 vel;
         Material eye;
         float t;
+        Transform rotorL, rotorR, eyeL, eyeR;
+        float blinkIn = 2.5f, blink;
 
         public static EchoBot Make(Transform parent)
         {
             var go = new GameObject("echo");
             go.transform.SetParent(parent, false);
             var e = go.AddComponent<EchoBot>();
+            var model = People.Echo(go.transform);
+            if (model != null)
+            {
+                // the holder's origin is at its feet: lift it so the transform is the middle of the body, as before
+                model.transform.localPosition = new Vector3(0, -0.8f, 0);
+                e.rotorL = People.Find(model, "rotor_l"); e.rotorR = People.Find(model, "rotor_r");
+                e.eyeL = People.Find(model, "eye_l"); e.eyeR = People.Find(model, "eye_r");
+                var sc = go.AddComponent<SphereCollider>();
+                sc.radius = 1.6f;
+                return e;
+            }
             var cream = Look.Lit(Look.Cream, 0.4f);
             Look.Prim(PrimitiveType.Sphere, go.transform, Vector3.zero, Vector3.one * 1.6f, cream);
             Look.Prim(PrimitiveType.Cylinder, go.transform, new Vector3(0, -0.05f, 0), new Vector3(1.75f, 0.08f, 1.75f), Look.Lit(Look.Orange));
@@ -250,6 +303,18 @@ namespace Zerks.Game
             t += Time.deltaTime;
             var g = Goal + new Vector3(0, Mathf.Sin(t * 2.2f) * 0.35f, 0);
             transform.position = Vector3.SmoothDamp(transform.position, g, ref vel, 0.6f, 30);
+            // The fans spin the other way from each other; the eyes blink now and then.
+            if (rotorL) rotorL.localRotation = Quaternion.Euler(0, t * 1500f, 0);
+            if (rotorR) rotorR.localRotation = Quaternion.Euler(0, -t * 1500f, 0);
+            if (eyeL)
+            {
+                blinkIn -= Time.deltaTime;
+                if (blinkIn <= 0) { blink = 0.16f; blinkIn = 2.5f + Random.value * 3.5f; }
+                blink = Mathf.Max(0, blink - Time.deltaTime);
+                var sy = blink > 0 ? Mathf.Lerp(1, 0.12f, Mathf.Sin(blink / 0.16f * Mathf.PI)) : 1;
+                eyeL.localScale = new Vector3(1, sy, 1);
+                eyeR.localScale = new Vector3(1, sy, 1);
+            }
             var cam = Camera.main;
             if (cam != null)
             {

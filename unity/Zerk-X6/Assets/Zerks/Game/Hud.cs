@@ -37,8 +37,13 @@ namespace Zerks.Game
 
         static readonly Dictionary<Res, Color> ResColor = new Dictionary<Res, Color>
         {
-            [Res.Carbon] = Look.Hex(0x2e2c33), [Res.Water] = Look.Hex(0x3fa7ff), [Res.Stone] = Look.Hex(0xb9643f),
-            [Res.Food] = Look.Hex(0x5fbf47), [Res.Quartz] = Look.Hex(0xb79cff), [Res.Silicon] = Look.Hex(0x6b7fa8), [Res.Iron] = Look.Hex(0x9a4a3a),
+            [Res.Carbon] = Look.Hex(0x3a3540), [Res.Water] = Look.Hex(0x4aa8ff), [Res.Stone] = Look.Hex(0xc98b55),
+            [Res.Food] = Look.Hex(0x6cc94f), [Res.Quartz] = Look.Hex(0xb79cff), [Res.Silicon] = Look.Hex(0x5f7fb8), [Res.Iron] = Look.Hex(0xb5563a),
+        };
+        /// <summary>The icon of each resource (Resources/UI/Icons, drawn from mockup/menus.html).</summary>
+        static readonly Dictionary<Res, string> ResIcon = new Dictionary<Res, string>
+        {
+            [Res.Carbon] = "carbon", [Res.Water] = "water", [Res.Stone] = "stone", [Res.Food] = "food", [Res.Quartz] = "quartz", [Res.Silicon] = "silicon", [Res.Iron] = "iron",
         };
         static readonly Dictionary<Res, string> ResShort = new Dictionary<Res, string>
         {
@@ -54,8 +59,16 @@ namespace Zerks.Game
             root.styleSheets.Add(Resources.Load<StyleSheet>("UI/Zerks"));
             root.AddToClassList("root");
             root.pickingMode = PickingMode.Ignore;
-            var font = Resources.Load<Font>("Fonts/Roboto-Medium");
-            if (font != null) root.style.unityFontDefinition = new StyleFontDefinition(FontDefinition.FromFont(font));
+            // Nunito, the rounded font of the friendly look (mockup/menus.html; a proposal of 14.11.2026)
+            var font = Resources.Load<Font>("Fonts/Nunito-800");
+            var spare = Resources.Load<Font>("Fonts/Roboto-Medium");
+            if (font != null)
+            {
+                // Nunito here has only the Latin letters: arrows, stars and crosses come from Roboto
+                var fa = UnityEngine.TextCore.Text.FontAsset.CreateFontAsset(font);
+                if (spare != null) fa.fallbackFontAssetTable = new List<UnityEngine.TextCore.Text.FontAsset> { UnityEngine.TextCore.Text.FontAsset.CreateFontAsset(spare) };
+                root.style.unityFontDefinition = new StyleFontDefinition(FontDefinition.FromSDFFont(fa));
+            }
 
             tagLayer = Layer("tags");
             BuildTop();
@@ -109,6 +122,18 @@ namespace Zerks.Game
             return v;
         }
 
+        /// <summary>A round badge in a colour with a white icon on it (the icons of mockup/menus.html).</summary>
+        static VisualElement Icon(string icon, Color? bg, string cls)
+        {
+            var c = Row(cls);
+            c.AddToClassList("ic");
+            if (bg.HasValue) c.style.backgroundColor = bg.Value;
+            var tex = Resources.Load<Texture2D>("UI/Icons/" + icon);
+            if (tex != null) c.style.backgroundImage = new StyleBackground(tex);
+            c.pickingMode = PickingMode.Ignore;
+            return c;
+        }
+
         static VisualElement Bar(float k, Color? color = null)
         {
             var bar = Row("bar");
@@ -134,62 +159,69 @@ namespace Zerks.Game
 
         // ================================================================ top bar
 
+        // The top of the screen in the friendly look (mockup/menus.html, a proposal of 14.11.2026): the level of the Ark
+        // in a big orange circle with the word ARK under it and the people awake below, the air as a bar with a leaf,
+        // and the resources in round badges, four to a row.
         void BuildTop()
         {
             top = Row("top");
             top.pickingMode = PickingMode.Ignore;
             root.Add(top);
-            var row = Row("top-row");
-            row.pickingMode = PickingMode.Ignore;
-            top.Add(row);
-            airBlock = new VisualElement();
-            airBlock.AddToClassList("air");
-            airBlock.Add(L("AIR", "air-label"));
-            airValue = L("7%", "air-value");
-            airBlock.Add(airValue);
-            var bar = Row("air-bar");
-            airFill = Row("air-fill");
+            var ark = Row("ark");
+            arkBadge = L("1", "ark-c");
+            ark.Add(arkBadge);
+            ark.Add(L("ARK", "ark-t"));
+            ark.AddManipulator(new Clickable(() => Open("ark")));
+            top.Add(ark);
+            colonistChip = Row("pill s crew");
+            colonistChip.Add(Icon("person", Look.Hex(0x8f6cff), "pill-ic small"));
+            colonistText = L("", "pill-text");
+            colonistChip.Add(colonistText);
+            colonistChip.AddManipulator(new Clickable(() => Open("colonists")));
+            top.Add(colonistChip);
+            airBlock = Row("atm");
+            airBlock.Add(Icon("leaf", Look.Hex(0x22c19b), "atm-ic"));
+            var bar = Row("atm-bar");
+            airFill = Row("atm-fill");
             bar.Add(airFill);
             airBlock.Add(bar);
+            airValue = L("7%", "atm-v");
+            airBlock.Add(airValue);
+            airNext = L("", "atm-next");
+            airBlock.Add(airNext);
             airBlock.AddManipulator(new Clickable(AirInfo));
-            row.Add(airBlock);
-            chipsRow = Row("chips");
+            top.Add(airBlock);
+            chipsRow = Row("res");
             chipsRow.pickingMode = PickingMode.Ignore;
-            row.Add(chipsRow);
-            arkBadge = L("ARK 1", "ark-badge");
-            arkBadge.AddManipulator(new Clickable(() => Open("ark")));
-            chipsRow.Add(arkBadge);
+            var row2 = Row("res res2");
+            row2.pickingMode = PickingMode.Ignore;
+            top.Add(chipsRow);
+            top.Add(row2);
             foreach (var r in ResInfo.All)
             {
-                var chip = Row("chip");
-                var dot = L(ResShort[r], "chip-dot");
-                dot.style.backgroundColor = ResColor[r];
-                var text = L("0", "chip-text");
-                var cap = L("", "chip-cap");
-                chip.Add(dot); chip.Add(text); chip.Add(cap);
+                var second = r == Res.Quartz || r == Res.Silicon || r == Res.Iron;
+                var chip = Row(second ? "pill s" : "pill");
+                chip.Add(Icon(ResIcon[r], ResColor[r], second ? "pill-ic small" : "pill-ic"));
+                var text = L("0", "pill-text");
+                var cap = L("", "pill-cap");
+                chip.Add(text); chip.Add(cap);
                 var res = r;
                 chip.AddManipulator(new Clickable(() => ResInfoModal(res)));
-                chipsRow.Add(chip);
+                (second ? row2 : chipsRow).Add(chip);
                 chips[r] = (chip, text, cap);
             }
-            energyChip = Row("chip");
-            var ed = L("kW", "chip-dot");
-            ed.style.backgroundColor = Look.Hex(0xffb21a);
-            energyText = L("", "chip-text");
+            energyChip = Row("pill s wide");
+            energyChip.Add(Icon("bolt", Look.Hex(0xffb020), "pill-ic small"));
+            energyText = L("", "pill-text");
             var bat = Row("battery");
             batteryFill = Row("battery-fill");
             bat.Add(batteryFill);
-            energyChip.Add(ed); energyChip.Add(energyText); energyChip.Add(bat);
+            energyChip.Add(energyText); energyChip.Add(bat);
             energyChip.AddManipulator(new Clickable(PowerInfo));
-            chipsRow.Add(energyChip);
-            colonistChip = Row("chip");
-            var cd = L("P", "chip-dot");
-            cd.style.backgroundColor = Look.Hex(0x9a7cff);
-            colonistText = L("", "chip-text");
-            colonistChip.Add(cd); colonistChip.Add(colonistText);
-            colonistChip.AddManipulator(new Clickable(() => Open("colonists")));
-            chipsRow.Add(colonistChip);
+            row2.Add(energyChip);
         }
+
+        Label airNext;
 
         void RefreshTop()
         {
@@ -197,8 +229,10 @@ namespace Zerks.Game
             var shown = s.Has("geolocator") || !C.InTutorial;
             airBlock.style.display = shown ? DisplayStyle.Flex : DisplayStyle.None;
             airValue.text = $"{s.Atmo}%";
+            var next = C.NextReq;
+            airNext.text = next != null && next.Atmo > 0 ? $"/ {next.Atmo}%" : "";
             airFill.style.width = Length.Percent((float)Math.Min(1, s.Air / G.Colony.Bal.AirFor(s.Atmo)) * 100);
-            arkBadge.text = $"ARK {s.Ark}";
+            arkBadge.text = $"{s.Ark}";
             var cap = C.Capacity;
             foreach (var r in ResInfo.All)
             {
@@ -220,7 +254,8 @@ namespace Zerks.Game
                 chip.EnableInClassList("full", s.Stock[r] >= cap - 0.5);
             }
             energyChip.style.display = s.Ark >= 5 || s.Has("solar") ? DisplayStyle.Flex : DisplayStyle.None;
-            energyText.text = $"{C.EnergySupply:0}/{C.EnergyDemand:0}";
+            var spare = C.EnergySupply - C.EnergyDemand;
+            energyText.text = spare >= 0 ? $"+{spare:0}" : $"{spare:0}";
             energyChip.EnableInClassList("energy-ok", C.EnergyRatio >= 0.999);
             energyChip.EnableInClassList("energy-short", C.EnergyRatio < 0.999);
             var bc = C.BatteryCapacity;
@@ -232,30 +267,25 @@ namespace Zerks.Game
 
         // ================================================================ bottom bar
 
+        // The bar at the bottom (mockup/menus.html): Colonists, Research, the big Build in the middle, Map, Goals.
         void BuildBottom()
         {
-            bottom = Row("bottom");
-            bottom.pickingMode = PickingMode.Ignore;
+            bottom = Row("dock");
             root.Add(bottom);
-            bBuild = Nav("+", "Build", () => Open("build"));
-            bColonists = Nav("P", "Colonists", () => Open("colonists"));
-            bResearch = Nav("R", "Research", () => Open("research"));
-            bMap = Nav("M", "Map", () => Open("map"));
-            bGoals = Nav("", "Goals", () => { GoalsNew = false; Open("goals"); });
-            bGoals.AddToClassList("nav-echo");
-            var eye = new VisualElement();
-            eye.AddToClassList("echo-eye");
-            bGoals.Q(className: "nav-icon").Add(eye);
+            bColonists = Nav("people", Look.Hex(0x8f6cff), "Colonists", () => Open("colonists"));
+            bResearch = Nav("flask", Look.Hex(0x4aa8ff), "Research", () => Open("research"));
+            bBuild = Nav("hammer", Look.Hex(0xff8b3d), "Build", () => Open("build"), true);
+            bMap = Nav("map", Look.Hex(0xc98b55), "Map", () => Open("map"));
+            bGoals = Nav("echo", Look.Hex(0x22c19b), "Goals", () => { GoalsNew = false; Open("goals"); });
         }
 
-        Button Nav(string icon, string label, Action click)
+        Button Nav(string icon, Color bg, string label, Action click, bool big = false)
         {
             var b = new Button(click);
-            b.AddToClassList("nav");
-            var i = L(icon, "nav-icon");
-            i.style.alignItems = Align.Center; i.style.justifyContent = Justify.Center;
-            b.Add(i);
-            b.Add(L(label, "nav-label"));
+            b.AddToClassList(big ? "build" : "db");
+            b.Add(Icon(icon, bg, big ? "build-c" : "db-c"));
+            b.Add(L(label, big ? "build-l" : "db-l"));
+            if (!big) { var dot = L("!", "db-dot"); dot.pickingMode = PickingMode.Ignore; b.Add(dot); }
             bottom.Add(b);
             return b;
         }
@@ -269,6 +299,7 @@ namespace Zerks.Game
             Show(bGoals, s.Ark >= 2);
             Show(bColonists, s.Ark >= 3);
             Show(bMap, s.Zone >= 1 || s.Ark >= 4);
+            Show(bottom, s.DebrisCleared || s.Ark >= 2);
             bGoals.EnableInClassList("glow", GoalsNew);
             bResearch.EnableInClassList("glow", s.DebrisCleared && s.Running.Count < C.ResearchSlots && Content.Research.Any(r => C.WhyNotResearch(r.Id) == ""));
             bBuild.EnableInClassList("glow", !C.InTutorial && Content.Buildings.Any(d => C.WhyNotBuild(d.Id, out _) == ""));
@@ -278,17 +309,16 @@ namespace Zerks.Game
 
         // ================================================================ ECHO
 
+        // ECHO speaks in a card over the bar at the bottom, with its face and its name (mockup/menus.html).
         void BuildEcho()
         {
-            echoBox = Row("echo");
-            var face = new VisualElement();
-            face.AddToClassList("echo-face");
-            var eye = new VisualElement();
-            eye.AddToClassList("echo-eye");
-            face.Add(eye);
-            echoBox.Add(face);
-            echoText = L("", "echo-text");
-            echoBox.Add(echoText);
+            echoBox = Row("echo-card");
+            echoBox.Add(Icon("echo", Look.Hex(0xeaf7ff), "who"));
+            var col = Row("bubble-col");
+            col.Add(L("ECHO", "bubble-nm"));
+            echoText = L("", "bubble-text");
+            col.Add(echoText);
+            echoBox.Add(col);
             echoBox.AddManipulator(new Clickable(() => { echoLeft = 0; }));
             echoBox.style.display = DisplayStyle.None;
             root.Add(echoBox);
@@ -359,9 +389,10 @@ namespace Zerks.Game
             if (Mathf.Abs(t - safeTop) > 0.5f || Mathf.Abs(b - safeBottom) > 0.5f)
             {
                 safeTop = t; safeBottom = b;
-                top.style.top = 6 + t;
-                bottom.style.bottom = 8 + b;
-                echoBox.style.bottom = 76 + b;
+                // the mockup's places are under the phone's status bar and above its home bar
+                top.style.top = Mathf.Max(t, 10);
+                bottom.style.bottom = 8 + b * 0.5f;
+                echoBox.style.bottom = 122 + b * 0.5f;
             }
         }
 
@@ -394,7 +425,7 @@ namespace Zerks.Game
             return RuntimePanelUtils.CameraTransformWorldToPanel(root.panel, world, G.Rig.Cam);
         }
 
-        VisualElement Tag(string key, string text, string cls, Vector3 world, Action click, float progress = -1, Color? dot = null)
+        VisualElement Tag(string key, string text, string cls, Vector3 world, Action click, float progress = -1, Color? dot = null, string icon = null)
         {
             tagsSeen.Add(key);
             if (!tags.TryGetValue(key, out var t))
@@ -404,8 +435,9 @@ namespace Zerks.Game
                 foreach (var c in cls.Split(' ')) t.AddToClassList(c);
                 if (dot.HasValue)
                 {
-                    var d = L("", "chip-dot");
+                    var d = L("", "tag-ic");
                     d.name = "dot";
+                    if (icon != null) { var tex = Resources.Load<Texture2D>("UI/Icons/" + icon); if (tex != null) d.style.backgroundImage = new StyleBackground(tex); }
                     t.Add(d);
                 }
                 t.Add(L(text, "tag-text"));
@@ -461,7 +493,7 @@ namespace Zerks.Game
                     if (best.amount >= 1)
                     {
                         var id = b.Id;
-                        Tag("b" + b.Id, $"+{Fmt.Num(best.amount)}", "bubble", top, () => Collect(id), -1, ResColor[best.res]);
+                        Tag("b" + b.Id, $"+{Fmt.Num(best.amount)}", "bubble", top, () => Collect(id), -1, ResColor[best.res], ResIcon[best.res]);
                     }
                 }
                 var arkTop = Look.ArkAt + Vector3.up * 36;
@@ -547,10 +579,20 @@ namespace Zerks.Game
             sheetEl = new VisualElement();
             sheetEl.AddToClassList("sheet");
             sheetLayer.Add(sheetEl);
+            sheetEl.Add(Row("grab"));
             var head = Row("sheet-head");
+            var (hicon, hbg) = sheet switch
+            {
+                "build" => ("hammer", 0xff8b3d), "research" => ("flask", 0x4aa8ff), "colonists" => ("people", 0x8f6cff),
+                "map" => ("map", 0xc98b55), "goals" => ("echo", 0x22c19b), _ => (null, 0),
+            };
+            if (hicon != null) head.Add(Icon(hicon, Look.Hex((uint)hbg), "hi"));
             var title = L("", "sheet-title");
             head.Add(title);
-            head.Add(B("✕", Close, "close"));
+            var x = B("", Close, "close");
+            var xt = Resources.Load<Texture2D>("UI/Icons/close");
+            if (xt != null) x.style.backgroundImage = new StyleBackground(xt);
+            head.Add(x);
             sheetEl.Add(head);
             var body = new ScrollView(ScrollViewMode.Vertical);
             body.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
@@ -652,7 +694,7 @@ namespace Zerks.Game
                             foreach (var mat in Content.MineMaterials(b.Level))
                             {
                                 var m = mat;
-                                picks.Add(B(ResInfo.Name(mat), () => C.SetDig(slot, m), b.Dig[i] == mat ? "btn small picked" : "btn small"));
+                                picks.Add(B(ResInfo.Name(mat), () => C.SetDig(slot, m), b.Dig[i] == mat ? "btn small choice picked" : "btn small choice"));
                             }
                             body.Add(picks);
                         }
@@ -674,7 +716,7 @@ namespace Zerks.Game
                 {
                     var cr = crop;
                     var can = b.Level >= crop.LabLevel;
-                    picks.Add(B(can ? crop.Name : $"{crop.Name} (lab {crop.LabLevel})", () => C.SetCrop(cr.Id), s.Crop == crop.Id ? "btn small picked" : "btn small", can));
+                    picks.Add(B(can ? crop.Name : $"{crop.Name} (lab {crop.LabLevel})", () => C.SetCrop(cr.Id), s.Crop == crop.Id ? "btn small choice picked" : "btn small choice", can));
                 }
                 body.Add(picks);
                 body.Add(L(Content.Crops.First(x => x.Id == s.Crop).About, "muted"));
@@ -958,7 +1000,7 @@ namespace Zerks.Game
             var s = C.S;
             body.Add(L($"Tempo x{C.Cfg.Tempo:0} · game time {s.GameTime / 3600:0.0} h · auto-play {(G.Auto ? "on" : "off")}", "sheet-sub"));
             var tempo = Row();
-            foreach (var t in new[] { 1, 10, 60, 600 }) { var tt = t; tempo.Add(B($"x{t}", () => { G.SetTempo(tt); RebuildSheet(); }, C.Cfg.Tempo == t ? "btn small picked" : "btn small")); }
+            foreach (var t in new[] { 1, 10, 60, 600 }) { var tt = t; tempo.Add(B($"x{t}", () => { G.SetTempo(tt); RebuildSheet(); }, C.Cfg.Tempo == t ? "btn small choice picked" : "btn small choice")); }
             body.Add(L("SPEED", "section")); body.Add(tempo);
             body.Add(L("PLAY", "section"));
             var row = Row();
