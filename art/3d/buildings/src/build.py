@@ -2048,7 +2048,7 @@ def b_dock(p, stage):
 #    the ship we came in, standing upright on four legs where it landed. All 100 colonists are aboard, in four pod decks
 #    of 25 behind glass round a column that brings the pods power and cold; at level 10 ten pods are open (those people
 #    are awake), the next one in the row glows (it has power, its sleeper is next) and the rest are dark (docs/levels.md).
-#    Below the decks: the reactor with its two radiators, the airlock with the lift down to the ground, the hold with the
+#    Below the decks: the reactor, the airlock with the lift down to the ground, the hold with the
 #    cargo hatch, the crane and the containers. Above: the bridge with searchlights round it, the drone's balcony with
 #    its hatch, and the orange top of a lifeboat with reflective tape and a beacon. About 33 m high at 4.15 m a unit.
 #    The parked drone is its own mesh ('parked_drone') and an empty marks its pad ('drone_pad'), so the build sequence
@@ -2283,9 +2283,7 @@ def b_ark(p, dish_state='folded'):
         tube([(side, ly - 0.04, 0.36), (side, ly - 0.46, 0.36), (sx * 0.1, ly - 0.46, 0.36)], 0.016, p['orange'])
         for py in (ly - 0.04, ly - 0.46):
             cyl(0.014, 0.31, p['char'], (side, py, 0.05), bev=0.005)
-    # the radiators of the reactor, out to the two sides
-    for a in (45, 225):
-        radiator(p, D2R(a), R + 0.14, R + 0.82, 1.35, 2.6, [(1.5, R + 0.16), (2.35, R + 0.16)])
+    # no radiators on the sides of the reactor: Joro took them off (15.11.2026)
     # the crane over the cargo hatch, a container on its hook, and the Ark's little store of containers beside it
     rbox(0.18, 0.18, 0.12, 0.035, p['char'], (R + 0.02, 0.0, 2.16))
     tube([(R + 0.07, 0.0, 2.23), (1.62, 0.0, 2.56), (2.22, 0.0, 2.56)], 0.045, p['orange'])
