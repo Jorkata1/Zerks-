@@ -18,6 +18,8 @@ Shader "Zerks/Ground"
         {
             Name "ForwardLit"
             Tags { "LightMode" = "UniversalForward" }
+            // not over the opening of a dug building (HoleMask.shader marks it)
+            Stencil { Ref 1 Comp NotEqual }
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag

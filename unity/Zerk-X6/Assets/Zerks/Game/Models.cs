@@ -21,6 +21,9 @@ namespace Zerks.Game
         static readonly Dictionary<string, float> Fixed = new Dictionary<string, float>
         {
             ["research"] = 4.3f, ["home"] = 4.3f, ["ark"] = 4.15f, ["drone"] = 1.1f * 4.15f,
+            // chapter 2, at the scales of stage 2 (game/src/view/layout.ts, level 20)
+            ["smelter"] = 4.15f, ["copperworks"] = 4.15f, ["claypit"] = 4.15f, ["kiln"] = 4.15f, ["dock"] = 4.15f,
+            ["brickhome"] = 4.5f, ["canteen"] = 4.5f,
             // the people and ECHO (art/3d/characters): real metres times 1.4 and 2.4, as on the mockup (a proposal)
             ["colonist"] = People.PersonScale, ["echo"] = People.EchoScale,
         };
@@ -74,8 +77,11 @@ namespace Zerks.Game
             return s;
         }
 
-        /// <summary>A copy of a model, standing on y = 0 and centred on its parent, at its family's scale.</summary>
-        public static GameObject Spawn(string model, string family, Transform parent)
+        /// <summary>
+        /// A copy of a model, standing on y = 0 and centred on its parent, at its family's scale. A dug model (the clay
+        /// pit) keeps its own ground at y = 0, with its pit below.
+        /// </summary>
+        public static GameObject Spawn(string model, string family, Transform parent, bool dug = false)
         {
             var prefab = Prefab(model);
             var holder = new GameObject(model);
@@ -93,7 +99,7 @@ namespace Zerks.Game
             var b = LocalBounds(prefab);
             var inst = Object.Instantiate(prefab, holder.transform, false);
             inst.transform.localScale = Vector3.one * scale;
-            inst.transform.localPosition = new Vector3(-b.center.x * scale, -b.min.y * scale, -b.center.z * scale);
+            inst.transform.localPosition = new Vector3(-b.center.x * scale, dug ? 0.02f : -b.min.y * scale, -b.center.z * scale);
             foreach (var r in inst.GetComponentsInChildren<Renderer>())
             {
                 r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;

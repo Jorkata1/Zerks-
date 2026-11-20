@@ -53,6 +53,7 @@ namespace Zerks.Sim
             Profession.Geologist => "geologist",
             Profession.Engineer => "engineer",
             Profession.Scientist => "scientist",
+            Profession.Builder => "builder",
             _ => "engineer",
         };
 

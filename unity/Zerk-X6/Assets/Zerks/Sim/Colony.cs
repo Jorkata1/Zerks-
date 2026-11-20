@@ -4,11 +4,13 @@ using System.Linq;
 
 namespace Zerks.Sim
 {
+    /// <summary>What happened in a step, for the screen. New kinds go at the end.</summary>
     public enum Ev
     {
         Echo, BuildStarted, Built, UpgradeStarted, Upgraded, Ready, Reprinted, ArkUpgradeStarted, ArkLevel,
         ResearchStarted, ResearchDone, Woken, RobotOut, RobotBack, Collected, NightFalls, DayBreaks, PowerShort,
         ZoneOpened, Sketch, Chapter1Done, TutorialStep, Debris, Impulse, AtmoUp,
+        DockOpened, FrameStarted, FrameDone, AntennaReady, AntennaFixed, Chapter2Done, GreenhouseSwitched,
     }
 
     public readonly struct GameEvent
@@ -47,6 +49,7 @@ namespace Zerks.Sim
 
     public sealed class SlotRef
     {
+        /// <summary>A building id, or "ark" for the builder's place in the Ark.</summary>
         public string Building;
         public int Slot;
         public Profession Profession;
@@ -55,8 +58,8 @@ namespace Zerks.Sim
     }
 
     /// <summary>
-    /// The colony of chapter 1: the rules of docs/levels.md and the numbers of docs/balance/balance.json.
-    /// No Unity here, so the whole chapter can be played in a test.
+    /// The colony of chapters 1 and 2: the rules of docs/levels.md and the numbers of docs/balance/balance.json.
+    /// No Unity here, so the whole game can be played in a test.
     /// </summary>
     public sealed class Colony
     {
@@ -78,6 +81,7 @@ namespace Zerks.Sim
         {
             Bal = bal;
             S = state ?? new GameState();
+            S.Fit();
             Cfg = cfg ?? new Settings();
             rng = new Random(S.NextColonistId * 7919 + (int)S.GameTime);
             EnsureResearchBuilding();
@@ -110,14 +114,15 @@ namespace Zerks.Sim
 
         public double Capacity => Content.ArkCapacity + Content.StoreCapacity(S.Level("warehouse"));
         public int Awake => S.Colonists.Count;
-        public int Beds => Content.Beds(S.Level("home"));
-        public int Seats => Content.Seats(S.Level("kitchen"));
+        public int Beds => Content.Beds(S.Level("home")) + Content.Beds(S.Level("brickhome"));
+        public int Seats => Content.Seats(S.Level("kitchen")) + Content.Seats(S.Level("canteen"));
         public int Pods => Content.PodsPowered(S.Ark);
         public bool DaysStarted => S.Ark >= 7;
         public double CycleMinutes => 20 * Cfg.CycleScale;
         public double NightMinutes => Bal.NightMin * Cfg.CycleScale;
         public bool IsDone(string research) => S.Done.Contains(research);
         public int ResearchSlots => S.ResearchUpgraded ? 2 : 1;
+        public int Chapter => S.Ark <= 10 ? 1 : S.Ark <= 20 ? 2 : 3;
 
         public bool Staffed(BuildingState b) => b.Workers.Any(w => w != 0);
 
@@ -128,11 +133,19 @@ namespace Zerks.Sim
 
         double HappyFactor(ColonistState c) => 0.9 + 0.2 * c.Happiness / 100.0;
 
+        /// <summary>The type a building is one of (the second greenhouse is a greenhouse).</summary>
+        public static string Kind(string id) => Content.Find(id)?.Kind ?? id;
+
+        public static bool IsGreenhouse(string id) => Kind(id) == "greenhouse";
+
+        /// <summary>Ark level on which a building can be built.</summary>
+        public int UnlockOf(BuildingDef def) => def.Unlock > 0 ? def.Unlock : Bal.B(def.Kind).Unlock;
+
         /// <summary>The highest level a building may be upgraded to now.</summary>
         public int MaxLevel(string id)
         {
             if (id == "research") return S.Ark >= 10 ? 2 : 1;
-            if (id == "home") return 20;
+            if (id == "home" || id == "brickhome") return 20; // a home's last level is 20 (levels.md)
             var store = S.Level("warehouse");
             var cap = (store > 0 ? store : S.Ark) + 5; // "at most 5 levels above the store" (levels.md, proposal)
             if (id == "warehouse") cap = S.Ark + 5;
@@ -141,11 +154,14 @@ namespace Zerks.Sim
             {
                 if (S.Ark < 9) cap = Math.Min(cap, 9);
                 else if (S.Ark < 14) cap = Math.Min(cap, 14);
+                else if (id == "mine" && S.Ark < 24) cap = Math.Min(cap, 19);
             }
+            if (IsGreenhouse(id) && S.Ark < 16) cap = Math.Min(cap, 15); // food from the greenhouse's level 16 wants the Ark on 16
+            if (id == "kitchen" || id == "canteen") cap = Math.Min(cap, 20); // the last level of a building for food
             return Math.Min(cap, 25);
         }
 
-        public BuildingRow Row(string id, int level) => Bal.B(id).Row(level);
+        public BuildingRow Row(string id, int level) => Bal.B(Kind(id)).Row(level);
 
         public Bag UpgradeCost(BuildingState b)
         {
@@ -153,11 +169,35 @@ namespace Zerks.Sim
             return Row(b.Id, b.Level).UpgradeCost;
         }
 
+        /// <summary>The builder at the console in the Ark (levels.md, level 13): -10% on builds and upgrades, up to -20% at five stars.</summary>
+        public double BuilderCut
+        {
+            get
+            {
+                var c = S.Builder != 0 ? S.Colonist(S.Builder) : null;
+                if (c == null) return 0;
+                var stars = Stars(c);
+                return stars <= 1 ? 0.10 : 0.10 + 0.025 * (stars - 1);
+            }
+        }
+
         public double UpgradeSeconds(BuildingState b)
         {
             var sec = b.Id == "research" ? Row("research", 10).UpgradeSeconds : Row(b.Id, b.Level).UpgradeSeconds;
             if (IsDone("short_upgrades")) sec *= 0.85;
+            sec *= 1 - BuilderCut;
             return Math.Max(sec, Cfg.MinUpgradeReal * Cfg.Tempo);
+        }
+
+        public double BuildSeconds(string id) => Math.Max(Bal.B(Kind(id)).BuildSeconds * (1 - BuilderCut), Cfg.MinBuildReal * Cfg.Tempo);
+
+        /// <summary>What printing a building costs: its paste, and the bricks and cables of the brick home and the canteen.</summary>
+        public Bag BuildCost(string id)
+        {
+            var cost = new Bag(Bal.B(Kind(id)).BuildCost);
+            var extra = Content.B(id).Extra;
+            if (extra != null) cost.Add(extra);
+            return cost;
         }
 
         public bool CanAfford(Bag cost)
@@ -184,7 +224,7 @@ namespace Zerks.Sim
         public string WhyNotBuild(string id, out int unlockLevel)
         {
             var def = Content.B(id);
-            unlockLevel = Bal.B(id).Unlock;
+            unlockLevel = UnlockOf(def);
             if (id == "research") return "Under the debris";
             if (S.Has(id) || (S.Get(id) != null && !S.Get(id).Built && S.Get(id).BuildTotal > 0)) return "Built";
             if (InTutorial)
@@ -200,10 +240,22 @@ namespace Zerks.Sim
                 return "Needs its blueprint (Research)";
             }
             if (def.MinAtmo > 0 && S.Atmo < def.MinAtmo) return $"Needs {def.MinAtmo}% air";
-            if (def.Zone > S.Zone) return "Under the dust: research Zone I expansion";
+            if (def.Zone > S.Zone) return def.Zone == 1 ? "Under the dust: research Zone I expansion" : "Under the dust: research Zone II expansion";
             if (Printing != null) return "The drone is busy";
-            if (!CanAfford(Bal.B(id).BuildCost)) return "Not enough resources";
+            if (!CanAfford(BuildCost(id))) return "Not enough resources";
             return "";
+        }
+
+        /// <summary>The one of a kind the build menu offers: the first that is not standing yet (or the last, when all stand).</summary>
+        public BuildingDef NextOfKind(string kind)
+        {
+            var all = Content.OfKind(kind).ToList();
+            foreach (var d in all)
+            {
+                var st = S.Get(d.Id);
+                if (st == null || (!st.Built && st.BuildTotal <= 0)) return d;
+            }
+            return all.Last();
         }
 
         public BuildingState Printing => S.Buildings.FirstOrDefault(b => !b.Built && b.BuildTotal > 0);
@@ -211,9 +263,8 @@ namespace Zerks.Sim
         public bool Build(string id)
         {
             if (WhyNotBuild(id, out _) != "") return false;
-            var bb = Bal.B(id);
-            Pay(bb.BuildCost);
-            var sec = Math.Max(bb.BuildSeconds, Cfg.MinBuildReal * Cfg.Tempo);
+            Pay(BuildCost(id));
+            var sec = BuildSeconds(id);
             var st = S.Get(id);
             if (st == null) { st = new BuildingState { Id = id }; S.Buildings.Add(st); }
             st.Built = false; st.Level = 0; st.BuildLeft = sec; st.BuildTotal = sec;
@@ -233,8 +284,12 @@ namespace Zerks.Sim
             if (b.Upgrading) return "Upgrading";
             if (b.Level >= MaxLevel(id))
             {
-                if ((id == "mine" || id == "veglab") && b.Level >= 9 && S.Ark < 9) return "The Ark must be on level 9";
+                if ((id == "mine" || id == "veglab") && b.Level == 9 && S.Ark < 9) return "The Ark must be on level 9";
+                if ((id == "mine" || id == "veglab") && b.Level == 14 && S.Ark < 14) return "The Ark must be on level 14";
+                if (id == "mine" && b.Level == 19 && S.Ark < 24) return "The Ark must be on level 24";
+                if (IsGreenhouse(id) && b.Level == 15 && S.Ark < 16) return "The Ark must be on level 16";
                 if (id == "research") return S.Ark < 10 ? "The Ark must be on level 10" : "Top level for now";
+                if ((id == "home" || id == "brickhome" || id == "kitchen" || id == "canteen") && b.Level >= 20) return "Its last level";
                 var store = S.Level("warehouse");
                 return store > 0 ? $"Needs the Store on level {b.Level - 4}" : $"Needs a Store (or the Ark on level {b.Level - 4})";
             }
@@ -262,11 +317,36 @@ namespace Zerks.Sim
             Emit(Ev.Reprinted, id);
         }
 
-        /// <summary>The model changes at this level (variants at 1, 10, 20; the mine becomes a shaft on 10; the research station on 2).</summary>
+        /// <summary>The model changes at this level (variants at 1, 10, 20; the mine becomes a shaft on 10; the research station on 2; a home's second floor on 11).</summary>
         static bool LooksDifferent(string id, int from, int to)
         {
             var def = Content.B(id);
-            return def.ModelFor(from) != def.ModelFor(to) || (id == "home" && from < 11 && to >= 11);
+            return def.ModelFor(from) != def.ModelFor(to) || ((id == "home" || id == "brickhome") && from < 11 && to >= 11);
+        }
+
+        // ---------- the greenhouses (levels.md, levels 16 and 17) ----------
+
+        /// <summary>From its level 16 a greenhouse can give food too: "air and food" is about 70% of the air plus food.</summary>
+        public bool CanGiveFood(BuildingState b) => b != null && b.Built && IsGreenhouse(b.Id) && b.Level >= 16;
+
+        /// <summary>Switch "air only" / "air and food". It takes hold after one cycle of the plants, about an hour.</summary>
+        public bool SetGreenhouseFood(string id, bool food)
+        {
+            var b = S.Get(id);
+            if (!CanGiveFood(b)) return false;
+            if (b.FoodWanted == food && (b.SwitchLeft > 0 || b.Food == food)) return true;
+            b.FoodWanted = food;
+            if (b.Food == food) { b.SwitchLeft = 0; return true; }
+            b.SwitchLeft = 60 * 60;
+            return true;
+        }
+
+        public bool SetSeedbed(string id, bool on)
+        {
+            var b = S.Get(id);
+            if (b == null || !b.Built || !IsGreenhouse(b.Id) || !IsDone("hardy_seedlings")) return false;
+            b.Seedbed = on;
+            return true;
         }
 
         // =====================================================================
@@ -285,6 +365,7 @@ namespace Zerks.Sim
             var prev = Content.Previous(r);
             if (prev != null && !IsDone(prev.Id)) return $"After \"{prev.Name}\"";
             if (S.Running.Count >= ResearchSlots) return "The station is busy";
+            if (r.Cost != null && !CanAfford(r.Cost)) return $"Needs {r.Cost}";
             return "";
         }
 
@@ -304,6 +385,8 @@ namespace Zerks.Sim
         public bool StartResearch(string id)
         {
             if (WhyNotResearch(id) != "") return false;
+            var r = Content.R(id);
+            if (r.Cost != null) Pay(r.Cost);
             var sec = ResearchSeconds(id);
             S.Running.Add(new ResearchRun { Id = id, Left = sec, Total = sec });
             Emit(Ev.ResearchStarted, id);
@@ -329,8 +412,72 @@ namespace Zerks.Sim
                 case "furnace_filter":
                     Echo("The filter is on the chimney. No more smoke.", "filter");
                     break;
+                case "smelter_filter":
+                    Echo("The smelter's filter is on. Steel, and no smoke.", "sfilter");
+                    break;
                 case "bp_mine": Echo("The mine's blueprint is ready. Build it in the canyon wall.", "bpmine"); break;
+                case "builder_console": Echo(Texts.Console, "console"); break;
+                case "hardy_seedlings": Echo(Texts.Seedbeds, "seedbeds"); break;
+                case "bp_brickhome": Echo(Texts.BrickHome, "bpbrick"); break;
+                case "antenna":
+                    S.AntennaReady = true;
+                    Emit(Ev.AntennaReady, "ark");
+                    Echo("The antenna is ready. Tap \"Ready\" over the Ark: the drone unfolds the dish.", "antready");
+                    break;
             }
+        }
+
+        // ---------- the antenna (levels.md, level 18) ----------
+
+        /// <summary>Tap on "Ready" over the Ark: the drone comes for a few seconds and the dish unfolds.</summary>
+        public bool FixAntenna()
+        {
+            if (!S.AntennaReady) return false;
+            S.AntennaReady = false;
+            S.AntennaFixed = true;
+            Emit(Ev.AntennaFixed, "ark");
+            Echo(Texts.AntennaFixed, "antfixed");
+            Echo(Texts.Signal, "signal");
+            return true;
+        }
+
+        /// <summary>With the antenna the robot goes where you send it: for carbon, stone or a speed-up (levels.md, level 18).</summary>
+        public bool SetRobotTarget(string target)
+        {
+            if (!S.AntennaFixed) return false;
+            if (target != "" && target != "carbon" && target != "stone" && target != "boost") return false;
+            S.RobotTarget = target;
+            return true;
+        }
+
+        // =====================================================================
+        // The dock and the frame (levels.md, "Строежът и корабът")
+        // =====================================================================
+
+        public bool DockOpen => S.Ark >= 12;
+        public FrameStage NextFrame => Content.Frame.FirstOrDefault(f => f.Stage == S.Frame + 1);
+
+        public string WhyNotFrame()
+        {
+            if (!DockOpen) return "The dock opens on level 12";
+            if (S.FrameLeft > 0) return "Building";
+            var f = NextFrame;
+            if (f == null) return "The frame is complete";
+            if (S.Ark < f.ArkLevel) return $"Stage {f.Stage} on level {f.ArkLevel}";
+            if (S.Stock[Res.Steel] + 1e-6 < f.Steel) return $"Needs {Fmt.Num(f.Steel)} steel";
+            return "";
+        }
+
+        /// <summary>The Ark's fabricator makes the parts from steel; its crane and the gantry crane set them. No drone, no builder's bonus.</summary>
+        public bool BuildFrame()
+        {
+            if (WhyNotFrame() != "") return false;
+            var f = NextFrame;
+            S.Stock[Res.Steel] -= f.Steel;
+            S.FrameTotal = S.FrameLeft = Math.Max(f.Minutes * 60, Cfg.MinBuildReal * Cfg.Tempo);
+            Emit(Ev.FrameStarted, f.Stage.ToString());
+            if (f.Stage == 1) Echo(Texts.FrameFirst, "frame1");
+            return true;
         }
 
         // =====================================================================
@@ -338,6 +485,21 @@ namespace Zerks.Sim
         // =====================================================================
 
         public LevelReq NextReq => Content.Requirements.TryGetValue(S.Ark + 1, out var r) ? r : null;
+
+        /// <summary>Every workplace there is now, and how many are taken (the builder's place in the Ark counts).</summary>
+        public (int taken, int all) Jobs()
+        {
+            int taken = 0, all = 0;
+            foreach (var b in S.Buildings)
+            {
+                if (!b.Built) continue;
+                var n = Content.Slots(b.Id, b.Level, S.ResearchUpgraded);
+                SyncSlots(b, n);
+                for (int i = 0; i < n; i++) { all++; if (b.Workers[i] != 0) taken++; }
+            }
+            if (IsDone("builder_console")) { all++; if (S.Builder != 0) taken++; }
+            return (taken, all);
+        }
 
         public List<ReqItem> Requirements()
         {
@@ -350,14 +512,26 @@ namespace Zerks.Sim
                 list.Add(new ReqItem($"{label} {Fmt.Num(a)}", S.Stock[r] + 1e-6 >= a, Fmt.Num(S.Stock[r])));
             }
             list.Add(new ReqItem($"Air {req.Atmo}%", S.Atmo >= req.Atmo, $"{S.Atmo}%"));
-            if (req.Colonists > 0) list.Add(new ReqItem($"Colonists awake {req.Colonists}", Awake >= req.Colonists, $"{Awake}"));
+            if (!req.ForEveryone && req.Colonists > 0) list.Add(new ReqItem($"Colonists awake {req.Colonists}", Awake >= req.Colonists, $"{Awake}"));
+            if (req.Store > 0) list.Add(new ReqItem($"Store level {req.Store}", S.Level("warehouse") >= req.Store, S.Has("warehouse") ? $"{S.Level("warehouse")}" : "not built"));
             foreach (var def in Content.Buildings)
             {
                 var need = Content.RequiredLevel(req, def.Id);
                 if (need <= 0) continue;
-                if (Bal.B(def.Id).Unlock > S.Ark) continue; // not on the map yet
-                list.Add(new ReqItem($"{def.Name} level {need}", S.Level(def.Id) >= need, S.Has(def.Id) ? $"{S.Level(def.Id)}" : "not built"));
+                if (UnlockOf(def) > S.Ark && !req.ForEveryone) continue; // not on the map yet
+                var name = def.Id == "greenhouse" && S.Has("greenhouse2") ? "First greenhouse" : def.Name;
+                list.Add(new ReqItem($"{name} level {need}{(def.Id == "mine" && req.MineCopper ? " (copper)" : "")}", S.Level(def.Id) >= need, S.Has(def.Id) ? $"{S.Level(def.Id)}" : "not built"));
             }
+            foreach (var id in req.Built) list.Add(new ReqItem($"{Content.B(id).Name} built", S.Has(id)));
+            if (req.Greenhouses > 0)
+            {
+                var n = Content.OfKind("greenhouse").Count(d => S.Has(d.Id));
+                list.Add(new ReqItem($"Greenhouses {req.Greenhouses}", n >= req.Greenhouses, $"{n}"));
+            }
+            if (req.GreenhouseFood) list.Add(new ReqItem("The first greenhouse gives food too", S.Get("greenhouse")?.Food == true));
+            if (req.Builder) list.Add(new ReqItem("A builder in the Ark", S.Builder != 0));
+            if (req.Frame > 0) list.Add(new ReqItem(req.Frame >= 4 ? "The frame complete" : $"The frame: stage {req.Frame}", S.Frame >= req.Frame, $"{S.Frame}/4"));
+            if (req.Antenna) list.Add(new ReqItem("The antenna repaired", S.AntennaFixed));
             if (req.LabPotatoes) list.Add(new ReqItem("Vegetable lab with potatoes", S.Level("veglab") >= 5));
             if (req.MineWorkers > 0)
             {
@@ -375,13 +549,21 @@ namespace Zerks.Sim
             if (req.NightWithoutShortage) list.Add(new ReqItem("A night without a power shortage", S.NightOk));
             foreach (var id in req.Research) list.Add(new ReqItem($"Research: {Content.R(id).Name}", IsDone(id)));
             if (req.ResearchStationUpgraded) list.Add(new ReqItem("Research station upgraded (second slot)", S.ResearchUpgraded));
+            if (req.ForEveryone)
+            {
+                // Beds 14/14 · Food 14/14 · Jobs 14/14 (levels.md, "Колко са и кога се будят").
+                var (taken, all) = Jobs();
+                list.Add(new ReqItem("Beds for everyone", Beds >= Awake, $"{Awake}/{Beds}"));
+                list.Add(new ReqItem("Seats for everyone", Seats >= Awake, $"{Awake}/{Seats}"));
+                list.Add(new ReqItem($"Every workplace taken ({req.Colonists} people)", taken >= all && Awake >= req.Colonists, $"{taken}/{Math.Max(all, req.Colonists)}"));
+            }
             return list;
         }
 
         public string WhyNotArk()
         {
             if (S.ArkLeft > 0) return "Upgrading";
-            if (NextReq == null) return "Chapter 1 is complete";
+            if (NextReq == null) return "Chapter 2 is complete";
             if (InTutorial && S.Tutorial < TStep.UpgradeArk) return "Later";
             return Requirements().All(x => x.Done) ? "" : "Not everything is ready";
         }
@@ -403,7 +585,7 @@ namespace Zerks.Sim
             if (S.Ark == 5) S.ReactorCapKw = DemandKw();
             if (S.Ark >= 7) S.ReactorCapKw = 0;
             Emit(Ev.ArkLevel, S.Ark.ToString());
-            if (Texts.ArkLevelUp.TryGetValue(S.Ark, out var line) && S.Ark != 10) Echo(line, $"ark{S.Ark}");
+            if (Texts.ArkLevelUp.TryGetValue(S.Ark, out var line) && S.Ark != 10 && S.Ark != 20) Echo(line, $"ark{S.Ark}");
             if (S.Ark == 2) { S.Tutorial = TStep.Done; S.Robot.Unlocked = true; LaunchRobot(); Emit(Ev.TutorialStep, "done"); }
             if (S.Ark == 10 && !S.Sketches.Contains("frame"))
             {
@@ -412,11 +594,24 @@ namespace Zerks.Sim
                 Echo(Texts.Sketch, "sketch");
                 Echo(Texts.FrameLater, "framelater");
             }
-            if (S.Ark >= Content.LastLevel && !S.Chapter1Done)
+            if (S.Ark == 12) { Emit(Ev.DockOpened); Echo(Texts.DockOpen, "dock"); }
+            if (S.Ark == 20 && !S.Sketches.Contains("hull"))
+            {
+                S.Sketches.Add("hull");
+                Emit(Ev.Sketch, "hull");
+                Echo(Texts.HullSketch, "sketch2");
+            }
+            if (S.Ark >= 11 && !S.Chapter1Done)
             {
                 S.Chapter1Done = true;
                 Emit(Ev.Chapter1Done);
                 Echo(Texts.Chapter2, "ch2");
+            }
+            if (S.Ark >= Content.LastLevel && !S.Chapter2Done)
+            {
+                S.Chapter2Done = true;
+                Emit(Ev.Chapter2Done);
+                Echo(Texts.Chapter3, "ch3");
             }
             if (Texts.LevelHint.TryGetValue(S.Ark, out var hint)) Echo(hint, $"hint{S.Ark}");
         }
@@ -443,7 +638,7 @@ namespace Zerks.Sim
         // Colonists
         // =====================================================================
 
-        /// <summary>Empty workplaces now, the ones ECHO recommends first.</summary>
+        /// <summary>Empty workplaces now, the one ECHO recommends first.</summary>
         public List<SlotRef> EmptySlots(Profession only = Profession.None)
         {
             var list = new List<SlotRef>();
@@ -458,12 +653,21 @@ namespace Zerks.Sim
                     if (b.Workers[i] == 0 && (only == Profession.None || def.Worker == only))
                         list.Add(new SlotRef { Building = b.Id, Slot = i, Profession = def.Worker });
             }
+            // The builder's console in the Ark (levels.md, level 13): only a builder works there.
+            if (IsDone("builder_console") && S.Builder == 0 && (only == Profession.None || only == Profession.Builder))
+                list.Add(new SlotRef { Building = "ark", Slot = 0, Profession = Profession.Builder });
             var rec = RecommendedSlot(list);
             if (rec != null) rec.Recommended = true;
             return list.OrderByDescending(x => x.Recommended).ThenBy(x => Priority(x.Building)).ToList();
         }
 
-        static int Priority(string id) => Array.IndexOf(new[] { "kitchen", "drill", "pump", "veglab", "mine", "furnace", "greenhouse", "research", "processor", "solar" }, id) is int i && i >= 0 ? i : 99;
+        static readonly string[] PriorityOrder =
+        {
+            "kitchen", "canteen", "drill", "pump", "veglab", "mine", "furnace", "greenhouse", "research", "processor", "solar",
+            "greenhouse2", "smelter", "ark", "claypit", "kiln", "greenhouse3", "copperworks",
+        };
+
+        static int Priority(string id) => Array.IndexOf(PriorityOrder, id) is int i && i >= 0 ? i : 99;
 
         /// <summary>ECHO's choice for the next colonist (levels.md, "Какво прави играчът").</summary>
         SlotRef RecommendedSlot(List<SlotRef> list)
@@ -488,7 +692,7 @@ namespace Zerks.Sim
             while (b.Dig.Count < n) b.Dig.Add(Res.Stone);
         }
 
-        /// <summary>Who wakes next: one of the first four on level 3, otherwise the profession of the chosen place.</summary>
+        /// <summary>Who wakes next: one of the first four on level 3, otherwise the profession of the place.</summary>
         public Texts.Person NextFixedPerson => Awake < 4 ? Texts.FirstFour[Awake] : null;
 
         public string WhyNotWake()
@@ -497,59 +701,75 @@ namespace Zerks.Sim
             if (!S.Has("home")) return "Build the Colonists' Home first";
             if (!S.Has("kitchen")) return "Build the Common Kitchen first";
             if (Awake >= Pods) return $"No more pods with power. The Ark gives one more on level {S.Ark + 1}";
-            if (Awake >= Beds) return Texts.NoBed;
-            if (Awake >= Seats) return Texts.NoSeat;
             var fixedP = NextFixedPerson;
             if (fixedP != null && fixedP.Profession != Profession.Cook && EmptySlots(fixedP.Profession).Count == 0)
                 return $"No place for a {Texts.ProfessionName(fixedP.Profession).ToLowerInvariant()}";
             if (fixedP == null && EmptySlots().Count == 0) return "No empty workplace";
+            if (Awake >= Beds) return S.Level("home") >= 20 && !S.Has("brickhome") ? Texts.HomeFull : Texts.NoBed;
+            if (Awake >= Seats) return Texts.NoSeat;
             return "";
+        }
+
+        /// <summary>Who the Ark would wake for a place (the first four are fixed; then the place decides the profession).</summary>
+        public Texts.Person WhoFor(string building)
+        {
+            var fixedP = NextFixedPerson;
+            if (fixedP != null) return fixedP;
+            var prof = building == "ark" ? Profession.Builder : Content.B(building).Worker;
+            return Texts.Pool.TryGetValue(prof, out var pool) ? pool.FirstOrDefault(p => !S.UsedNames.Contains(p.Name)) ?? Texts.Anyone(prof, S.NextColonistId)
+                : Texts.Anyone(prof, S.NextColonistId);
         }
 
         /// <summary>Wake a colonist into a workplace. The first four are fixed; then the place decides the profession.</summary>
         public ColonistState Wake(string building, int slot)
         {
             if (WhyNotWake() != "") return null;
-            var fixedP = NextFixedPerson;
-            Texts.Person who;
-            if (fixedP != null)
+            var who = WhoFor(building);
+            if (NextFixedPerson != null && who.Profession == Profession.Cook) { building = "kitchen"; slot = 0; }
+            ColonistState c;
+            if (building == "ark")
             {
-                who = fixedP;
-                if (who.Profession == Profession.Cook) { building = "kitchen"; slot = 0; }
+                if (!IsDone("builder_console") || S.Builder != 0 || who.Profession != Profession.Builder) return null;
+                c = NewColonist(who, "ark", 0);
+                S.Builder = c.Id;
             }
             else
             {
-                var def = Content.B(building);
-                who = Texts.Pool[def.Worker].FirstOrDefault(p => !S.UsedNames.Contains(p.Name))
-                      ?? new Texts.Person { Name = $"Colonist {S.NextColonistId}", Profession = def.Worker, Story = "", Earth = "" };
+                var b = S.Get(building);
+                if (b == null || !b.Built) return null;
+                if (Content.B(building).Worker != who.Profession) return null;
+                SyncSlots(b, Content.Slots(building, b.Level, S.ResearchUpgraded));
+                if (slot < 0 || slot >= b.Workers.Count || b.Workers[slot] != 0) return null;
+                c = NewColonist(who, building, slot);
+                b.Workers[slot] = c.Id;
+                if (building == "mine") b.Dig[slot] = BestDig(b);
+                // An idle building hands its bubble over when someone starts working there.
+                CollectInto(b);
             }
-            var b = S.Get(building);
-            if (b == null || !b.Built) return null;
-            var def2 = Content.B(building);
-            if (def2.Worker != who.Profession) return null;
-            SyncSlots(b, Content.Slots(building, b.Level, S.ResearchUpgraded));
-            if (slot < 0 || slot >= b.Workers.Count || b.Workers[slot] != 0) return null;
+            Emit(Ev.Woken, c.Id.ToString(), $"{c.Name}: \"{c.Earth}\"");
+            if (Awake == Seats && S.Ark >= 7 && S.Ark <= 10) Echo(Texts.KitchenFull, "kitchenfull");
+            if (Awake == 20 && S.Level("home") >= 20) Echo(Texts.HomeFull, "homefull");
+            return c;
+        }
+
+        ColonistState NewColonist(Texts.Person who, string work, int slot)
+        {
             var c = new ColonistState
             {
                 Id = S.NextColonistId++, Name = who.Name, Story = who.Story, Earth = who.Earth, Profession = who.Profession,
-                Work = building, Slot = slot, Happiness = 60,
+                Work = work, Slot = slot, Happiness = 60,
             };
             S.UsedNames.Add(who.Name);
             S.Colonists.Add(c);
-            b.Workers[slot] = c.Id;
-            if (building == "mine") b.Dig[slot] = BestDig(b);
-            // An idle building hands its bubble over when someone starts working there.
-            CollectInto(b);
-            Emit(Ev.Woken, c.Id.ToString(), $"{c.Name}: \"{c.Earth}\"");
-            if (Awake == Seats && S.Ark >= 7) Echo(Texts.KitchenFull, "kitchenfull");
             return c;
         }
 
         Res BestDig(BuildingState mine)
         {
             var mats = Content.MineMaterials(mine.Level);
-            if (mats.Contains(Res.Iron) && !mine.Dig.Take(mine.Workers.Count).Where((d, i) => mine.Workers[i] != 0).Contains(Res.Iron)) return Res.Iron;
-            if (mats.Contains(Res.Quartz) && !mine.Dig.Take(mine.Workers.Count).Where((d, i) => mine.Workers[i] != 0).Contains(Res.Quartz)) return Res.Quartz;
+            var dug = mine.Dig.Take(mine.Workers.Count).Where((d, i) => mine.Workers[i] != 0).ToList();
+            foreach (var r in new[] { Res.Copper, Res.Iron, Res.Quartz })
+                if (mats.Contains(r) && !dug.Contains(r)) return r;
             return Res.Stone;
         }
 
@@ -616,7 +836,10 @@ namespace Zerks.Sim
             return true;
         }
 
-        double RobotTripSeconds => 30 * 60 * (IsDone("fast_robot") ? 0.7 : 1);
+        /// <summary>With the antenna and a target on the map the robot goes farther: longer trips, more cargo (proposal).</summary>
+        bool RobotFar => S.AntennaFixed && S.RobotTarget != "";
+
+        double RobotTripSeconds => 30 * 60 * (IsDone("fast_robot") ? 0.7 : 1) * (RobotFar ? 1.3 : 1);
 
         void LaunchRobot()
         {
@@ -633,15 +856,16 @@ namespace Zerks.Sim
             rb.Trips++;
             var roll = rng.NextDouble();
             var trip = RobotTripSeconds / 60.0;
-            var big = IsDone("big_cargo") ? 1.5 : 1.0;
-            if (roll < 0.15 && rb.Trips > 1)
+            var big = (IsDone("big_cargo") ? 1.5 : 1.0) * (RobotFar ? 1.5 : 1.0);
+            var boost = RobotFar ? S.RobotTarget == "boost" : roll < 0.15 && rb.Trips > 1;
+            if (boost)
             {
                 rb.Boost = true; rb.Amount = 0;
             }
             else
             {
                 rb.Boost = false;
-                rb.Cargo = roll < 0.6 ? Res.Carbon : Res.Stone;
+                rb.Cargo = RobotFar ? (S.RobotTarget == "stone" ? Res.Stone : Res.Carbon) : roll < 0.6 ? Res.Carbon : Res.Stone;
                 var rate = Math.Max(5, RatePerMin[rb.Cargo]);
                 rb.Amount = Math.Round(Math.Max(10, rate * trip * 0.15 * big));
             }
@@ -664,6 +888,7 @@ namespace Zerks.Sim
                 }
                 foreach (var r in S.Running) r.Left = Math.Max(1, r.Left - cut);
                 if (S.ArkLeft > 0) S.ArkLeft = Math.Max(1, S.ArkLeft - cut);
+                if (S.FrameLeft > 0) S.FrameLeft = Math.Max(1, S.FrameLeft - cut);
                 got = "Speed-up: 10 minutes off every timer";
             }
             else
@@ -768,20 +993,24 @@ namespace Zerks.Sim
             var goals = new List<string>();
             if (InTutorial) { if (TutorialLine != null) goals.Add(TutorialLine); return goals; }
             var req = NextReq;
-            if (req == null) { goals.Add("Chapter 1 is complete."); return goals; }
+            if (req == null) { goals.Add("Chapter 2 is complete."); return goals; }
             // 1. A new building or its blueprint.
             foreach (var def in Content.Buildings)
             {
-                if (def.Id == "research" || S.Has(def.Id) || Bal.B(def.Id).Unlock > S.Ark) continue;
-                if (Content.RequiredLevel(req, def.Id) <= 0) continue;
+                if (def.Id == "research" || S.Has(def.Id) || UnlockOf(def) > S.Ark) continue;
+                if (Content.RequiredLevel(req, def.Id) <= 0 && !req.Built.Contains(def.Id) && !(IsGreenhouse(def.Id) && req.ForEveryone)) continue;
                 if (def.Blueprint != null && !IsDone(def.Blueprint)) goals.Add($"Research \"{Content.R(def.Blueprint).Name}\"");
                 else goals.Add($"Build the {def.Name}");
                 break;
             }
             foreach (var id in req.Research) if (!IsDone(id)) { goals.Add($"Research \"{Content.R(id).Name}\""); break; }
-            if (req.Colonists > Awake) goals.Add($"Wake colonist {req.Colonists}");
+            if (!req.ForEveryone && req.Colonists > Awake) goals.Add($"Wake colonist {req.Colonists}");
+            if (req.ForEveryone && WhyNotWake() == "") goals.Add("A pod is glowing: wake the next colonist");
+            if (req.Frame > S.Frame && WhyNotFrame() == "") goals.Add($"Build stage {S.Frame + 1} of the frame in the dock");
+            if (S.AntennaReady) goals.Add("Tap \"Ready\" over the Ark: the antenna");
             var low = Content.Buildings.Where(d => S.Has(d.Id) && Content.RequiredLevel(req, d.Id) > S.Level(d.Id)).ToList();
-            if (low.Count > 0) goals.Add($"Upgrade {low.Count} building{(low.Count > 1 ? "s" : "")} to level {req.Level}");
+            if (low.Count > 0)
+                goals.Add(req.ForEveryone ? $"Upgrade the {low[0].Name} to level {Content.RequiredLevel(req, low[0].Id)}" : $"Upgrade {low.Count} building{(low.Count > 1 ? "s" : "")} to level {req.Level}");
             if (S.Atmo < req.Atmo) goals.Add($"Air {req.Atmo}%");
             foreach (var it in Requirements()) if (!it.Done && goals.Count < 6 && !goals.Any(g => g.Contains(it.Text))) goals.Add(it.Text);
             return goals.Take(3).ToList();
@@ -884,6 +1113,11 @@ namespace Zerks.Sim
                     }
                 }
                 if (b.ImpulseLeft > 0) b.ImpulseLeft = Math.Max(0, b.ImpulseLeft - dt);
+                if (b.SwitchLeft > 0)
+                {
+                    b.SwitchLeft -= dt;
+                    if (b.SwitchLeft <= 0) { b.SwitchLeft = 0; b.Food = b.FoodWanted; Emit(Ev.GreenhouseSwitched, b.Id); }
+                }
                 if (b.UpgradeLeft > 0)
                 {
                     b.UpgradeLeft -= dt;
@@ -911,6 +1145,17 @@ namespace Zerks.Sim
                 S.ArkLeft -= dt;
                 if (S.ArkLeft <= 0) { S.ArkLeft = 0; S.ArkTotal = 0; ArkLevelUp(); }
             }
+            if (S.FrameLeft > 0)
+            {
+                S.FrameLeft -= dt;
+                if (S.FrameLeft <= 0)
+                {
+                    S.FrameLeft = 0; S.FrameTotal = 0;
+                    S.Frame++;
+                    Emit(Ev.FrameDone, S.Frame.ToString());
+                    Echo(S.Frame >= 4 ? Texts.FrameDone : $"Stage {S.Frame} of the frame stands in the dock.", $"framedone{S.Frame}");
+                }
+            }
             if (S.Robot.Unlocked && !S.Robot.Back)
             {
                 S.Robot.Left -= dt;
@@ -931,6 +1176,12 @@ namespace Zerks.Sim
                 case "batteries": Echo("By day they fill from the surplus; at night they give it back. The bar is next to the power.", "batteries"); break;
                 case "greenhouse": Echo("The greenhouse gives more air than the processor and the lab together.", "greenhouse"); break;
                 case "warehouse": Echo("The store raises the ceiling of every stock.", "warehouse"); break;
+                case "smelter": Echo(Texts.SmelterSmoke, "smelter"); break;
+                case "claypit": Echo("Clay under the regolith, by the ice. The kiln will turn it into bricks.", "claypit"); break;
+                case "kiln": Echo("The smelter and the kiln both eat a lot of power. The panels and the batteries must keep up.", "kiln"); break;
+                case "copperworks": Echo("Our own cables, from our own copper.", "copperworks"); break;
+                case "brickhome": Echo("Red walls, warm walls. The first home of our own bricks.", "brickhome"); break;
+                case "canteen": Echo("A second place to eat. The colonists from the twenty-first on eat here.", "canteen"); break;
             }
         }
 
@@ -938,19 +1189,30 @@ namespace Zerks.Sim
         {
             if (id == "veglab" && level == 5) Echo("Potatoes grow slower, but they feed more. Plant them before you leave.", "potato");
             if (id == "veglab" && level == 10) Echo("Beans: medium speed, more food than vegetables. Varied food makes people happier.", "bean");
+            if (id == "veglab" && level == 15) Echo("Wheat: four seeds now. The kitchen bakes bread from it.", "wheat");
             if (id == "mine" && level == 5) Echo("Quartz, and room for a second miner.", "quartz");
             if (id == "mine" && level == 10) Echo(Texts.Iron, "iron");
-            if (id == "home" && level >= 5 && Awake < Pods) Echo("A new bed. The Ark has powered another pod.", $"bed{level}");
+            if (id == "mine" && level == 15) Echo("The first copper ore comes up with the wagons, and there's room for a fourth miner.", "copper");
+            if (id == "greenhouse" && level == 16) Echo(Texts.GreenhouseFood, "ghfood");
+            if (id == "home" && level >= 5 && level <= 10 && Awake < Pods) Echo("A new bed. The Ark has powered another pod.", $"bed{level}");
         }
 
         // ---------- Production ----------
+
+        /// <summary>Power a building wants now, kW. Double glass: the greenhouses use 20% less at night (levels.md, level 11).</summary>
+        double PowerOf(BuildingState b)
+        {
+            var kw = Row(b.Id, b.Level).EnergyKw;
+            if (S.Night && IsGreenhouse(b.Id) && IsDone("double_glass")) kw *= 0.8;
+            return kw;
+        }
 
         /// <summary>Power the buildings want now, kW.</summary>
         public double DemandKw()
         {
             double d = 0;
             foreach (var b in S.Buildings)
-                if (b.Working) d += Row(b.Id, b.Level).EnergyKw;
+                if (b.Working) d += PowerOf(b);
             return d;
         }
 
@@ -963,13 +1225,14 @@ namespace Zerks.Sim
             return kw;
         }
 
+        /// <summary>What the batteries hold; the copper bars lose less as heat, so they last 10% longer (levels.md, level 18).</summary>
         public double BatteryCapacity
         {
             get
             {
                 var b = S.Get("batteries");
                 if (b == null || !b.Working) return 0;
-                return Row("batteries", b.Level).Get("kWh") * Cfg.CycleScale;
+                return Row("batteries", b.Level).Get("kWh") * Cfg.CycleScale * (IsDone("copper_bars") ? 1.1 : 1);
             }
         }
 
@@ -989,7 +1252,8 @@ namespace Zerks.Sim
             if (r == Res.Carbon && IsDone("drills")) m *= 1.2;
             if (r == Res.Food && IsDone("fast_seeds")) m *= 1.2;
             if (r == Res.Water && IsDone("pump_plus")) m *= 1.2;
-            if ((r == Res.Stone || r == Res.Quartz || r == Res.Iron) && IsDone("wide_belts")) m *= 1.2;
+            if ((r == Res.Stone || r == Res.Quartz || r == Res.Iron || r == Res.Copper) && IsDone("wide_belts")) m *= 1.2;
+            if (r == Res.Steel && IsDone("good_steel")) m *= 1.2;
             return m;
         }
 
@@ -1005,7 +1269,7 @@ namespace Zerks.Sim
             {
                 if (!b.Working) continue;
                 if (!playing && !Staffed(b)) continue;
-                EnergyDemand += Row(b.Id, b.Level).EnergyKw;
+                EnergyDemand += PowerOf(b);
             }
             SolarKw = S.Night ? 0 : SolarDayKw();
             ReactorKw = ReactorNow(EnergyDemand);
@@ -1034,7 +1298,7 @@ namespace Zerks.Sim
             var power = Math.Max(0.25, Math.Min(1, EnergyRatio)); // slower, never stopped (levels.md)
             var night = S.Night ? 0.95 : 1; // machines give 5% less at night (Joro, 11.11.2026)
 
-            double air = 0;
+            double air = 0, smokers = 0;
             foreach (var b in S.Buildings)
             {
                 if (!b.Working) continue;
@@ -1043,7 +1307,7 @@ namespace Zerks.Sim
                 var on = staffed ? workersOn : playing; // without a worker it works only while you play
                 if (!on) continue;
                 var k = power * night * (b.ImpulseLeft > 0 ? 2 : 1);
-                switch (b.Id)
+                switch (Kind(b.Id))
                 {
                     case "drill": Make(b, Res.Carbon, row.Get("carbon/min") * k * Bonus(Res.Carbon) * Crew(b), min, staffed); break;
                     case "pump": Make(b, Res.Water, row.Get("water/min") * k * Bonus(Res.Water) * Crew(b), min, staffed); break;
@@ -1063,28 +1327,40 @@ namespace Zerks.Sim
                     }
                     case "greenhouse":
                     {
-                        var a = row.Get("air/min") * k * Crew(b);
-                        AirBySource["Greenhouse"] = a; air += a;
+                        // The seedling bed takes 10% of the rest; "air and food" gives about 70% of the air plus food (levels.md, 16-17).
+                        var bed = b.Seedbed && IsDone("hardy_seedlings");
+                        var less = bed ? 0.9 : 1;
+                        var food = b.Food && b.Level >= 16;
+                        var a = row.Get("air/min") * k * Crew(b) * less * (food ? 0.7 : 1);
+                        var name = Content.B(b.Id).Name;
+                        AirBySource[name] = a; air += a;
+                        if (food) Make(b, Res.Food, row.Get("food/min") * k * Crew(b) * less * Bonus(Res.Food) * (IsDone("tomatoes") ? 1.2 : 1), min, staffed);
+                        if (bed) Make(b, Res.Seedlings, row.Get("seedlings/min (from level 17)") * k * Crew(b), min, staffed);
                         break;
                     }
                     case "mine": MineWork(b, row, k, min, staffed); break;
                     case "furnace":
-                    {
-                        var want = row.Get("silicon/min") * k * Crew(b) * min;
                         // quartz + carbon + power -> silicon: 2 quartz and 1 carbon for each (balance model)
-                        var can = Math.Min(want, Math.Min(S.Stock[Res.Quartz] / 2, S.Stock[Res.Carbon]));
-                        if (can > 0)
-                        {
-                            S.Stock[Res.Quartz] -= 2 * can; S.Stock[Res.Carbon] -= can;
-                            UsePerMin[Res.Quartz] += 2 * can / min; UsePerMin[Res.Carbon] += can / min;
-                            Make(b, Res.Silicon, can / min, min, staffed);
-                        }
+                        Convert(b, Res.Silicon, row.Get("silicon/min") * k * Crew(b), (Res.Quartz, 2), (Res.Carbon, 1), min, staffed);
                         break;
-                    }
+                    case "smelter":
+                        // iron ore + carbon + power -> steel: 2 iron ore and 1 carbon for each (balance model)
+                        Convert(b, Res.Steel, row.Get("steel/min") * k * Crew(b) * Bonus(Res.Steel), (Res.Iron, 2), (Res.Carbon, 1), min, staffed);
+                        break;
+                    case "claypit": Make(b, Res.Clay, row.Get("clay/min") * k * Crew(b), min, staffed); break;
+                    case "kiln":
+                        // clay + power -> bricks: 2 clay for each (balance model)
+                        Convert(b, Res.Bricks, row.Get("bricks/min") * k * Crew(b), (Res.Clay, 2), (Res.Clay, 0), min, staffed);
+                        break;
+                    case "copperworks":
+                        // copper ore -> copper, with carbon insulation -> cables: 2 copper ore and 1 carbon for each (balance model)
+                        Convert(b, Res.Cables, row.Get("cables/min") * k * Crew(b), (Res.Copper, 2), (Res.Carbon, 1), min, staffed);
+                        break;
                 }
+                if ((b.Id == "furnace" && !IsDone("furnace_filter")) || (b.Id == "smelter" && !IsDone("smelter_filter"))) smokers++;
             }
-            // Smoke from the furnace until its filter (levels.md, level 6): -15% of the air (balance model).
-            SmokeRate = S.Has("furnace") && !IsDone("furnace_filter") && S.Get("furnace").Working ? air * 0.15 : 0;
+            // Smoke from the furnace and the smelter until their filters (levels.md, levels 6 and 11): -15% of the air each (balance model).
+            SmokeRate = air * 0.15 * smokers;
             AirRate = air - SmokeRate;
             S.Air += AirRate * min;
             while (S.Air >= Bal.AirFor(S.Atmo) && S.Atmo < 100)
@@ -1101,6 +1377,19 @@ namespace Zerks.Sim
             UsePerMin[Res.Food] += Awake * Bal.FoodPerColonistMin;
             Hungry = Awake > 0 && S.Stock[Res.Food] < eat;
             S.Stock[Res.Food] = Math.Max(0, S.Stock[Res.Food] - eat);
+        }
+
+        /// <summary>A converter: as much output as its inputs in the store allow.</summary>
+        void Convert(BuildingState b, Res output, double perMin, (Res r, double k) in1, (Res r, double k) in2, double min, bool staffed)
+        {
+            var want = perMin * min;
+            var can = want;
+            if (in1.k > 0) can = Math.Min(can, S.Stock[in1.r] / in1.k);
+            if (in2.k > 0) can = Math.Min(can, S.Stock[in2.r] / in2.k);
+            if (can <= 0) return;
+            S.Stock[in1.r] -= in1.k * can; UsePerMin[in1.r] += in1.k * can / min;
+            if (in2.k > 0) { S.Stock[in2.r] -= in2.k * can; UsePerMin[in2.r] += in2.k * can / min; }
+            Make(b, output, can / min, min, staffed);
         }
 
         /// <summary>Single-workplace buildings: a worker's factor, or 1 while you play without one.</summary>
@@ -1138,14 +1427,22 @@ namespace Zerks.Sim
             }
         }
 
+        /// <summary>The home a colonist sleeps in: the first 20 in the first home, the rest in the brick home.</summary>
+        public string HomeOf(ColonistState c)
+        {
+            var i = S.Colonists.IndexOf(c);
+            return i >= 20 && S.Has("brickhome") ? "brickhome" : "home";
+        }
+
         void People(double dt, bool workersOn)
         {
             var min = dt / 60.0;
-            var homeLevel = S.Level("home");
             var kitchen = S.Get("kitchen");
             var cooked = kitchen != null && kitchen.Working && Staffed(kitchen);
-            foreach (var c in S.Colonists)
+            for (int i = 0; i < S.Colonists.Count; i++)
             {
+                var c = S.Colonists[i];
+                var homeLevel = S.Level(i >= 20 && S.Has("brickhome") ? "brickhome" : "home");
                 // Happiness: the home's comfort, food, a cook, varied food (levels.md "Щастие"; numbers are a proposal).
                 var target = 45 + Math.Min(30, 3 * homeLevel) + (cooked ? 10 : -10) + (Hungry ? -30 : 0) + 3 * (S.CropsTried.Count - 1);
                 target = Math.Max(0, Math.Min(100, target));
@@ -1166,9 +1463,11 @@ namespace Zerks.Sim
             {
                 if (!b.Built && b.BuildTotal > 0) b.BuildLeft = 0.001;
                 if (b.UpgradeLeft > 0) b.UpgradeLeft = 0.001;
+                if (b.SwitchLeft > 0) b.SwitchLeft = 0.001;
             }
             foreach (var r in S.Running) r.Left = 0.001;
             if (S.ArkLeft > 0) S.ArkLeft = 0.001;
+            if (S.FrameLeft > 0) S.FrameLeft = 0.001;
             if (S.Robot.Unlocked && !S.Robot.Back) S.Robot.Left = 0.001;
             Step(0.01, true, true);
         }

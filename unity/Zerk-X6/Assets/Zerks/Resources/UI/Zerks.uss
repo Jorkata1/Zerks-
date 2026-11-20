@@ -14,7 +14,7 @@
 }
 
 /* ---------- the top of the screen ---------- */
-.top { position: absolute; left: 0; right: 0; top: 10px; height: 130px; }
+.top { position: absolute; left: 0; right: 0; top: 10px; height: 160px; }
 .ark { position: absolute; top: 0; left: 12px; width: 66px; align-items: center; }
 .ark-c { width: 64px; height: 64px; border-radius: 32px; background-color: #ff8b3d; border-width: 3px; border-color: #6b4226; border-bottom-width: 6px;
     color: #ffffff; font-size: 28px; -unity-text-align: middle-center; text-shadow: 0 2px 0 rgba(150, 60, 10, 0.5); padding: 0; }
@@ -33,6 +33,10 @@
     background-color: #fffaf2; border-width: 3px; border-color: #6b4226; border-bottom-width: 5px; }
 .pill.s { height: 28px; border-width: 2px; border-bottom-width: 4px; border-radius: 14px; padding: 0 7px 0 2px; }
 .res2 .pill.s { width: 66px; }
+/* chapter 2: steel, clay, bricks, copper, cables, seedlings, under the crew chip (proposal, 20.11.2026) */
+.res3 { top: 124px; left: 12px; }
+.res3 .pill.s { width: 56px; padding-right: 4px; margin-right: 3px; }
+.res3 .pill-text { font-size: 11px; }
 .res2 .pill.wide { width: 86px; }
 .crew.pill.s { width: auto; }
 .pill-ic { width: 22px; height: 22px; border-radius: 11px; margin-right: 3px; }
@@ -141,3 +145,9 @@
     padding: 0; border-width: 0; }
 .toast { position: absolute; left: 18%; right: 18%; top: 40%; background-color: #fffaf2; color: #3b2618; border-radius: 16px; padding: 9px; -unity-text-align: middle-center;
     white-space: normal; border-width: 3px; border-color: #6b4226; border-bottom-width: 5px; }
+
+/* ---------- the map of the planet (levels.md, level 18; proposal, 20.11.2026) ---------- */
+.planet { position: relative; height: 190px; margin: 6px 0 4px 0; border-radius: 18px; overflow: hidden;
+    background-color: #d9895a; border-width: 3px; border-color: #6b4226; border-bottom-width: 5px; }
+.planet-canyon { position: absolute; left: 8%; top: 48%; width: 84%; height: 14px; border-radius: 7px; background-color: #a9572f; rotate: -14deg; }
+.planet-label { position: absolute; font-size: 11px; color: #fffaf2; -unity-font-style: bold; text-shadow: 0 1px 0 rgba(60, 30, 10, 0.6); }

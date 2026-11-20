@@ -24,6 +24,9 @@ namespace Zerks.Game
         readonly List<(Material m, Color c)> glows = new List<(Material, Color)>();
         /// <summary>Rooms and windows: dark by day, warm light at night (the mockup's lvl10-night).</summary>
         readonly List<Material> rooms = new List<Material>();
+        /// <summary>The opening of a dug building: drawn with the hole mask, never printed (HoleMask.shader).</summary>
+        readonly List<Renderer> masks = new List<Renderer>();
+        static Material holeMask;
         static readonly Color RoomLight = new Color(1f, 0.78f, 0.45f);
         bool printing;
         float pulse;
@@ -48,12 +51,21 @@ namespace Zerks.Game
         {
             if (name == modelName && model != null) return;
             if (model != null) Destroy(model);
-            model = Models.Spawn(name, Family(Id), transform);
+            model = Models.Spawn(name, Family, transform, Def != null && Def.Dug);
             modelName = name;
-            originals.Clear(); steam.Clear(); glows.Clear(); rooms.Clear();
+            originals.Clear(); steam.Clear(); glows.Clear(); rooms.Clear(); masks.Clear();
             var instances = new Dictionary<Material, Material>();
             foreach (var r in model.GetComponentsInChildren<Renderer>())
             {
+                if (r.sharedMaterials.Length == 1 && r.sharedMaterial != null && r.sharedMaterial.name.StartsWith("hole"))
+                {
+                    // the clay pit's opening: the ground of the map is not drawn over it
+                    if (holeMask == null) holeMask = Resources.Load<Material>("Materials/HoleMask");
+                    r.sharedMaterial = holeMask;
+                    r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    masks.Add(r);
+                    continue;
+                }
                 // Own copies of the materials, so the night glow never changes the imported model.
                 var mats = r.sharedMaterials;
                 for (int i = 0; i < mats.Length; i++)
@@ -67,6 +79,7 @@ namespace Zerks.Game
             }
             foreach (var r in model.GetComponentsInChildren<Renderer>())
             {
+                if (masks.Contains(r)) continue;
                 foreach (var m in r.sharedMaterials)
                 {
                     if (m == null) continue;
@@ -85,7 +98,20 @@ namespace Zerks.Game
             printing = false;
         }
 
-        static string Family(string id) => id;
+        /// <summary>The scale is shared by a kind: the second greenhouse has the first one's.</summary>
+        string Family => Def != null ? Def.Kind : Id;
+
+        /// <summary>Where the opening of a dug building is, in world space (or null).</summary>
+        public Bounds? Opening
+        {
+            get
+            {
+                if (masks.Count == 0) return null;
+                var b = masks[0].bounds;
+                foreach (var r in masks) b.Encapsulate(r.bounds);
+                return b;
+            }
+        }
 
         /// <summary>Called every frame with the building's state (null = not on the map).</summary>
         public void Sync(Colony c, BuildingState st, bool open, float night)
@@ -103,25 +129,44 @@ namespace Zerks.Game
             col.enabled = open;
             if (!st.Built)
             {
-                // Printing: 0-15% the drone measures with the laser, 15-30% the plan on light layers, then the print.
-                SetModel(Def.ModelFor(1));
-                model.SetActive(true);
-                var p = 1 - (float)(st.BuildLeft / System.Math.Max(0.001, st.BuildTotal));
-                EnsurePrint();
-                var baseY = transform.position.y;
-                var planTop = baseY + Height * Mathf.InverseLerp(0.15f, 0.3f, p);
-                holo.SetActive(p >= 0.15f);
-                holoMat.SetFloat("_Top", planTop);
-                holoMat.SetFloat("_Alpha", p < 0.3f ? 0.55f : 0.18f);
-                printMat.SetFloat("_Height", p < 0.3f ? baseY - 1 : baseY + Height * 1.05f * Mathf.InverseLerp(0.3f, 1f, p));
+                ShowPrint(Def.ModelFor(1), 1 - (float)(st.BuildLeft / System.Math.Max(0.001, st.BuildTotal)));
                 return;
             }
-            if (printing) EndPrint();
-            SetModel(Def.ModelFor(st.ShownLevel));
-            model.SetActive(true);
-            // The furnace smokes until its filter (levels.md, level 6).
-            var smoke = Id == "furnace" && !c.IsDone("furnace_filter");
+            ShowStanding(Def.ModelFor(st.ShownLevel), night);
+            // The furnace and the smelter smoke until their filters (levels.md, levels 6 and 11).
+            var smoke = (Id == "furnace" && !c.IsDone("furnace_filter")) || (Id == "smelter" && !c.IsDone("smelter_filter"));
             foreach (var r in steam) if (r != null) r.enabled = smoke;
+            // A soft breath while it is being upgraded (the work over the building is drawn by the screen).
+            if (st.Upgrading)
+            {
+                pulse += Time.deltaTime * 6;
+                model.transform.localScale = Vector3.one * (1 + 0.012f * Mathf.Sin(pulse));
+            }
+            else model.transform.localScale = Vector3.one;
+        }
+
+        /// <summary>Printing: 0-15% the drone measures with the laser, 15-30% the plan on light layers, then the print.</summary>
+        public void ShowPrint(string modelName, float p)
+        {
+            Visible = true;
+            SetModel(modelName);
+            model.SetActive(true);
+            EnsurePrint();
+            var baseY = transform.position.y;
+            var planTop = baseY + Height * Mathf.InverseLerp(0.15f, 0.3f, p);
+            holo.SetActive(p >= 0.15f);
+            holoMat.SetFloat("_Top", planTop);
+            holoMat.SetFloat("_Alpha", p < 0.3f ? 0.55f : 0.18f);
+            printMat.SetFloat("_Height", p < 0.3f ? baseY - 1 : baseY + Height * 1.05f * Mathf.InverseLerp(0.3f, 1f, p));
+        }
+
+        /// <summary>The building as it stands, its windows lit at night.</summary>
+        public void ShowStanding(string modelName, float night)
+        {
+            Visible = true;
+            if (printing) EndPrint();
+            SetModel(modelName);
+            model.SetActive(true);
             // Windows and lamps glow brighter at night.
             foreach (var (m, e) in glows) if (m != null) m.SetColor("emissiveFactor", e * (1 + 1.6f * night));
             foreach (var m in rooms)
@@ -130,13 +175,13 @@ namespace Zerks.Game
                 if (night > 0.02f) m.EnableKeyword("_EMISSIVE"); else m.DisableKeyword("_EMISSIVE");
                 m.SetColor("emissiveFactor", RoomLight * (0.9f * night));
             }
-            // A soft breath while it is being upgraded (the work over the building is drawn by the screen).
-            if (st.Upgrading)
-            {
-                pulse += Time.deltaTime * 6;
-                model.transform.localScale = Vector3.one * (1 + 0.012f * Mathf.Sin(pulse));
-            }
-            else model.transform.localScale = Vector3.one;
+        }
+
+        public void Hide()
+        {
+            if (model != null) model.SetActive(false);
+            if (holo != null) holo.SetActive(false);
+            Visible = false;
         }
 
         void EnsurePrint()
@@ -156,6 +201,7 @@ namespace Zerks.Game
             holoMat = Look.Hologram();
             foreach (var r in holo.GetComponentsInChildren<Renderer>())
             {
+                if (r.sharedMaterial == holeMask && holeMask != null) { r.enabled = false; continue; }
                 var arr = new Material[r.sharedMaterials.Length];
                 for (int i = 0; i < arr.Length; i++) arr[i] = holoMat;
                 r.sharedMaterials = arr;

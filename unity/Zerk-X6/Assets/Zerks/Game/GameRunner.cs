@@ -121,13 +121,35 @@ namespace Zerks.Game
                 case Ev.ArkLevel:
                     World.Commander.Wave();
                     Hud.Toast($"The Ark is on level {e.Id}");
-                    if (e.Id == "10") Hud.ShowSketch();
+                    if (e.Id == "10") Hud.ShowSketch("frame");
+                    if (e.Id == "20") Hud.ShowSketch("hull");
                     break;
                 case Ev.ResearchDone: Hud.Toast($"Research done: {Content.R(e.Id).Name}"); break;
                 case Ev.RobotBack: Hud.Toast($"The robot is back with {e.Text}"); break;
                 case Ev.Woken: break;
                 case Ev.Chapter1Done:
                     Hud.Modal("Chapter 1 · Landing", "The colony breathes on its own: air, food, power by day and by night, eleven people.\nChapter 2, \"First Breath\", starts here.", "Time to make it a home.", ("Keep playing", null));
+                    break;
+                case Ev.Chapter2Done:
+                    Hud.Modal("Chapter 2 · First Breath", "Steel, clay, bricks and copper of our own; the frame stands whole in the dock; two homes and twenty-one people.\nChapter 3, \"Green Belt\", starts here.", "The hardiest plants can go outside.", ("Keep playing", null));
+                    break;
+                case Ev.DockOpened:
+                    World.PrintDock();
+                    Rig.FocusOn(World.WorldOf("dock") - Vector3.up * 4, 58, 2.2f);
+                    break;
+                case Ev.FrameStarted: Hud.Toast($"The fabricator is making stage {e.Id} of the frame"); break;
+                case Ev.FrameDone:
+                    Hud.Toast(e.Id == "4" ? "The frame is complete" : $"Stage {e.Id} of the frame is done");
+                    Rig.FocusOn(World.WorldOf("dock") - Vector3.up * 4, Mathf.Min(Rig.View, 62), 1.8f);
+                    break;
+                case Ev.AntennaReady: Hud.Toast("The antenna: Ready. Tap it over the Ark."); break;
+                case Ev.AntennaFixed:
+                    World.UnfoldAntenna();
+                    Rig.FocusOn(Look.ArkAt + Vector3.up * 8, Mathf.Min(Rig.View, 64), 2f);
+                    break;
+                case Ev.GreenhouseSwitched:
+                    var gh = Colony.S.Get(e.Id);
+                    if (gh != null) Hud.Toast($"{Content.B(e.Id).Name}: {(gh.Food ? "air and food" : "air only")}");
                     break;
                 case Ev.ZoneOpened: Rig.FocusOn(e.Id == "1" ? World.PlotOf("warehouse") : Look.Plot(0, 5), 70, 1.6f); break;
             }
@@ -199,11 +221,16 @@ namespace Zerks.Game
                     return;
                 case WorldView.PickKind.Colonist:
                     var col = Colony.S.Colonist(int.Parse(id));
-                    if (col != null) Hud.Modal(col.Name, $"{Texts.ProfessionName(col.Profession)} · {Content.B(col.Work).Name}\n{col.Story}", col.Earth, ("Close", null));
+                    if (col != null) Hud.Modal(col.Name, $"{Texts.ProfessionName(col.Profession)} · {Content.PlaceName(col.Work)}\n{col.Story}", col.Earth, ("Close", null));
                     return;
                 case WorldView.PickKind.Ark:
+                    if (Colony.S.AntennaReady) { Colony.FixAntenna(); return; }
                     if (Hud.SheetOpen) Hud.Close();
                     Hud.Open("ark");
+                    return;
+                case WorldView.PickKind.Dock:
+                    if (Hud.SheetOpen) Hud.Close();
+                    Hud.Open("dock");
                     return;
                 case WorldView.PickKind.Building:
                     if (impulseArmed) { impulseArmed = false; if (Colony.Impulse(id)) { Hud.Toast("ECHO's impulse: twice as fast for 5 minutes"); return; } }

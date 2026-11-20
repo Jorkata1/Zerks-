@@ -4,13 +4,20 @@ using Newtonsoft.Json;
 
 namespace Zerks.Sim
 {
-    /// <summary>The stock resources of chapter 1 (docs/levels.md). Air and energy are flows, not stock.</summary>
-    public enum Res { Carbon, Water, Stone, Food, Quartz, Silicon, Iron }
+    /// <summary>
+    /// The stock resources of chapters 1 and 2 (docs/levels.md). Air and energy are flows, not stock. New ones go at the
+    /// end: a save keeps the amounts by their place in this list.
+    /// </summary>
+    public enum Res { Carbon, Water, Stone, Food, Quartz, Silicon, Iron, Steel, Clay, Bricks, Copper, Cables, Seedlings }
 
     public static class ResInfo
     {
-        public const int Count = 7;
-        public static readonly Res[] All = { Res.Carbon, Res.Water, Res.Stone, Res.Food, Res.Quartz, Res.Silicon, Res.Iron };
+        public const int Count = 13;
+        public static readonly Res[] All =
+        {
+            Res.Carbon, Res.Water, Res.Stone, Res.Food, Res.Quartz, Res.Silicon, Res.Iron,
+            Res.Steel, Res.Clay, Res.Bricks, Res.Copper, Res.Cables, Res.Seedlings,
+        };
 
         /// <summary>The key balance.json uses ("carbon", "water", ...).</summary>
         public static string Key(Res r) => r.ToString().ToLowerInvariant();
@@ -25,6 +32,12 @@ namespace Zerks.Sim
             Res.Quartz => "Quartz",
             Res.Silicon => "Silicon",
             Res.Iron => "Iron ore",
+            Res.Steel => "Steel",
+            Res.Clay => "Clay",
+            Res.Bricks => "Bricks",
+            Res.Copper => "Copper ore",
+            Res.Cables => "Cables",
+            Res.Seedlings => "Seedlings",
             _ => r.ToString(),
         };
 
@@ -47,7 +60,14 @@ namespace Zerks.Sim
         public double[] V = new double[ResInfo.Count];
 
         public Bag() { }
-        public Bag(Bag other) { Array.Copy(other.V, V, ResInfo.Count); }
+        public Bag(Bag other) { other.Fit(); Array.Copy(other.V, V, ResInfo.Count); }
+
+        /// <summary>A save from before chapter 2 holds 7 amounts: make room for the new resources.</summary>
+        public void Fit()
+        {
+            if (V == null) V = new double[ResInfo.Count];
+            else if (V.Length < ResInfo.Count) { var v = new double[ResInfo.Count]; Array.Copy(V, v, V.Length); V = v; }
+        }
 
         [JsonIgnore]
         public double this[Res r]

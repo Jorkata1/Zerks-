@@ -1,11 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Zerks.Sim
 {
     /// <summary>
-    /// Plays the colony the way ECHO recommends: for the tests (can chapter 1 be finished, and how long does it take)
-    /// and for the "Auto" switch in the developer panel.
+    /// Plays the colony the way ECHO recommends: for the tests (can chapters 1 and 2 be finished, and how long do they
+    /// take) and for the "Auto" switch in the developer panel.
     /// </summary>
     public static class AutoPlayer
     {
@@ -18,6 +19,7 @@ namespace Zerks.Sim
             foreach (var b in s.Buildings) if (!b.Buffer.IsEmpty) c.Collect(b.Id);
             if (s.Robot.Back) c.UnloadRobot();
             foreach (var b in s.Buildings.Where(b => b.Ready).ToList()) c.Reprint(b.Id);
+            if (s.AntennaReady) c.FixAntenna();
 
             if (c.WhyNotArk() == "") { c.UpgradeArk(); return "ark"; }
 
@@ -35,22 +37,27 @@ namespace Zerks.Sim
             foreach (var def in Content.Buildings)
                 if (c.WhyNotBuild(def.Id, out _) == "") { c.Build(def.Id); break; }
 
-            // Colonists.
+            // The frame in the dock, as soon as a stage can be built.
+            if (c.WhyNotFrame() == "") c.BuildFrame();
+
+            // Colonists: the next one comes with the next empty workplace.
             while (c.WhyNotWake() == "")
             {
                 var fixedP = c.NextFixedPerson;
-                var slots = fixedP != null ? c.EmptySlots(fixedP.Profession == Profession.Cook ? Profession.Cook : fixedP.Profession) : c.EmptySlots();
-                var slot = fixedP != null && fixedP.Profession == Profession.Cook ? new SlotRef { Building = "kitchen", Slot = 0 } : slots.FirstOrDefault();
+                var slot = fixedP != null && fixedP.Profession == Profession.Cook
+                    ? new SlotRef { Building = "kitchen", Slot = 0 }
+                    : (fixedP != null ? c.EmptySlots(fixedP.Profession) : c.EmptySlots()).FirstOrDefault();
                 if (slot == null || c.Wake(slot.Building, slot.Slot) == null) break;
             }
 
-            // The mine digs what the next level is short of; the lab grows the richest crop.
+            // The mine digs what is short; the lab grows the richest crop; the greenhouses as levels.md asks.
             Mine(c);
             var crop = Content.Crops.Where(x => s.Level("veglab") >= x.LabLevel).OrderByDescending(x => x.Food).First();
             if (s.Crop != crop.Id) c.SetCrop(crop.Id);
+            Greenhouses(c);
 
             // Power first when it is short, then everything the Ark needs, cheapest first.
-            if (s.Has("solar") && c.DaytimeEnergyRatio(true) < (s.Ark >= 6 ? 1.6 : 1.1)) c.Upgrade("solar");
+            if (s.Has("solar") && c.DaytimeEnergyRatio(true) < (s.Ark >= 11 ? 1.9 : s.Ark >= 6 ? 1.6 : 1.1)) c.Upgrade("solar");
             if (s.Has("batteries") && s.Ark >= 7 && c.BatteryCapacity < c.DemandKw() * c.NightMinutes / 60 * 1.3) c.Upgrade("batteries");
             if (s.Ark >= 10 && !s.ResearchUpgraded) c.Upgrade("research");
             var req = c.NextReq;
@@ -58,32 +65,89 @@ namespace Zerks.Sim
             {
                 var store = s.Get("warehouse");
                 var need = req.Res.V.Max();
-                if (store != null && c.Capacity < need * 1.05) c.Upgrade("warehouse");
+                if (store != null && (c.Capacity < need * 1.05 || s.Level("warehouse") < req.Store)) c.Upgrade("warehouse");
                 var low = Content.Buildings
                     .Where(d => s.Has(d.Id) && Content.RequiredLevel(req, d.Id) > s.Level(d.Id) && !s.Get(d.Id).Upgrading)
                     .OrderBy(d => c.UpgradeCost(s.Get(d.Id)).V.Sum());
                 foreach (var d in low) c.Upgrade(d.Id);
-                if (s.Has("home") && c.Awake >= c.Beds && c.Awake < c.Pods) c.Upgrade("home");
-                if (s.Has("kitchen") && c.Awake >= c.Seats && c.Awake < c.Pods) c.Upgrade("kitchen");
+                // A bed and a seat for whoever the new workplace wakes (from level 11 the homes grow with the people).
+                var waiting = c.EmptySlots().Count > 0 && c.Awake < c.Pods;
+                if (waiting && c.Awake >= c.Beds) c.Upgrade(s.Level("home") < 20 ? "home" : "brickhome");
+                if (waiting && c.Awake >= c.Seats) c.Upgrade(s.Level("kitchen") < 20 ? "kitchen" : "canteen");
+                // From level 12 nothing else is asked for: the producers keep up with the Ark, as in the balance model.
+                if (req.ForEveryone)
+                {
+                    var plan = Content.Buildings
+                        .Where(d => s.Has(d.Id) && !s.Get(d.Id).Upgrading && Producer(d.Id) && s.Level(d.Id) < Content.PlanLevel(d.Id, s.Ark + 1))
+                        .OrderBy(d => c.UpgradeCost(s.Get(d.Id)).V.Sum());
+                    foreach (var d in plan) c.Upgrade(d.Id);
+                }
             }
             return null;
         }
 
+        /// <summary>The buildings that make something (not the homes, the kitchens, the store or the research station).</summary>
+        static bool Producer(string id) => id != "home" && id != "brickhome" && id != "kitchen" && id != "canteen" && id != "research" && id != "warehouse";
+
+        static void Greenhouses(Colony c)
+        {
+            var s = c.S;
+            var req = c.NextReq;
+            // levels.md, level 16: the first greenhouse gives air and food; the others keep making air.
+            if (c.CanGiveFood(s.Get("greenhouse")) && !s.Get("greenhouse").FoodWanted) c.SetGreenhouseFood("greenhouse", true);
+            if (!c.IsDone("hardy_seedlings")) return;
+            // levels.md, level 17: a seedling bed in each greenhouse while seedlings are short.
+            var want = Math.Max(req?.Res[Res.Seedlings] ?? 0, s.Ark >= 18 ? 300 : 100);
+            var on = s.Stock[Res.Seedlings] < want * 1.02;
+            foreach (var d in Content.OfKind("greenhouse"))
+            {
+                var b = s.Get(d.Id);
+                if (b != null && b.Built && b.Seedbed != on) c.SetSeedbed(d.Id, on);
+            }
+        }
+
+        /// <summary>Each miner digs what the colony is shortest of now (stone for the Ark, quartz, iron for steel, copper).</summary>
         static void Mine(Colony c)
         {
             var m = c.S.Get("mine");
             if (m == null || !m.Built) return;
+            var s = c.S;
             var req = c.NextReq;
             var mats = Content.MineMaterials(m.Level);
-            for (int i = 0; i < m.Workers.Count; i++)
+            var miners = Enumerable.Range(0, m.Workers.Count).Where(i => m.Workers[i] != 0).ToList();
+            if (miners.Count == 0) return;
+            if (s.Ark <= 10)
             {
-                if (m.Workers[i] == 0) continue;
-                Res want = Res.Stone;
-                if (i == 1 && mats.Contains(Res.Quartz)) want = Res.Quartz;
-                if (i == 2 && mats.Contains(Res.Iron)) want = Res.Iron;
-                if (i == 0 && mats.Contains(Res.Quartz) && m.Workers.Count(w => w != 0) == 1 && req != null &&
-                    c.S.Stock[Res.Silicon] < req.Res[Res.Silicon] && c.S.Stock[Res.Stone] >= req.Res[Res.Stone]) want = Res.Quartz;
-                if (m.Dig[i] != want) c.SetDig(i, want);
+                // Chapter 1, as it was tested: stone, quartz, iron in that order of places.
+                foreach (var i in miners)
+                {
+                    Res want = Res.Stone;
+                    if (i == 1 && mats.Contains(Res.Quartz)) want = Res.Quartz;
+                    if (i == 2 && mats.Contains(Res.Iron)) want = Res.Iron;
+                    if (i == 0 && mats.Contains(Res.Quartz) && miners.Count == 1 && req != null &&
+                        s.Stock[Res.Silicon] < req.Res[Res.Silicon] && s.Stock[Res.Stone] >= req.Res[Res.Stone]) want = Res.Quartz;
+                    if (m.Dig[i] != want) c.SetDig(i, want);
+                }
+                return;
+            }
+            // How far each material is from what the next level and its stages need (0 = enough).
+            // A little over the target, so a miner never stops one unit short.
+            double Short(Res r, double target) => target <= 0 ? 0 : Math.Max(0, target * 1.05 + 5 - s.Stock[r]) / target;
+            var frame = c.NextFrame;
+            var steelWant = (req?.Res[Res.Steel] ?? 0) + (frame != null && frame.ArkLevel <= s.Ark + 1 ? frame.Steel : 0);
+            var need = new Dictionary<Res, double>
+            {
+                [Res.Stone] = Short(Res.Stone, req?.Res[Res.Stone] ?? 0) + 0.05,
+                [Res.Quartz] = Short(Res.Quartz, 400) + Short(Res.Silicon, req?.Res[Res.Silicon] ?? 0),
+                [Res.Iron] = Short(Res.Iron, 600) + Short(Res.Steel, steelWant) * 1.5,
+                [Res.Copper] = Short(Res.Copper, Math.Max(req?.Res[Res.Copper] ?? 0, 300)) + Short(Res.Cables, req?.Res[Res.Cables] ?? 0),
+            };
+            var count = new Dictionary<Res, int>();
+            foreach (var i in miners)
+            {
+                var pick = mats.OrderByDescending(r => (need.TryGetValue(r, out var v) ? v : 0) / (1 + (count.TryGetValue(r, out var n) ? n : 0))).First();
+                count[pick] = (count.TryGetValue(pick, out var k) ? k : 0) + 1;
+                if (m.Dig[i] != pick) c.SetDig(i, pick);
             }
         }
 
@@ -120,27 +184,34 @@ namespace Zerks.Sim
             var s = c.S;
             s.Tutorial = Colony.TStep.Done;
             s.DebrisCleared = true;
-            var research = s.Get("research");
-            research.Built = true; research.Level = 1; research.ShownLevel = 1;
             s.Ark = level;
+            var research = s.Get("research");
+            research.Built = true; research.Level = level >= 11 ? 2 : 1; research.ShownLevel = research.Level;
+            s.ResearchUpgraded = level >= 11;
             s.Robot.Unlocked = true; s.Robot.Back = true; s.Robot.Cargo = Res.Carbon; s.Robot.Amount = 20;
             foreach (var r in Content.Research.Where(r => r.ArkLevel < level)) s.Done.Add(r.Id);
             if (s.Done.Contains("zone1")) s.Zone = 1;
+            if (s.Done.Contains("zone2")) s.Zone = 2;
             var req = Content.Requirements.TryGetValue(level, out var q) ? q : null;
             foreach (var def in Content.Buildings)
             {
                 if (def.Id == "research") continue;
-                var unlock = bal.B(def.Id).Unlock;
-                if (unlock >= level) continue;
-                var lv = req != null ? Content.RequiredLevel(req, def.Id) : level;
+                if (c.UnlockOf(def) >= level) continue; // it comes on its own level
+                int lv;
+                if (level <= 11) lv = req != null ? Content.RequiredLevel(req, def.Id) : level;
+                else lv = req != null && req.Overrides.TryGetValue(def.Id, out var o) ? o : Content.PlanLevel(def.Id, level);
                 if (lv <= 0) lv = level;
                 s.Buildings.Add(new BuildingState { Id = def.Id, Built = true, Level = lv, ShownLevel = lv });
             }
             s.Atmo = req?.Atmo ?? Content.StartAtmo;
             if (level >= 5) s.ReactorCapKw = level <= 6 ? c.DemandKw() * 0.9 : 0;
             for (int i = 0; i < ResInfo.Count; i++) s.Stock.V[i] = c.Capacity * 0.25;
-            // Colonists as ECHO recommends, one for each level from 4 (and the first four on 3).
-            var awake = level >= 4 ? level : 0;
+            // The ship and the antenna, as far as the levels before got them (levels.md).
+            s.Frame = Content.Frame.Count(f => f.ArkLevel < level);
+            s.AntennaFixed = level >= 19;
+            if (s.Has("greenhouse") && level >= 17) { var g = s.Get("greenhouse"); g.Food = g.FoodWanted = true; }
+            // Colonists as ECHO recommends: as many as the levels before woke (levels.md).
+            var awake = Content.ColonistsAfter.TryGetValue(level - 1, out var a) ? a : 0;
             while (c.Awake < awake)
             {
                 var fixedP = c.NextFixedPerson;
@@ -151,10 +222,16 @@ namespace Zerks.Sim
                 // Wake ignores the pods of the level we jumped to; the Ark gave them on the way.
                 if (c.Wake(slot.Building, slot.Slot) == null) break;
             }
-            if (s.Level("veglab") >= 5) c.SetCrop(s.Level("veglab") >= 10 ? "bean" : "potato");
+            var best = Content.Crops.Where(x => s.Level("veglab") >= x.LabLevel).OrderByDescending(x => x.Food).First();
+            c.SetCrop(best.Id);
             if (s.Has("batteries")) s.Battery = c.BatteryCapacity;
             if (level >= 10) s.Sketches.Add("frame");
-            foreach (var id in new[] { "ark2", "ark3", "ark4", "ark5", "ark6", "ark7", "ark8", "ark9", "ark10" }) s.Said.Add(id);
+            if (level >= 20) s.Sketches.Add("hull");
+            s.Chapter1Done = level >= 11;
+            s.Chapter2Done = level >= 21;
+            for (int l = 2; l <= level; l++) s.Said.Add($"ark{l}");
+            foreach (var (key, from) in new[] { ("sketch", 10), ("framelater", 10), ("ch2", 11), ("dock", 12), ("frame1", 13), ("sketch2", 20) })
+                if (level >= from) s.Said.Add(key);
             c.TakeEvents();
             return s;
         }

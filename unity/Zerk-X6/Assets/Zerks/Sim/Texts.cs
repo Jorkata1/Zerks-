@@ -21,6 +21,16 @@ namespace Zerks.Sim
             [9] = "The mine reaches deeper. The geologists say there is iron under the quartz.",
             [10] = "This is not my file. Why does a rescue ship carry plans for a warship?",
             [11] = "The colony breathes on its own now. Time to make it a home.",
+            [12] = "The Ark opens its dock. The fabricator makes the beams from steel, the cranes set them.",
+            [13] = "The drone manages, but no one leads it. In the pods there are people who have built cities.",
+            [14] = "The geologists say there's copper under the iron. We'll need it for the cables and for the ship.",
+            [15] = "Our home is made of the canyon's stone. The next one will be of bricks we baked ourselves.",
+            [16] = "More grows under the glass than we need for air. Let's try some for eating.",
+            [17] = "The plants in the greenhouses are strong. Some will survive outside, once we have soil.",
+            [18] = "The antenna hasn't worked since the landing. Let's see what it hears.",
+            [19] = "The cable from the containers is running out. The copper from the mine has to become cables.",
+            [20] = "It's not only the frame. There will be a hull. Whoever put these files here knew what was waiting for us.",
+            [21] = "The colony breathes. The seedlings are ready, and the hardiest plants can go outside.",
         };
 
         /// <summary>One line after the level-up line, about what comes next (levels.md).</summary>
@@ -35,6 +45,16 @@ namespace Zerks.Sim
             [8] = "The greenhouse wants light at night too. The batteries must last for it as well.",
             [9] = "We'll need the iron when we learn to make steel.",
             [10] = "The iron we're piling up will become steel. Then we'll see what this is.",
+            [11] = "We have air and food. What's left is the iron. If we make it into steel, we'll see what this frame is.",
+            [12] = "Tap the dock next to the Ark: the first stage of the frame wants 200 steel.",
+            [13] = "The clay by the ice is for the bricks of the next home.",
+            [14] = "The mine on level 15 reaches the copper. The lab on 15 grows wheat.",
+            [15] = "The smelter and the kiln both eat a lot of power. Watch the panels and the batteries.",
+            [16] = "The first greenhouse on level 16: in its panel, air only, or air and food.",
+            [17] = "A seedling bed in each greenhouse. While seedlings grow there, it gives 10% less of the rest.",
+            [18] = "The copper bars make the batteries last longer. They cost 200 copper ore.",
+            [19] = "The new buildings on the next level will want our own cables.",
+            [20] = "The next home will be of our bricks and with our cables.",
         };
 
         public const string Hello = "Good morning, Commander. Did you sleep well?";
@@ -69,6 +89,23 @@ namespace Zerks.Sim
         public const string Sketch = "This is not my file. Why does a rescue ship carry plans for a warship?";
         public const string FrameLater = "The frame needs steel. The smelter comes in chapter 2.";
         public const string Chapter2 = "Chapter 1 complete. Chapter 2, \"First Breath\", starts here.";
+        public const string Chapter3 = "Chapter 2 complete. Chapter 3, \"Green Belt\", starts here.";
+
+        // ---------- Chapter 2 (levels.md, levels 11-20; lines that are not in levels.md are a proposal) ----------
+
+        public const string SmelterSmoke = "Same as with the furnace. We know how to fix it.";
+        public const string DockOpen = "The drone has printed the dock next to the Ark. The ship will grow there.";
+        public const string FrameFirst = "The ship will be bigger than the Ark. Someone thought about this long before we took off.";
+        public const string FrameDone = "The frame stands whole in the dock.";
+        public const string Console = "The builder's console is ready. A builder in the Ark leads the drone: builds and upgrades go faster.";
+        public const string GreenhouseFood = "Level 16: the greenhouse can give food too. Air only, or air and food: it's in its panel.";
+        public const string Seedbeds = "Hardy seedlings: each greenhouse can grow a seedling bed. Turn it on in its panel.";
+        public const string AntennaFixed = "The containers up there hear us. We can see the planet from above now.";
+        public const string Signal = "I hear something. It may be from the fleet. It may be nothing.";
+        public const string HomeFull = "The next one we wake won't have a bed here.";
+        public const string BrickHome = "The next home will be of our bricks and with our cables.";
+        public const string HullSketch = "It's not only the frame. There will be a hull. Whoever put these files here knew what was waiting for us.";
+        public const string HullLater = "The hull will be built in the dock in chapter 3, from steel, with our cables.";
 
         // ---------- The colonists (proposal: names, stories and the sentence about Earth) ----------
 
@@ -99,6 +136,9 @@ namespace Zerks.Sim
                 new Person { Name = "Ana Lima", Profession = Profession.Geologist, Story = "Studied volcanoes in the Andes.", Earth = "Snow on a volcano is the most honest thing I've seen." },
                 new Person { Name = "Jonas Weber", Profession = Profession.Geologist, Story = "Drilled ice cores in Greenland.", Earth = "I counted ten thousand winters in a tube of ice." },
                 new Person { Name = "Sofia Ruiz", Profession = Profession.Geologist, Story = "Looked for water under the Sahara.", Earth = "The desert at dawn was blue, not yellow." },
+                new Person { Name = "Aiyana Begay", Profession = Profession.Geologist, Story = "Read the clay of river banks in Arizona.", Earth = "After rain the red earth smelled like iron and bread." },
+                new Person { Name = "Piotr Zielinski", Profession = Profession.Geologist, Story = "Ran a copper mine in Silesia.", Earth = "Down there you hear the whole mountain breathe." },
+                new Person { Name = "Mei Lin", Profession = Profession.Geologist, Story = "Mapped the karst of Guilin.", Earth = "The hills stood in the river like teeth in mist." },
             },
             [Profession.Engineer] = new List<Person>
             {
@@ -106,11 +146,18 @@ namespace Zerks.Sim
                 new Person { Name = "Elif Kaya", Profession = Profession.Engineer, Story = "Ran a steel furnace in Izmir.", Earth = "Tea on the harbour wall, every evening." },
                 new Person { Name = "Marek Novak", Profession = Profession.Engineer, Story = "Repaired trams in Prague.", Earth = "The bridges had statues that watched you cross." },
                 new Person { Name = "Grace Mensah", Profession = Profession.Engineer, Story = "Wired villages in Ghana to the sun.", Earth = "The first light in a school is a loud thing." },
+                new Person { Name = "Olaf Berg", Profession = Profession.Engineer, Story = "Kept a brickworks running in Norway.", Earth = "The kiln was the warmest room in the whole valley." },
+                new Person { Name = "Farah Haddad", Profession = Profession.Engineer, Story = "Built power lines across Jordan.", Earth = "From the pylons you could see three countries." },
+                new Person { Name = "Diego Santos", Profession = Profession.Engineer, Story = "Drew copper wire in Chile.", Earth = "The wire came off the drum singing." },
+                new Person { Name = "Ingrid Holm", Profession = Profession.Engineer, Story = "Rolled steel in Sweden.", Earth = "Hot steel at night lights the whole hall orange." },
             },
             [Profession.Agronomist] = new List<Person>
             {
                 new Person { Name = "Pablo Herrera", Profession = Profession.Agronomist, Story = "Grew tomatoes under glass in Almeria.", Earth = "A sea of greenhouses, and the real sea behind it." },
                 new Person { Name = "Nadia Petrova", Profession = Profession.Agronomist, Story = "Kept a seed bank in Svalbard.", Earth = "I kept a million seeds cold for a day like this." },
+                new Person { Name = "Amara Diallo", Profession = Profession.Agronomist, Story = "Grew millet at the edge of the Sahel.", Earth = "We planted trees against the sand, one row a year." },
+                new Person { Name = "Tom Fischer", Profession = Profession.Agronomist, Story = "Ran a tomato greenhouse in the Netherlands.", Earth = "In winter the glass houses glowed pink for miles." },
+                new Person { Name = "Yuki Tanaka", Profession = Profession.Agronomist, Story = "Bred rice for cold mountain valleys.", Earth = "The terraces held the sky like mirrors." },
             },
             [Profession.Scientist] = new List<Person>
             {
@@ -119,6 +166,12 @@ namespace Zerks.Sim
             [Profession.Cook] = new List<Person>
             {
                 new Person { Name = "Luca Bianchi", Profession = Profession.Cook, Story = "Cooked on the fleet's flagship.", Earth = "Basil on a windowsill in Genoa." },
+                new Person { Name = "Rosa Alvarez", Profession = Profession.Cook, Story = "Fed a whole street in Oaxaca every Sunday.", Earth = "The market smelled of chili and wet stone." },
+            },
+            [Profession.Builder] = new List<Person>
+            {
+                new Person { Name = "Hamid Rahimi", Profession = Profession.Builder, Story = "Built new towns on the coast of the Gulf.", Earth = "A crane at sunset is the most patient thing in the world." },
+                new Person { Name = "Clara Moreau", Profession = Profession.Builder, Story = "Printed houses from earth in the south of France.", Earth = "Our walls were the colour of the fields around them." },
             },
         };
 
@@ -129,7 +182,14 @@ namespace Zerks.Sim
             Profession.Geologist => "Geologist",
             Profession.Engineer => "Engineer",
             Profession.Scientist => "Scientist",
+            Profession.Builder => "Builder",
             _ => "",
+        };
+
+        /// <summary>Someone the lists above do not hold any more (they run out only past chapter 2).</summary>
+        public static Person Anyone(Profession p, int id) => new Person
+        {
+            Name = $"Colonist {id}", Profession = p, Story = $"{ProfessionName(p)} from the fleet.", Earth = "I remember the sea.",
         };
 
         /// <summary>The Commander's lines when tapped (concept.md: a short line and the Ark's level).</summary>

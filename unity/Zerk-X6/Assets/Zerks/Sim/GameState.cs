@@ -26,6 +26,13 @@ namespace Zerks.Sim
         public List<Res> Dig = new List<Res>();
         /// <summary>ECHO's impulse: game seconds of double speed left.</summary>
         public double ImpulseLeft;
+        /// <summary>A greenhouse from its level 16: "air and food" (true) or "air only" (levels.md, level 16).</summary>
+        public bool Food;
+        /// <summary>The setting the player chose; it takes hold after one cycle of the plants (about an hour).</summary>
+        public bool FoodWanted;
+        public double SwitchLeft;
+        /// <summary>A greenhouse's seedling bed after "Hardy seedlings" (levels.md, level 17): seedlings, and 10% less of the rest.</summary>
+        public bool Seedbed;
 
         [Newtonsoft.Json.JsonIgnore] public bool Upgrading => UpgradeLeft > 0;
         [Newtonsoft.Json.JsonIgnore] public bool Working => Built && Level > 0;
@@ -97,6 +104,18 @@ namespace Zerks.Sim
         public bool Night, NightOk, ShortageThisNight;
         public int NightsSeen;
         public RobotState Robot = new RobotState();
+        /// <summary>Where the robot searches once the antenna works: "", "carbon", "stone" or "boost" (levels.md, level 18).</summary>
+        public string RobotTarget = "";
+        /// <summary>Stages of the ship's frame done in the dock (levels.md: four, on the levels 12, 14, 17 and 19).</summary>
+        public int Frame;
+        /// <summary>Game seconds left of the stage the fabricator and the cranes are building.</summary>
+        public double FrameLeft, FrameTotal;
+        /// <summary>The antenna research is done: "Ready" over the Ark until the drone unfolds the dish.</summary>
+        public bool AntennaReady;
+        public bool AntennaFixed;
+        /// <summary>The colonist at the builder's console in the Ark (0 = none; levels.md, level 13).</summary>
+        public int Builder;
+        public bool Chapter2Done;
         public int Tutorial;
         public int TutorialCollects;
         public string Crop = "veg";
@@ -114,6 +133,15 @@ namespace Zerks.Sim
         public double ReactorCapKw;
 
         public BuildingState Get(string id) => Buildings.Find(b => b.Id == id);
+
+        /// <summary>After loading: a save from chapter 1 holds fewer resources in each amount.</summary>
+        public void Fit()
+        {
+            if (Stock == null) Stock = new Bag();
+            Stock.Fit();
+            foreach (var b in Buildings) { if (b.Buffer == null) b.Buffer = new Bag(); b.Buffer.Fit(); }
+            if (RobotTarget == null) RobotTarget = "";
+        }
         public bool Has(string id) { var b = Get(id); return b != null && b.Built; }
         public int Level(string id) { var b = Get(id); return b != null && b.Built ? b.Level : 0; }
         public ColonistState Colonist(int id) => Colonists.Find(c => c.Id == id);
