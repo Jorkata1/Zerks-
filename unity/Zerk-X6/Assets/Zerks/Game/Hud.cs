@@ -39,15 +39,20 @@ namespace Zerks.Game
         {
             [Res.Carbon] = Look.Hex(0x3a3540), [Res.Water] = Look.Hex(0x4aa8ff), [Res.Stone] = Look.Hex(0xc98b55),
             [Res.Food] = Look.Hex(0x6cc94f), [Res.Quartz] = Look.Hex(0xb79cff), [Res.Silicon] = Look.Hex(0x5f7fb8), [Res.Iron] = Look.Hex(0xb5563a),
+            // chapter 2 (proposal, 20.11.2026)
+            [Res.Steel] = Look.Hex(0x7d8a99), [Res.Clay] = Look.Hex(0xb9703f), [Res.Bricks] = Look.Hex(0xb8452f), [Res.Copper] = Look.Hex(0xd1773a),
+            [Res.Cables] = Look.Hex(0xd0466a), [Res.Seedlings] = Look.Hex(0x3f9e4f),
         };
         /// <summary>The icon of each resource (Resources/UI/Icons, drawn from mockup/menus.html).</summary>
         static readonly Dictionary<Res, string> ResIcon = new Dictionary<Res, string>
         {
             [Res.Carbon] = "carbon", [Res.Water] = "water", [Res.Stone] = "stone", [Res.Food] = "food", [Res.Quartz] = "quartz", [Res.Silicon] = "silicon", [Res.Iron] = "iron",
+            [Res.Steel] = "steel", [Res.Clay] = "clay", [Res.Bricks] = "bricks", [Res.Copper] = "copper", [Res.Cables] = "cables", [Res.Seedlings] = "seedlings",
         };
         static readonly Dictionary<Res, string> ResShort = new Dictionary<Res, string>
         {
             [Res.Carbon] = "C", [Res.Water] = "W", [Res.Stone] = "S", [Res.Food] = "F", [Res.Quartz] = "Q", [Res.Silicon] = "Si", [Res.Iron] = "Fe",
+            [Res.Steel] = "St", [Res.Clay] = "Cl", [Res.Bricks] = "Br", [Res.Copper] = "Cu", [Res.Cables] = "Cb", [Res.Seedlings] = "Sd",
         };
 
         public void Init(GameRunner g)
@@ -87,7 +92,7 @@ namespace Zerks.Game
             root.Add(toast);
             var dev = new Button(() => Open("dev")) { text = "DEV" };
             dev.AddToClassList("dev-btn");
-            root.Add(dev);
+            top.Add(dev); // moves down with the top bar under the phone's status bar
         }
 
         VisualElement Layer(string name)
@@ -195,19 +200,24 @@ namespace Zerks.Game
             chipsRow.pickingMode = PickingMode.Ignore;
             var row2 = Row("res res2");
             row2.pickingMode = PickingMode.Ignore;
+            // chapter 2: steel, clay, bricks, copper, cables, seedlings in a third row, smaller (proposal)
+            var row3 = Row("res res3");
+            row3.pickingMode = PickingMode.Ignore;
             top.Add(chipsRow);
             top.Add(row2);
+            top.Add(row3);
             foreach (var r in ResInfo.All)
             {
                 var second = r == Res.Quartz || r == Res.Silicon || r == Res.Iron;
-                var chip = Row(second ? "pill s" : "pill");
-                chip.Add(Icon(ResIcon[r], ResColor[r], second ? "pill-ic small" : "pill-ic"));
+                var third = (int)r >= (int)Res.Steel;
+                var chip = Row(third ? "pill s xs" : second ? "pill s" : "pill");
+                chip.Add(Icon(ResIcon[r], ResColor[r], second || third ? "pill-ic small" : "pill-ic"));
                 var text = L("0", "pill-text");
                 var cap = L("", "pill-cap");
                 chip.Add(text); chip.Add(cap);
                 var res = r;
                 chip.AddManipulator(new Clickable(() => ResInfoModal(res)));
-                (second ? row2 : chipsRow).Add(chip);
+                (third ? row3 : second ? row2 : chipsRow).Add(chip);
                 chips[r] = (chip, text, cap);
             }
             energyChip = Row("pill s wide");
@@ -222,6 +232,9 @@ namespace Zerks.Game
         }
 
         Label airNext;
+
+        /// <summary>A shorter number for the small badges of the third row: 17k, 4.1k, 820.</summary>
+        static string Short(double v) => v >= 10000 ? $"{v / 1000:0}k" : v >= 1000 ? $"{v / 1000:0.#}k" : Fmt.Num(v);
 
         void RefreshTop()
         {
@@ -246,10 +259,16 @@ namespace Zerks.Game
                     Res.Quartz => s.Level("mine") >= 5 || s.Stock[r] > 0,
                     Res.Silicon => s.Has("furnace") || s.Stock[r] > 0,
                     Res.Iron => s.Level("mine") >= 10 || s.Stock[r] > 0,
+                    Res.Steel => s.Has("smelter") || s.Stock[r] > 0,
+                    Res.Clay => s.Has("claypit") || s.Stock[r] > 0,
+                    Res.Bricks => s.Has("kiln") || s.Stock[r] > 0,
+                    Res.Copper => s.Level("mine") >= 15 || s.Stock[r] > 0,
+                    Res.Cables => s.Has("copperworks") || s.Stock[r] > 0,
+                    Res.Seedlings => C.IsDone("hardy_seedlings") || s.Stock[r] > 0,
                     _ => true,
                 };
                 chip.style.display = show ? DisplayStyle.Flex : DisplayStyle.None;
-                text.text = Fmt.Num(s.Stock[r]);
+                text.text = (int)r >= (int)Res.Steel ? Short(s.Stock[r]) : Fmt.Num(s.Stock[r]);
                 capL.text = $"/{Fmt.Num(cap)}";
                 chip.EnableInClassList("full", s.Stock[r] >= cap - 0.5);
             }
@@ -500,6 +519,14 @@ namespace Zerks.Game
                 if (s.ArkLeft > 0) Tag("ark-t", $"Ark → {s.Ark + 1} · {RealTime(s.ArkLeft)}", "timer", arkTop, null, 1 - (float)(s.ArkLeft / s.ArkTotal));
                 else if (C.WhyNotArk() == "") Tag("ark-up", $"Upgrade the Ark to {s.Ark + 1}", "action", arkTop, () => { if (C.UpgradeArk()) Toast("The Ark is upgrading"); });
                 if (C.WhyNotWake() == "") Tag("ark-wake", "A pod is glowing: wake", "action", Look.ArkAt + Vector3.up * 24, OpenWake);
+                if (s.AntennaReady) Tag("antenna", "Ready", "ready", Look.ArkAt + Vector3.up * 42, () => C.FixAntenna());
+                if (C.DockOpen)
+                {
+                    // over the far end of the dock, clear of the robot that waits beside it
+                    var dockTop = G.World.WorldOf("dock") + new Vector3(0, 4, -4);
+                    if (s.FrameLeft > 0) Tag("dock-t", $"Frame {s.Frame + 1} · {RealTime(s.FrameLeft)}", "timer", dockTop, null, 1 - (float)(s.FrameLeft / Math.Max(0.001, s.FrameTotal)));
+                    else if (C.WhyNotFrame() == "") Tag("dock-up", $"Frame: stage {s.Frame + 1}", "action", dockTop, () => { if (C.BuildFrame()) Toast($"The fabricator is making stage {s.Frame + 1}"); });
+                }
                 if (s.Robot.Unlocked && s.Robot.Back)
                     Tag("robot", s.Robot.Boost ? "Robot: speed-up" : $"Robot: +{Fmt.Num(s.Robot.Amount)} {ResShort[s.Robot.Cargo]}", "bubble", G.World.Robot.transform.position + Vector3.up * 4, UnloadRobot);
                 if (!s.DebrisCleared && (s.Tutorial >= Colony.TStep.Debris))
@@ -557,10 +584,12 @@ namespace Zerks.Game
         string Signature()
         {
             var s = C.S;
-            var sig = $"{sheet}|{sheetArg}|{s.Ark}|{s.Atmo}|{s.Zone}|{s.Colonists.Count}|{s.Done.Count}|{s.Running.Count}|{s.ArkLeft > 0}|{s.Crop}|{s.ResearchUpgraded}|{s.Tutorial}";
-            foreach (var b in s.Buildings) sig += $"|{b.Id}{b.Level}{b.Built}{b.Upgrading}{b.Ready}{string.Join(",", b.Workers)}{string.Join(",", b.Dig)}";
+            var sig = $"{sheet}|{sheetArg}|{s.Ark}|{s.Atmo}|{s.Zone}|{s.Colonists.Count}|{s.Done.Count}|{s.Running.Count}|{s.ArkLeft > 0}|{s.Crop}|{s.ResearchUpgraded}|{s.Tutorial}" +
+                      $"|{s.Frame}{s.FrameLeft > 0}{s.AntennaReady}{s.AntennaFixed}{s.Builder}{s.RobotTarget}";
+            foreach (var b in s.Buildings) sig += $"|{b.Id}{b.Level}{b.Built}{b.Upgrading}{b.Ready}{string.Join(",", b.Workers)}{string.Join(",", b.Dig)}{b.Food}{b.FoodWanted}{b.Seedbed}{b.SwitchLeft > 0}";
+            if (sheet == "dock") sig += "|" + C.WhyNotFrame();
             // Affordability changes which buttons are on: count what can be paid now.
-            if (sheet == "building" || sheet == "build" || sheet == "ark")
+            if (sheet == "building" || sheet == "build" || sheet == "ark" || sheet == "research")
             {
                 sig += "|" + string.Join("", Content.Buildings.Select(d => C.WhyNotBuild(d.Id, out _) == "" ? "1" : "0"));
                 sig += "|" + string.Join("", s.Buildings.Select(b => C.WhyNotUpgrade(b.Id) == "" ? "1" : "0"));
@@ -584,7 +613,7 @@ namespace Zerks.Game
             var (hicon, hbg) = sheet switch
             {
                 "build" => ("hammer", 0xff8b3d), "research" => ("flask", 0x4aa8ff), "colonists" => ("people", 0x8f6cff),
-                "map" => ("map", 0xc98b55), "goals" => ("echo", 0x22c19b), _ => (null, 0),
+                "map" => ("map", 0xc98b55), "goals" => ("echo", 0x22c19b), "dock" => ("hammer", 0x7d8a99), _ => (null, 0),
             };
             if (hicon != null) head.Add(Icon(hicon, Look.Hex((uint)hbg), "hi"));
             var title = L("", "sheet-title");
@@ -602,6 +631,7 @@ namespace Zerks.Game
             {
                 case "building": title.text = BuildingSheet(body, sheetArg); break;
                 case "ark": title.text = ArkSheet(body); break;
+                case "dock": title.text = DockSheet(body); break;
                 case "build": title.text = "Build"; BuildMenu(body); break;
                 case "research": title.text = "Research"; ResearchSheet(body); break;
                 case "colonists": title.text = "Colonists"; ColonistsSheet(body); break;
@@ -641,13 +671,23 @@ namespace Zerks.Game
                 r.Add(L($"{Fmt.Num(now)} → {Fmt.Num(next)} {unit}", "muted"));
                 body.Add(r);
             }
-            switch (id)
+            switch (Colony.Kind(id))
             {
                 case "drill": Line("Carbon", rowNow.Get("carbon/min"), rowNext.Get("carbon/min"), "/min"); break;
                 case "pump": Line("Water", rowNow.Get("water/min"), rowNext.Get("water/min"), "/min"); break;
                 case "veglab": Line("Food", rowNow.Get("food/min"), rowNext.Get("food/min"), "/min"); Line("Air", rowNow.Get("air/min"), rowNext.Get("air/min"), "/min"); break;
                 case "processor": Line("Air", rowNow.Get("air/min"), rowNext.Get("air/min"), "/min"); break;
-                case "greenhouse": Line("Air", rowNow.Get("air/min"), rowNext.Get("air/min"), "/min"); break;
+                case "greenhouse":
+                    Line("Air", rowNow.Get("air/min"), rowNext.Get("air/min"), "/min");
+                    if (b.Level >= 15) Line("Food (with air and food)", rowNow.Get("food/min"), rowNext.Get("food/min"), "/min");
+                    if (C.IsDone("hardy_seedlings")) Line("Seedlings (with a bed)", rowNow.Get("seedlings/min (from level 17)"), rowNext.Get("seedlings/min (from level 17)"), "/min");
+                    break;
+                case "smelter": Line("Steel", rowNow.Get("steel/min"), rowNext.Get("steel/min"), "/min (2 iron ore + 1 carbon each)"); break;
+                case "claypit": Line("Clay", rowNow.Get("clay/min"), rowNext.Get("clay/min"), "/min"); break;
+                case "kiln": Line("Bricks", rowNow.Get("bricks/min"), rowNext.Get("bricks/min"), "/min (2 clay each)"); break;
+                case "copperworks": Line("Cables", rowNow.Get("cables/min"), rowNext.Get("cables/min"), "/min (2 copper ore + 1 carbon each)"); break;
+                case "brickhome": Line("Beds", Content.Beds(b.Level), Content.Beds(b.Level + 1), ""); break;
+                case "canteen": Line("Seats", Content.Seats(b.Level), Content.Seats(b.Level + 1), ""); break;
                 case "furnace": Line("Silicon", rowNow.Get("silicon/min"), rowNext.Get("silicon/min"), "/min (2 quartz + 1 carbon each)"); break;
                 case "solar": Line("Power by day", rowNow.Get("kW by day"), rowNext.Get("kW by day"), "kW"); break;
                 case "batteries": Line("Stores", rowNow.Get("kWh") * C.Cfg.CycleScale, rowNext.Get("kWh") * C.Cfg.CycleScale, "kWh"); break;
@@ -664,12 +704,14 @@ namespace Zerks.Game
             body.Add(L($"Power {rowNow.EnergyKw:0.#} kW", "muted"));
 
             // Next new thing (concept.md: how many levels to the next unlock and which Ark level it wants).
-            var next = id switch
+            var next = Colony.Kind(id) switch
             {
-                "mine" => b.Level < 5 ? "Level 5: quartz and a second miner" : b.Level < 10 ? "Level 10: iron ore and a third miner (the Ark on level 9)" : null,
-                "veglab" => b.Level < 5 ? "Level 5: potatoes" : b.Level < 10 ? "Level 10: beans (the Ark on level 9)" : null,
-                "home" => b.Level < 11 ? $"Level {Math.Max(5, b.Level + 1)}: one more bed" + (b.Level == 10 ? " and the second floor" : "") : null,
-                "kitchen" => b.Level < 8 ? "Level 9: the ninth seat" : null,
+                "mine" => b.Level < 5 ? "Level 5: quartz and a second miner" : b.Level < 10 ? "Level 10: iron ore and a third miner (the Ark on level 9)"
+                    : b.Level < 15 ? "Level 15: copper ore and a fourth miner (the Ark on level 14)" : b.Level < 20 ? "Level 20: a fifth miner (the Ark on level 24)" : null,
+                "veglab" => b.Level < 5 ? "Level 5: potatoes" : b.Level < 10 ? "Level 10: beans (the Ark on level 9)" : b.Level < 15 ? "Level 15: wheat (the Ark on level 14)" : null,
+                "greenhouse" => b.Level < 16 ? "Level 16: food as well as air (the Ark on level 16)" : null,
+                "home" or "brickhome" => b.Level < 20 ? $"Level {Math.Max(5, b.Level + 1)}: one more bed" + (b.Level == 10 ? " and the second floor" : "") : "The last level: 20 beds",
+                "kitchen" or "canteen" => b.Level < 8 ? "Level 9: the ninth seat" : b.Level < 20 ? $"Level {b.Level + 1}: one more seat" : "The last level: 20 seats",
                 _ => null,
             };
             if (next != null) body.Add(L(next, "muted"));
@@ -722,10 +764,30 @@ namespace Zerks.Game
                 body.Add(L(Content.Crops.First(x => x.Id == s.Crop).About, "muted"));
             }
             if (id == "research") body.Add(B("Open research", () => Open("research"), "btn alt"));
+            if (Colony.IsGreenhouse(id) && (C.CanGiveFood(b) || C.IsDone("hardy_seedlings")))
+            {
+                // levels.md, level 16: "air only" gives all the air; "air and food" about 70% of it plus food, after one cycle.
+                body.Add(L("WHAT IT GROWS", "section"));
+                if (C.CanGiveFood(b))
+                {
+                    var picks = Row();
+                    picks.Add(B("Air only", () => C.SetGreenhouseFood(id, false), !b.FoodWanted ? "btn small choice picked" : "btn small choice"));
+                    picks.Add(B("Air and food", () => C.SetGreenhouseFood(id, true), b.FoodWanted ? "btn small choice picked" : "btn small choice"));
+                    body.Add(picks);
+                    var t = L("", "muted");
+                    body.Add(t);
+                    live.Add(() => t.text = b.SwitchLeft > 0 ? $"The plants change over after one cycle · {RealTime(b.SwitchLeft)}" : b.Food ? "About 70% of the air, and food." : "All the air.");
+                }
+                if (C.IsDone("hardy_seedlings"))
+                {
+                    // levels.md, level 17: a seedling bed; while it grows, the greenhouse gives 10% less of the rest.
+                    body.Add(B(b.Seedbed ? "Seedling bed: on (10% less of the rest)" : "Seedling bed: off", () => C.SetSeedbed(id, !b.Seedbed), b.Seedbed ? "btn small teal" : "btn small alt"));
+                }
+            }
 
             // Bubble, impulse, upgrade.
             if (b.Buffer.V.Sum() >= 1) body.Add(B($"Collect {b.Buffer}", () => Collect(id), "btn teal"));
-            if (C.ImpulseReady && id != "home" && id != "warehouse") body.Add(B("ECHO's impulse: twice as fast for 5 min", () => { if (C.Impulse(id)) Toast("ECHO's impulse"); }, "btn alt"));
+            if (C.ImpulseReady && id != "home" && id != "brickhome" && id != "warehouse") body.Add(B("ECHO's impulse: twice as fast for 5 min", () => { if (C.Impulse(id)) Toast("ECHO's impulse"); }, "btn alt"));
             if (b.Ready) body.Add(B("Ready: the drone re-prints the new part", () => { C.Reprint(id); G.World.Reprint(id); }, "btn"));
             if (b.Upgrading)
             {
@@ -772,23 +834,81 @@ namespace Zerks.Game
                 var why = C.WhyNotArk();
                 body.Add(B(why == "" ? $"Upgrade the Ark to level {s.Ark + 1}" : why, () => { if (C.UpgradeArk()) Toast("The Ark is upgrading"); }, "btn", why == ""));
             }
-            else body.Add(L("Chapter 1 is complete.", "line-text"));
+            else body.Add(L("Chapter 2 is complete.", "line-text"));
 
+            if (s.AntennaReady) body.Add(B("Ready: the drone unfolds the antenna", () => C.FixAntenna(), "btn teal"));
             body.Add(L("THE PODS", "section"));
-            body.Add(L($"Pods with power {C.Pods} · awake {C.Awake} · beds {C.Beds} · kitchen seats {C.Seats}", "line-text"));
+            body.Add(L(s.Ark >= 11
+                ? $"The Ark powers a pod for every new workplace · awake {C.Awake} · beds {C.Beds} · seats {C.Seats}"
+                : $"Pods with power {C.Pods} · awake {C.Awake} · beds {C.Beds} · kitchen seats {C.Seats}", "line-text"));
             var whyWake = C.WhyNotWake();
             if (whyWake == "") body.Add(B("A pod is glowing: wake a colonist", OpenWake, "btn teal"));
             else if (s.Ark >= 3) body.Add(L(whyWake, "muted"));
+            if (C.IsDone("builder_console"))
+            {
+                // levels.md, level 13: one place in the Ark, for a builder, who leads the drone.
+                body.Add(L("THE BUILDER'S CONSOLE", "section"));
+                var bc = s.Builder != 0 ? s.Colonist(s.Builder) : null;
+                if (bc != null) body.Add(L($"{bc.Name} {Stars(C.Stars(bc))} · builds and upgrades {C.BuilderCut * 100:0}% faster", "line-text"));
+                else
+                {
+                    body.Add(L("Empty: only a builder works here.", "muted"));
+                    if (whyWake == "") body.Add(B("Wake a builder", OpenWake, "btn small teal"));
+                }
+            }
+            if (C.DockOpen)
+            {
+                body.Add(L("THE DOCK", "section"));
+                body.Add(L(s.FrameLeft > 0 ? $"Stage {s.Frame + 1} of the frame is being built" : s.Frame >= 4 ? "The frame is complete." : $"The frame: {s.Frame}/4 stages", "line-text"));
+                body.Add(B("Open the dock", () => Open("dock"), "btn small alt"));
+            }
 
             body.Add(L("POWER", "section"));
             body.Add(L($"Use {C.EnergyDemand:0.#} kW · panels {C.SolarKw:0.#} kW · reactor {C.ReactorKw:0.#} kW" + (C.BatteryCapacity > 0 ? $" · batteries {s.Battery:0.#}/{C.BatteryCapacity:0.#} kWh" : ""), "line-text"));
             if (s.Sketches.Count > 0)
             {
                 body.Add(L("SKETCHES", "section"));
-                body.Add(B($"Sketches {s.Sketches.Count}/10: the frame", ShowSketch, "btn alt"));
+                var row = Row();
+                foreach (var sk in s.Sketches) { var k = sk; row.Add(B(k == "hull" ? "2: the hull" : "1: the frame", () => ShowSketch(k), "btn small alt")); }
+                body.Add(row);
             }
             return $"The Ark · Level {s.Ark}";
         }
+
+        // ---------------------------------------------------------------- the dock (levels.md, level 12)
+
+        string DockSheet(VisualElement body)
+        {
+            var s = C.S;
+            body.Add(L("The Ark's fabricator makes the parts from steel; its crane lowers them into the dock and the gantry crane sets them. No drone, no workplace.", "sheet-sub"));
+            body.Add(L("THE FRAME", "section"));
+            foreach (var f in Content.Frame)
+            {
+                var r = Row("line");
+                r.Add(L($"Stage {f.Stage} · {Fmt.Num(f.Steel)} steel · level {f.ArkLevel}", "line-text"));
+                var state = s.Frame >= f.Stage ? "✓" : s.Frame + 1 == f.Stage && s.FrameLeft > 0 ? "building" : s.Ark < f.ArkLevel ? $"level {f.ArkLevel}" : "—";
+                r.Add(L(state, s.Frame >= f.Stage ? "ok" : "muted"));
+                body.Add(r);
+            }
+            if (s.FrameLeft > 0)
+            {
+                var t = L("", "line-text");
+                var bar = Bar(0);
+                body.Add(t); body.Add(bar);
+                live.Add(() => { t.text = $"Stage {s.Frame + 1} · {RealTime(s.FrameLeft)}"; bar.Q(className: "bar-fill").style.width = Length.Percent((1 - (float)(s.FrameLeft / Math.Max(0.001, s.FrameTotal))) * 100); });
+            }
+            else if (C.NextFrame != null)
+            {
+                var f = C.NextFrame;
+                var why = C.WhyNotFrame();
+                body.Add(L($"Stage {f.Stage}: {Cost(Bag1(Res.Steel, f.Steel), s.Stock)} · {RealTime(f.Minutes * 60)}", "line-text"));
+                body.Add(B(why == "" ? $"Build stage {f.Stage}" : why, () => { if (C.BuildFrame()) Toast($"The fabricator is making stage {f.Stage}"); }, "btn", why == ""));
+            }
+            else body.Add(L("The frame stands whole in the dock. The hull comes in chapter 3.", "line-text"));
+            return $"The dock · Frame {s.Frame}/4";
+        }
+
+        static Bag Bag1(Res r, double a) { var b = new Bag(); b[r] = a; return b; }
 
         // ---------------------------------------------------------------- build menu
 
@@ -798,9 +918,12 @@ namespace Zerks.Game
             var grid = Row();
             body.Add(L("A building is printed by the drone on its own plot. One at a time.", "sheet-sub"));
             body.Add(grid);
-            foreach (var def in Content.Buildings)
+            // One card for each kind: the next one of it that is not standing yet (the second and third greenhouse).
+            // What can be built comes first, then what is still to come, and what stands at the end (proposal).
+            int Order(string k) { var w = C.WhyNotBuild(C.NextOfKind(k).Id, out _); return w == "" ? 0 : w == "Built" ? 2 : 1; }
+            foreach (var kind in Content.Kinds.Where(k => k != "research").OrderBy(Order).ThenBy(k => Array.IndexOf(Content.Kinds, k)))
             {
-                if (def.Id == "research") continue;
+                var def = C.NextOfKind(kind);
                 var why = C.WhyNotBuild(def.Id, out var lvl);
                 var built = why == "Built";
                 var locked = why.StartsWith("Level ");
@@ -809,7 +932,7 @@ namespace Zerks.Game
                 if (why == "") card.AddToClassList("can");
                 var img = new VisualElement();
                 img.AddToClassList("card-img");
-                var rt = Thumbs.Get(def.Id, def.ModelFor(1), locked);
+                var rt = Thumbs.Get(def.Kind, def.ModelFor(1), locked);
                 if (rt != null) img.style.backgroundImage = new StyleBackground(Background.FromRenderTexture(rt));
                 if (locked) img.Add(L("🔒", "card-lock"));
                 card.Add(img);
@@ -821,11 +944,11 @@ namespace Zerks.Game
                 else
                 {
                     card.Add(L(def.Name, "card-name"));
-                    if (built) card.Add(L($"Built · level {s.Level(def.Id)}", "card-info"));
+                    var many = Content.OfKind(kind).Count();
+                    if (built) card.Add(L(many > 1 ? $"Built: {many}" : $"Built · level {s.Level(def.Id)}", "card-info"));
                     else
                     {
-                        var bb = C.Bal.B(def.Id);
-                        card.Add(L($"{Cost(bb.BuildCost, s.Stock)} · {RealTime(Math.Max(bb.BuildSeconds, C.Cfg.MinBuildReal * C.Cfg.Tempo))}", "card-info"));
+                        card.Add(L($"{Cost(C.BuildCost(def.Id), s.Stock)} · {RealTime(C.BuildSeconds(def.Id))}", "card-info"));
                         if (why != "") card.Add(L(why, "card-info"));
                     }
                 }
@@ -873,7 +996,7 @@ namespace Zerks.Game
                     if (why == "") { var id = r.Id; line.Add(B("Start", () => { if (C.StartResearch(id)) Toast($"Research: {r.Name}"); }, "btn small")); }
                     else line.Add(L(why == "Done" ? "✓" : why, why == "Done" ? "ok" : "muted"));
                     item.Add(line);
-                    item.Add(L($"{r.Effect} · {RealTime(C.ResearchSeconds(r.Id))}", "item-info"));
+                    item.Add(L($"{r.Effect} · {RealTime(C.ResearchSeconds(r.Id))}{(r.Cost != null ? $" · costs {r.Cost}" : "")}", "item-info"));
                     body.Add(item);
                 }
             }
@@ -896,7 +1019,7 @@ namespace Zerks.Game
                 line.Add(L(col.Name, "item-name"));
                 line.Add(L(Stars(C.Stars(col)), "ok"));
                 item.Add(line);
-                var work = string.IsNullOrEmpty(col.Work) ? "no work" : Content.B(col.Work).Name;
+                var work = string.IsNullOrEmpty(col.Work) ? "no work" : Content.PlaceName(col.Work);
                 item.Add(L($"{Texts.ProfessionName(col.Profession)} · {work} · happy {col.Happiness:0}%", "item-info"));
                 var c = col;
                 item.AddManipulator(new Clickable(() => Dossier(c)));
@@ -907,7 +1030,7 @@ namespace Zerks.Game
 
         void Dossier(ColonistState c)
         {
-            Modal(c.Name, $"{Texts.ProfessionName(c.Profession)} · works at the {(string.IsNullOrEmpty(c.Work) ? "—" : Content.B(c.Work).Name)}\n{c.Story}\nExperience {Stars(C.Stars(c))} ({c.WorkMinutes / 60:0.#} h of work) · happiness {c.Happiness:0}%",
+            Modal(c.Name, $"{Texts.ProfessionName(c.Profession)} · works at the {Content.PlaceName(c.Work)}\n{c.Story}\nExperience {Stars(C.Stars(c))} ({c.WorkMinutes / 60:0.#} h of work) · happiness {c.Happiness:0}%",
                 c.Earth, ("Close", null));
         }
 
@@ -924,6 +1047,22 @@ namespace Zerks.Game
                 return;
             }
             var slots = fixedP != null ? C.EmptySlots(fixedP.Profession) : C.EmptySlots();
+            if (C.S.Ark >= 11 && fixedP == null && slots.Count > 0)
+            {
+                // From level 11 the colonist comes with the workplace (levels.md): the Ark wakes whoever the next place needs.
+                var sl = slots[0];
+                var who = C.WhoFor(sl.Building);
+                var d2 = Dim();
+                var m2 = new VisualElement();
+                m2.AddToClassList("modal");
+                d2.Add(m2);
+                m2.Add(L($"{who.Name}, {Texts.ProfessionName(who.Profession).ToLowerInvariant()}", "modal-title"));
+                m2.Add(L($"For the {Content.PlaceName(sl.Building)}{(sl.Building == "mine" ? $" (place {sl.Slot + 1})" : "")}. {who.Story}", "modal-text"));
+                if (slots.Count > 1) m2.Add(L($"{slots.Count - 1} more place{(slots.Count > 2 ? "s" : "")} wait{(slots.Count > 2 ? "" : "s")} after this one.", "muted"));
+                m2.Add(B("Wake", () => { modalLayer.Clear(); Woke(C.Wake(sl.Building, sl.Slot)); }, "btn teal"));
+                m2.Add(B("Not now", () => modalLayer.Clear(), "btn small alt"));
+                return;
+            }
             var dim = Dim();
             var m = new VisualElement();
             m.AddToClassList("modal");
@@ -935,7 +1074,7 @@ namespace Zerks.Game
             m.Add(sv);
             foreach (var sl in slots)
             {
-                var label = $"{Content.B(sl.Building).Name}{(sl.Building == "mine" ? $" (place {sl.Slot + 1})" : "")} · {Texts.ProfessionName(sl.Profession)}{(sl.Recommended ? " · ECHO recommends" : "")}";
+                var label = $"{Content.PlaceName(sl.Building)}{(sl.Building == "mine" ? $" (place {sl.Slot + 1})" : "")} · {Texts.ProfessionName(sl.Profession)}{(sl.Recommended ? " · ECHO recommends" : "")}";
                 var s1 = sl;
                 var pick = B(label, () => { modalLayer.Clear(); Woke(C.Wake(s1.Building, s1.Slot)); }, sl.Recommended ? "btn teal" : "btn alt");
                 pick.style.height = StyleKeyword.Auto;
@@ -950,7 +1089,7 @@ namespace Zerks.Game
         {
             if (c == null) { Toast("Could not wake anyone"); return; }
             G.World.CommanderTo("home");
-            Modal($"{c.Name} wakes up", $"{Texts.ProfessionName(c.Profession)}, for the {Content.B(c.Work).Name}.\n{c.Story}", c.Earth, ("Welcome", null));
+            Modal($"{c.Name} wakes up", $"{Texts.ProfessionName(c.Profession)}, for the {Content.PlaceName(c.Work)}.\n{c.Story}", c.Earth, ("Welcome", null));
         }
 
         // ---------------------------------------------------------------- map, goals
@@ -972,9 +1111,66 @@ namespace Zerks.Game
                 body.Add(item);
             }
             Zone("The landing", "The Ark, the first five buildings, the mine in the canyon wall, the home and the kitchen.", true, "");
-            Zone("Zone I", "The next strip: the store, the furnace, the panels, the batteries, the greenhouse.", s.Zone >= 1, "Research on level 4");
-            Zone("Zone II · the south slope", "Sun and room for the greenhouses of chapter 2.", s.Zone >= 2, "Research on level 10");
+            Zone("Zone I", "The next strip: the store, the furnace, the panels, the batteries, the greenhouse; by the Ice Hollow the clay pit, the brick kiln and the canteen.", s.Zone >= 1, "Research on level 4");
+            Zone("Zone II · the south slope", "Sun all day: the smelter, the copper works, the brick home, the second and the third greenhouse.", s.Zone >= 2, "Research on level 10");
             Zone("Zone III · the Green Belt", "Chapter 3.", false, "Chapter 3");
+            PlanetMap(body);
+        }
+
+        /// <summary>
+        /// The map of the planet (levels.md, level 18): the antenna brings down the pictures of the containers' cameras in
+        /// orbit; the signal is a point on it, and you choose where the robot searches and what it brings.
+        /// </summary>
+        void PlanetMap(VisualElement body)
+        {
+            var s = C.S;
+            body.Add(L("THE PLANET", "section"));
+            if (!s.AntennaFixed)
+            {
+                body.Add(L(s.AntennaReady ? "The antenna is ready: tap \"Ready\" over the Ark." : "The Ark's antenna has been broken since the landing (research on level 18).", "muted"));
+                return;
+            }
+            body.Add(L("Pictures from the containers' cameras in orbit. The robot goes where you send it, farther than the canyon.", "sheet-sub"));
+            var map = new VisualElement();
+            map.AddToClassList("planet");
+            void Spot(float x, float y, float size, Color c, string label = null, bool pulse = false)
+            {
+                var d = new VisualElement();
+                d.style.position = Position.Absolute;
+                d.style.left = Length.Percent(x); d.style.top = Length.Percent(y);
+                d.style.width = size; d.style.height = size;
+                d.style.borderTopLeftRadius = d.style.borderTopRightRadius = d.style.borderBottomLeftRadius = d.style.borderBottomRightRadius = size / 2;
+                d.style.backgroundColor = c;
+                d.pickingMode = PickingMode.Ignore;
+                map.Add(d);
+                if (pulse) live.Add(() => d.style.opacity = 0.45f + 0.55f * Mathf.Abs(Mathf.Sin(Time.time * 3)));
+                if (label != null)
+                {
+                    var l = L(label, "planet-label");
+                    l.style.left = Length.Percent(x + 2.5f); l.style.top = Length.Percent(y - 1);
+                    map.Add(l);
+                }
+            }
+            // the canyon (a dark line), the base in it, the three places for the robot and the signal far away
+            var canyon = new VisualElement();
+            canyon.AddToClassList("planet-canyon");
+            map.Add(canyon);
+            Spot(46, 52, 12, Look.Hex(0xff8b3d), "Base");
+            Spot(26, 30, 10, ResColor[Res.Carbon], "Carbon field");
+            Spot(64, 72, 10, ResColor[Res.Stone], "Stone slope");
+            Spot(18, 74, 10, Look.Hex(0x5fe3d0), "Old debris");
+            Spot(82, 16, 12, Look.Hex(0xfff3a0), "Signal", true);
+            body.Add(map);
+            body.Add(L(Texts.Signal, "quote"));
+            body.Add(L("THE ROBOT SEARCHES", "section"));
+            var picks = Row();
+            foreach (var (key, label) in new[] { ("", "Near the base"), ("carbon", "Carbon field"), ("stone", "Stone slope"), ("boost", "Old debris: a speed-up") })
+            {
+                var k = key;
+                picks.Add(B(label, () => C.SetRobotTarget(k), s.RobotTarget == key ? "btn small choice picked" : "btn small choice"));
+            }
+            body.Add(picks);
+            body.Add(L(s.RobotTarget == "" ? "Near the base it brings carbon or stone, sometimes a speed-up." : "Farther away: longer trips, half as much again on each.", "muted"));
         }
 
         void GoalsSheet(VisualElement body)
@@ -988,7 +1184,7 @@ namespace Zerks.Game
                 item.Add(L(g, "item-name"));
                 body.Add(item);
             }
-            if (s.Sketches.Count > 0) body.Add(B($"Sketches {s.Sketches.Count}/10", ShowSketch, "btn alt"));
+            if (s.Sketches.Count > 0) body.Add(B($"Sketches {s.Sketches.Count}/10", () => ShowSketch(s.Sketches.Last()), "btn alt"));
             body.Add(L("ECHO'S NOTES", "section"));
             foreach (var n in s.Notes.AsEnumerable().Reverse().Take(14)) body.Add(L("· " + n.Text, "item-info"));
         }
@@ -1010,9 +1206,12 @@ namespace Zerks.Game
             row.Add(B("Away 1 h", () => G.SimulateAway(3600), "btn small alt"));
             body.Add(row);
             body.Add(L("START OF ARK LEVEL", "section"));
-            var jump = Row();
-            for (int l = 1; l <= 11; l++) { var ll = l; jump.Add(B(l.ToString(), () => { Close(); G.JumpTo(ll); }, "btn small")); }
-            body.Add(jump);
+            for (int from = 1; from <= Content.LastLevel; from += 11)
+            {
+                var jump = Row();
+                for (int l = from; l <= Math.Min(Content.LastLevel, from + 10); l++) { var ll = l; jump.Add(B(l.ToString(), () => { Close(); G.JumpTo(ll); }, "btn small")); }
+                body.Add(jump);
+            }
             body.Add(B("New game (delete the save)", () => { Close(); G.NewGame(); }, "btn alt"));
         }
 
@@ -1045,7 +1244,7 @@ namespace Zerks.Game
         void AirInfo()
         {
             var lines = string.Join("\n", C.AirBySource.Select(kv => $"{kv.Key}: +{kv.Value:0.##} units/min"));
-            if (C.SmokeRate > 0) lines += $"\nSmoke from the furnace: -{C.SmokeRate:0.##} units/min";
+            if (C.SmokeRate > 0) lines += $"\nSmoke{(C.S.Has("smelter") ? " from the furnace and the smelter" : " from the furnace")}: -{C.SmokeRate:0.##} units/min";
             var need = C.Bal.AirFor(C.S.Atmo);
             Modal($"Air {C.S.Atmo}%", $"{lines}\nTo {C.S.Atmo + 1}%: {C.S.Air:0.#} of {need:0.#} units.\nAt 100% we breathe without masks.", null, ("Close", null));
         }
@@ -1065,13 +1264,14 @@ namespace Zerks.Game
                                    (ResInfo.ArkSpends(r) ? "\nThe Ark takes it when it levels up." : "\nThe Ark only checks it is in the store."), null, ("Close", null));
         }
 
-        public void ShowSketch()
+        public void ShowSketch(string which)
         {
+            var hull = which == "hull";
             var dim = Dim();
             var m = new VisualElement();
             m.AddToClassList("modal");
             dim.Add(m);
-            m.Add(L("Sketch 1/10: the frame", "modal-title"));
+            m.Add(L(hull ? "Sketch 2/10: the hull" : "Sketch 1/10: the frame", "modal-title"));
             var bp = new VisualElement();
             bp.AddToClassList("blueprint");
             // A few lines of the frame of a warship, drawn in the light of the research station.
@@ -1087,9 +1287,16 @@ namespace Zerks.Game
             Beam(10, 48, 80, 3); Beam(18, 28, 64, 2); Beam(18, 68, 64, 2);
             for (int i = 0; i < 7; i++) Beam(14 + i * 11, 26, 1.5f, 46);
             Beam(86, 40, 6, 18); Beam(4, 44, 6, 10);
+            if (hull)
+            {
+                // the plates that wrap the frame: an outline round it, thicker, with the seams of the sheets
+                Beam(12, 20, 76, 3); Beam(12, 76, 76, 3); Beam(6, 30, 3, 40); Beam(91, 30, 3, 40);
+                Beam(8, 22, 5, 9); Beam(8, 69, 5, 9); Beam(87, 22, 5, 9); Beam(87, 69, 5, 9);
+                for (int i = 1; i < 6; i++) { Beam(12 + i * 12.6f, 18, 0.8f, 7); Beam(12 + i * 12.6f, 74, 0.8f, 7); }
+            }
             m.Add(bp);
-            m.Add(L(Texts.Sketch, "quote"));
-            m.Add(L(Texts.FrameLater, "modal-text"));
+            m.Add(L(hull ? Texts.HullSketch : Texts.Sketch, "quote"));
+            m.Add(L(hull ? Texts.HullLater : Texts.FrameLater, "modal-text"));
             m.Add(B("Close", () => modalLayer.Clear(), "btn"));
         }
     }

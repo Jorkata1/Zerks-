@@ -19,6 +19,13 @@ namespace Zerks.Game
         public Rover Robot;
         public EchoBot Echo;
         public Figure Commander;
+        /// <summary>The dock with the ship's frame, on the Ark's plot (levels.md, level 12; art/3d/buildings dock-0 … dock-4).</summary>
+        public BuildingView DockV;
+        /// <summary>Where the drone works when it unfolds the antenna's dish on top of the Ark (levels.md, level 18).</summary>
+        BuildingView arkTop;
+        GameObject arkModel;
+        string arkModelName;
+        float dockPrint = -1, antennaLeft;
         public readonly Dictionary<int, Figure> People = new Dictionary<int, Figure>();
         public Light Sun;
         public float NightK;
@@ -44,10 +51,11 @@ namespace Zerks.Game
         string reprintId;
         float reprintLeft;
 
-        // The street blocks of the level 10 map: (d, s) and their zone (0 open, 1 Zone I, 2 Zone II). Zone II, the South
-        // Slope, lies at the back, up the canyon, where the approved map has the closed zone with its dust and the sign
-        // "ZONE II" (Joro, 14.11.2026; the plots of stage 2): the front is the canyon's low end with the Ice Hollow.
-        static readonly (int d, int s, int zone)[] EmptyBlocks = { (-2, 4, 1), (2, 4, 1), (-2, -4, 2), (0, -4, 2), (2, -4, 2), (-1, -5, 2), (1, -5, 2) };
+        // The street blocks of the map: (d, s) and their zone (0 open, 1 Zone I, 2 Zone II). Zone II, the South Slope, lies
+        // at the back, up the canyon, where the approved map has the closed zone with its dust and the sign "ZONE II" (Joro,
+        // 14.11.2026; the plots of stage 2): the front is the canyon's low end with the Ice Hollow. Every plot of the map
+        // has a building of chapter 2 now (Content.Buildings), so no block stays empty.
+        static readonly (int d, int s, int zone)[] EmptyBlocks = { };
         static readonly (int d, int s)[] ArkBlocks = { (0, -2), (-1, -1), (1, -1), (0, 0) };
         const float ArkHalf = 13.8f;
         // The service channel along the streets (three.js metres, game/src/view/layout.ts, level 10): it runs this far
@@ -83,7 +91,7 @@ namespace Zerks.Game
             var road = Look.Lit(Look.Road, 0.1f);
             var pad = Look.Lit(Look.Pad, 0.1f);
             var edge = Look.Lit(Look.PadEdge, 0.1f);
-            void Block(int d, int s, int zone, bool plot)
+            GameObject Block(int d, int s, int zone, bool plot)
             {
                 var at = Look.Plot(d, s);
                 var g = new GameObject($"block {d},{s}");
@@ -97,20 +105,24 @@ namespace Zerks.Game
                 }
                 zoneThings.Add((zone, g));
                 if (zone > c.S.Zone) g.SetActive(false);
+                return g;
             }
-            foreach (var def in Content.Buildings) Block(def.D, def.S, def.Zone, true);
+            foreach (var def in Content.Buildings)
+            {
+                var g = Block(def.D, def.S, def.Zone, true);
+                if (def.Dug) DugPlot(def, g, road, edge, pad);
+            }
             foreach (var (d, s, z) in EmptyBlocks) Block(d, s, z, true);
             foreach (var (d, s) in ArkBlocks) Block(d, s, 0, false);
 
-            // The Ark on its 2x2 plot, with the containers next to it.
+            // The Ark on its 2x2 plot, with the containers next to it; from level 18 with its dish unfolded.
             var ark = new GameObject("ark");
             ark.transform.SetParent(transform, false);
             ark.transform.localPosition = Look.ArkAt;
-            var arkModel = Models.Spawn("ark", "ark", ark.transform);
             ArkT = ark.transform;
+            SetArk(c.S.AntennaFixed ? "ark-18" : "ark");
             var padNode = arkModel.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == "drone_pad");
             DronePad = padNode != null ? padNode.position : Look.ArkAt + new Vector3(-6, 15.5f, 6);
-            foreach (var t in arkModel.GetComponentsInChildren<Transform>(true).Where(t => t.name.StartsWith("parked_drone"))) t.gameObject.SetActive(false);
             var arkCol = ark.AddComponent<BoxCollider>();
             arkCol.center = new Vector3(0, 14, 0); arkCol.size = new Vector3(18, 30, 18);
             podMat = Look.Glow(Look.Teal, 0);
@@ -179,15 +191,25 @@ namespace Zerks.Game
             for (int i = 0; i < 7; i++)
                 Look.Prim(PrimitiveType.Cube, iceDeposit.transform, new Vector3(Mathf.Cos(i * 2.1f) * 3.2f, 0.4f, Mathf.Sin(i * 1.3f) * 3.2f), new Vector3(1.2f, 0.8f, 1.0f), Look.Lit(Look.Ice, 0.7f));
 
+            // The dock on the Ark's plot, in front of it on the crane's side: its centre is (2.32, -1.82) Blender units from
+            // the Ark's origin at the Ark's 4.15 m a unit (art/3d/buildings/README.md), as on stage 2 (game/src/view/world.ts).
+            var origin = arkModel.transform.GetChild(0).position;
+            var dockDef = new BuildingDef { Id = "dock", Kind = "dock", Name = "Dock", Models = { [1] = "dock-0", [2] = "dock-1", [3] = "dock-2", [4] = "dock-3", [5] = "dock-4" } };
+            DockV = BuildingView.Make(dockDef, transform);
+            DockV.transform.position = origin + new Vector3(-2.32f * 4.15f, 0, 1.82f * 4.15f);
+            var dcol = DockV.GetComponent<BoxCollider>();
+            dcol.center = new Vector3(0, 2, 0); dcol.size = new Vector3(6.5f, 4, 13.5f);
+            arkTop = new GameObject("ark top").AddComponent<BuildingView>();
+            arkTop.transform.SetParent(transform, false);
+            arkTop.transform.position = Look.ArkAt;
+            arkTop.Height = 30;
+
             // Movers.
             DroneBot = Drone.Make(transform, DronePad);
             // The robot drives along the streets to the front corner of the colony, then on its tracks out through the
             // mouth of the canyon to the plain (Joro, 14.11.2026); it keeps to the ground of the canyon.
-            var park = Look.ArkAt + new Vector3(-12, 0, 12);
-            var route = new List<Vector3>(Route(park, U3.V(40, 0, 40)));
-            route.Insert(0, park);
-            for (int i = 1; i < CanyonShape.TRACK.Length; i++) route.Add(U3.At(CanyonShape.TRACK[i][0], CanyonShape.TRACK[i][1], 0));
-            Robot = Rover.Make(transform, park, route.ToArray());
+            var park = RobotPark(c.S.Ark);
+            Robot = Rover.Make(transform, park, RobotRoute(park));
             Robot.Ground = Land.GroundY;
             Echo = EchoBot.Make(transform);
             Echo.transform.position = Look.ArkAt + new Vector3(-12, 10, 12);
@@ -217,6 +239,75 @@ namespace Zerks.Game
                     list.Add(new Block { D = d, S = s, Cx = i * Content.Pitch, Cz = j * Content.Pitch, Zone = z });
                 }
             return list.ToArray();
+        }
+
+        /// <summary>
+        /// A dug building's plot (the clay pit): once the pit stands, the road and the pad are laid round its opening
+        /// instead of over it, and the ground is cut open there by the pit's own hole mask (HoleMask.shader).
+        /// </summary>
+        void DugPlot(BuildingDef def, GameObject block, Material road, Material edge, Material pad)
+        {
+            var tmp = new GameObject("measure");
+            var m = Models.Spawn(def.ModelFor(1), def.Kind, tmp.transform, true);
+            var hole = m.GetComponentsInChildren<Renderer>().Where(r => r.sharedMaterial != null && r.sharedMaterial.name.StartsWith("hole")).ToList();
+            var open = hole.Count > 0 ? hole[0].bounds : new Bounds(Vector3.zero, new Vector3(8, 0, 8));
+            foreach (var r in hole) open.Encapsulate(r.bounds);
+            Destroy(tmp);
+            var whole = new List<GameObject>();
+            foreach (Transform t in block.transform) whole.Add(t.gameObject);
+            var ring = new GameObject("round the pit");
+            ring.transform.SetParent(block.transform, false);
+            void Frame(float size, float y, float thick, Material mat)
+            {
+                float h = size / 2, x0 = Mathf.Max(-h, open.min.x), x1 = Mathf.Min(h, open.max.x), z0 = Mathf.Max(-h, open.min.z), z1 = Mathf.Min(h, open.max.z);
+                void Piece(float a0, float a1, float b0, float b1)
+                {
+                    if (a1 - a0 < 0.01f || b1 - b0 < 0.01f) return;
+                    Look.Prim(PrimitiveType.Cube, ring.transform, new Vector3((a0 + a1) / 2, y, (b0 + b1) / 2), new Vector3(a1 - a0, thick, b1 - b0), mat);
+                }
+                Piece(-h, x0, -h, h); Piece(x1, h, -h, h); Piece(x0, x1, -h, z0); Piece(x0, x1, z1, h);
+            }
+            Frame(16.2f, 0.02f, 0.04f, road);
+            Frame(12.6f, 0.06f, 0.08f, edge);
+            Frame(12f, 0.1f, 0.1f, pad);
+            ring.SetActive(false);
+            dugPlots[def.Id] = (whole, ring);
+        }
+
+        readonly Dictionary<string, (List<GameObject> whole, GameObject ring)> dugPlots = new Dictionary<string, (List<GameObject>, GameObject)>();
+
+        /// <summary>The Ark's model: the dish folded, or unfolded after the antenna (art/3d/buildings ark.glb and ark-18.glb).</summary>
+        public void SetArk(string model)
+        {
+            if (arkModelName == model && arkModel != null) return;
+            if (arkModel != null) Destroy(arkModel);
+            arkModel = Models.Spawn(model, "ark", ArkT);
+            arkModelName = model;
+            foreach (var t in arkModel.GetComponentsInChildren<Transform>(true).Where(t => t.name.StartsWith("parked_drone"))) t.gameObject.SetActive(false);
+        }
+
+        /// <summary>
+        /// Where the robot waits: the front corner of the Ark's plot; from level 12 the dock is there (nothing small
+        /// stands in the dock, game/src/view/world.ts), so it waits on the other side of it, under the Ark's front leg.
+        /// </summary>
+        static Vector3 RobotPark(int ark) => Look.ArkAt + (ark >= 12 ? new Vector3(2, 0, 12.6f) : new Vector3(-12, 0, 12));
+
+        Vector3[] RobotRoute(Vector3 park)
+        {
+            var route = new List<Vector3>(Route(park, U3.V(40, 0, 40)));
+            route.Insert(0, park);
+            for (int i = 1; i < CanyonShape.TRACK.Length; i++) route.Add(U3.At(CanyonShape.TRACK[i][0], CanyonShape.TRACK[i][1], 0));
+            return route.ToArray();
+        }
+
+        /// <summary>The dock opens on level 12: the drone prints its platform next to the Ark.</summary>
+        public void PrintDock() => dockPrint = 0;
+
+        /// <summary>The antenna's "Ready" is tapped: the drone comes for a few seconds and the dish unfolds.</summary>
+        public void UnfoldAntenna()
+        {
+            antennaLeft = 3f;
+            SetArk("ark-18");
         }
 
         /// <summary>The plots that get a box on the service channel: every building and the Ark (three.js metres).</summary>
@@ -283,6 +374,27 @@ namespace Zerks.Game
                 var open = Content.B(kv.Key).Zone <= s.Zone;
                 kv.Value.Sync(c, st, open, NightK);
             }
+            // A dug plot: the road and the pad go round the opening once the pit is there.
+            foreach (var kv in dugPlots)
+            {
+                var pit = Views[kv.Key].Visible;
+                foreach (var g in kv.Value.whole) if (g.activeSelf == pit) g.SetActive(!pit);
+                if (kv.Value.ring.activeSelf != pit) kv.Value.ring.SetActive(pit);
+            }
+            // The dock: from level 12, printed by the drone, then the frame grows stage by stage (dock-0 … dock-4).
+            if (s.Ark < 12) { DockV.Hide(); DockV.GetComponent<BoxCollider>().enabled = false; }
+            else
+            {
+                DockV.GetComponent<BoxCollider>().enabled = true;
+                if (dockPrint >= 0)
+                {
+                    dockPrint += dt / 7f;
+                    DockV.ShowPrint("dock-0", Mathf.Min(1, dockPrint));
+                    if (dockPrint >= 1) dockPrint = -1;
+                }
+                else DockV.ShowStanding($"dock-{Mathf.Clamp(s.Frame, 0, 4)}", NightK);
+            }
+            if (s.AntennaFixed && !s.AntennaReady) SetArk("ark-18");
             for (int i = 0; i < nightPools.Count; i++) nightPools[i].SetFloat("_Alpha", 0.28f * NightK);
 
             // Zones open with their research: the dust settles, the ground under the plots is made flat, the plots show.
@@ -320,11 +432,16 @@ namespace Zerks.Game
             // The drone: prints the building being built, or re-prints the one that grew; otherwise it rests.
             var printing = c.Printing;
             if (reprintLeft > 0) reprintLeft -= dt;
+            if (antennaLeft > 0) antennaLeft -= dt;
             if (reprintLeft > 0 && reprintId != null) DroneBot.Drive(Views[reprintId], 1, true);
+            else if (antennaLeft > 0) DroneBot.Drive(arkTop, 1, true);
+            else if (dockPrint >= 0) DroneBot.Drive(DockV, dockPrint, false);
             else if (printing != null) DroneBot.Drive(Views[printing.Id], 1 - (float)(printing.BuildLeft / System.Math.Max(0.001, printing.BuildTotal)), false);
             else DroneBot.Drive(null, 0, false);
 
             // The robot.
+            var park = RobotPark(s.Ark);
+            if (Robot.Park != park) { Robot.Park = park; Robot.Route = RobotRoute(park); }
             var rb = s.Robot;
             Robot.Show(rb.Unlocked, rb.Back, rb.Total > 0 ? 1 - (float)(rb.Left / rb.Total) : 0);
 
@@ -377,8 +494,8 @@ namespace Zerks.Game
                     f.transform.position = Look.ArkAt + new Vector3(-8, 0, 8); // out of the pod, down the ramp
                     People[col.Id] = f;
                 }
-                // By day at work, at night at home (levels.md: at night the people go home).
-                var dest = s.Night && s.Has("home") ? "home" : col.Work;
+                // By day at work, at night at home (levels.md: at night the people go home); from the 21st in the brick home.
+                var dest = s.Night && s.Has("home") ? c.HomeOf(col) : col.Work;
                 if (string.IsNullOrEmpty(dest) || !s.Has(dest)) dest = "ark";
                 if (!goingTo.TryGetValue(col.Id, out var was) || was != dest)
                 {
@@ -388,7 +505,7 @@ namespace Zerks.Game
                     f.GoTo(Route(f.transform.position, spot));
                 }
                 // Inside the home at night: out of sight once there.
-                var atHome = dest == "home" && !f.Walking;
+                var atHome = (dest == "home" || dest == "brickhome") && !f.Walking;
                 f.gameObject.SetActive(!atHome);
             }
         }
@@ -426,7 +543,7 @@ namespace Zerks.Game
 
         // ---------------------------------------------------------------- picking
 
-        public enum PickKind { None, Building, Ark, Debris, Robot, Echo, Commander, Colonist, Plot }
+        public enum PickKind { None, Building, Ark, Debris, Robot, Echo, Commander, Colonist, Plot, Dock }
 
         public (PickKind kind, string id) Pick(Vector2 screen)
         {
@@ -445,13 +562,14 @@ namespace Zerks.Game
                 var fig = t.GetComponent<Figure>();
                 if (fig != null) return (PickKind.Colonist, fig.ColonistId.ToString());
                 if (t == ArkT) return (PickKind.Ark, "ark");
+                if (t == DockV.transform && colony.S.Ark >= 12) return (PickKind.Dock, "dock");
                 var bv = t.GetComponent<BuildingView>();
                 if (bv != null && bv.Visible) return (PickKind.Building, bv.Id);
             }
             return (PickKind.None, null);
         }
 
-        public Vector3 WorldOf(string id) => id == "ark" ? Look.ArkAt + Vector3.up * 30 : Views.TryGetValue(id, out var v) ? v.Top : Look.ArkAt;
+        public Vector3 WorldOf(string id) => id == "ark" ? Look.ArkAt + Vector3.up * 30 : id == "dock" ? DockV.Top : Views.TryGetValue(id, out var v) ? v.Top : Look.ArkAt;
         public Vector3 PlotOf(string id) => Look.Plot(Content.B(id));
     }
 }

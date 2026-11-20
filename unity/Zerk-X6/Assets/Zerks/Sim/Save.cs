@@ -24,7 +24,9 @@ namespace Zerks.Sim
             try
             {
                 var s = JsonConvert.DeserializeObject<GameState>(json, Settings);
-                return s != null && s.Version == 1 ? s : null;
+                if (s == null || s.Version != 1) return null;
+                s.Fit();
+                return s;
             }
             catch (Exception)
             {
