@@ -92,7 +92,7 @@ namespace Zerks.Game
             root.Add(toast);
             var dev = new Button(() => Open("dev")) { text = "DEV" };
             dev.AddToClassList("dev-btn");
-            root.Add(dev);
+            top.Add(dev); // moves down with the top bar under the phone's status bar
         }
 
         VisualElement Layer(string name)
@@ -233,6 +233,9 @@ namespace Zerks.Game
 
         Label airNext;
 
+        /// <summary>A shorter number for the small badges of the third row: 17k, 4.1k, 820.</summary>
+        static string Short(double v) => v >= 10000 ? $"{v / 1000:0}k" : v >= 1000 ? $"{v / 1000:0.#}k" : Fmt.Num(v);
+
         void RefreshTop()
         {
             var s = C.S;
@@ -265,7 +268,7 @@ namespace Zerks.Game
                     _ => true,
                 };
                 chip.style.display = show ? DisplayStyle.Flex : DisplayStyle.None;
-                text.text = Fmt.Num(s.Stock[r]);
+                text.text = (int)r >= (int)Res.Steel ? Short(s.Stock[r]) : Fmt.Num(s.Stock[r]);
                 capL.text = $"/{Fmt.Num(cap)}";
                 chip.EnableInClassList("full", s.Stock[r] >= cap - 0.5);
             }
@@ -519,9 +522,10 @@ namespace Zerks.Game
                 if (s.AntennaReady) Tag("antenna", "Ready", "ready", Look.ArkAt + Vector3.up * 42, () => C.FixAntenna());
                 if (C.DockOpen)
                 {
-                    var dockTop = G.World.WorldOf("dock");
+                    // over the far end of the dock, clear of the robot that waits beside it
+                    var dockTop = G.World.WorldOf("dock") + new Vector3(0, 4, -4);
                     if (s.FrameLeft > 0) Tag("dock-t", $"Frame {s.Frame + 1} · {RealTime(s.FrameLeft)}", "timer", dockTop, null, 1 - (float)(s.FrameLeft / Math.Max(0.001, s.FrameTotal)));
-                    else if (C.WhyNotFrame() == "") Tag("dock-up", $"Build stage {s.Frame + 1} of the frame", "action", dockTop, () => { if (C.BuildFrame()) Toast($"The fabricator is making stage {s.Frame + 1}"); });
+                    else if (C.WhyNotFrame() == "") Tag("dock-up", $"Frame: stage {s.Frame + 1}", "action", dockTop, () => { if (C.BuildFrame()) Toast($"The fabricator is making stage {s.Frame + 1}"); });
                 }
                 if (s.Robot.Unlocked && s.Robot.Back)
                     Tag("robot", s.Robot.Boost ? "Robot: speed-up" : $"Robot: +{Fmt.Num(s.Robot.Amount)} {ResShort[s.Robot.Cargo]}", "bubble", G.World.Robot.transform.position + Vector3.up * 4, UnloadRobot);
@@ -915,9 +919,10 @@ namespace Zerks.Game
             body.Add(L("A building is printed by the drone on its own plot. One at a time.", "sheet-sub"));
             body.Add(grid);
             // One card for each kind: the next one of it that is not standing yet (the second and third greenhouse).
-            foreach (var kind in Content.Kinds)
+            // What can be built comes first, then what is still to come, and what stands at the end (proposal).
+            int Order(string k) { var w = C.WhyNotBuild(C.NextOfKind(k).Id, out _); return w == "" ? 0 : w == "Built" ? 2 : 1; }
+            foreach (var kind in Content.Kinds.Where(k => k != "research").OrderBy(Order).ThenBy(k => Array.IndexOf(Content.Kinds, k)))
             {
-                if (kind == "research") continue;
                 var def = C.NextOfKind(kind);
                 var why = C.WhyNotBuild(def.Id, out var lvl);
                 var built = why == "Built";

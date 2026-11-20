@@ -208,11 +208,8 @@ namespace Zerks.Game
             DroneBot = Drone.Make(transform, DronePad);
             // The robot drives along the streets to the front corner of the colony, then on its tracks out through the
             // mouth of the canyon to the plain (Joro, 14.11.2026); it keeps to the ground of the canyon.
-            var park = Look.ArkAt + new Vector3(-12, 0, 12);
-            var route = new List<Vector3>(Route(park, U3.V(40, 0, 40)));
-            route.Insert(0, park);
-            for (int i = 1; i < CanyonShape.TRACK.Length; i++) route.Add(U3.At(CanyonShape.TRACK[i][0], CanyonShape.TRACK[i][1], 0));
-            Robot = Rover.Make(transform, park, route.ToArray());
+            var park = RobotPark(c.S.Ark);
+            Robot = Rover.Make(transform, park, RobotRoute(park));
             Robot.Ground = Land.GroundY;
             Echo = EchoBot.Make(transform);
             Echo.transform.position = Look.ArkAt + new Vector3(-12, 10, 12);
@@ -287,6 +284,20 @@ namespace Zerks.Game
             arkModel = Models.Spawn(model, "ark", ArkT);
             arkModelName = model;
             foreach (var t in arkModel.GetComponentsInChildren<Transform>(true).Where(t => t.name.StartsWith("parked_drone"))) t.gameObject.SetActive(false);
+        }
+
+        /// <summary>
+        /// Where the robot waits: the front corner of the Ark's plot; from level 12 the dock is there (nothing small
+        /// stands in the dock, game/src/view/world.ts), so it waits on the other side of it, under the Ark's front leg.
+        /// </summary>
+        static Vector3 RobotPark(int ark) => Look.ArkAt + (ark >= 12 ? new Vector3(2, 0, 12.6f) : new Vector3(-12, 0, 12));
+
+        Vector3[] RobotRoute(Vector3 park)
+        {
+            var route = new List<Vector3>(Route(park, U3.V(40, 0, 40)));
+            route.Insert(0, park);
+            for (int i = 1; i < CanyonShape.TRACK.Length; i++) route.Add(U3.At(CanyonShape.TRACK[i][0], CanyonShape.TRACK[i][1], 0));
+            return route.ToArray();
         }
 
         /// <summary>The dock opens on level 12: the drone prints its platform next to the Ark.</summary>
@@ -429,6 +440,8 @@ namespace Zerks.Game
             else DroneBot.Drive(null, 0, false);
 
             // The robot.
+            var park = RobotPark(s.Ark);
+            if (Robot.Park != park) { Robot.Park = park; Robot.Route = RobotRoute(park); }
             var rb = s.Robot;
             Robot.Show(rb.Unlocked, rb.Back, rb.Total > 0 ? 1 - (float)(rb.Left / rb.Total) : 0);
 
