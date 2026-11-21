@@ -1052,11 +1052,16 @@ namespace Zerks.Sim
             var before = new Bag(S.Stock);
             var game = realSeconds * Cfg.Tempo;
             var window = Cfg.AwayHours * 3600 * (IsDone("long_shift") ? 2 : 1);
+            // While the workers work: steps of 30 game seconds. After that nothing is made, only the timers and the
+            // clock run, so the rest goes in at most about 2000 steps: a long absence at the test tempo once took so
+            // many small steps that iOS stopped the game before it showed anything (20.11.2026).
+            var coarse = Math.Max(30, (game - window) / 2000);
             double t = 0;
             while (t < game - 1e-9)
             {
-                var dt = Math.Min(game - t, 30);
-                Step(dt, false, t < window);
+                var working = t < window;
+                var dt = Math.Min(game - t, working ? Math.Min(30, window - t) : coarse);
+                Step(dt, false, working);
                 t += dt;
             }
             var made = new Bag();

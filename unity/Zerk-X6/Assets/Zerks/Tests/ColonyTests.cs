@@ -192,6 +192,16 @@ namespace Zerks.Tests
             }
         }
 
+        /// <summary>A long absence at a fast test tempo must not hold up the start: iOS stops a game that does not show up in time (20.11.2026).</summary>
+        [Test]
+        public void ALongAbsenceIsWorkedOutQuickly()
+        {
+            var c = new Colony(Bal, Jump.To(Bal, 21, new Settings { Tempo = 600 }), new Settings { Tempo = 600 });
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            c.CatchUp(24 * 3600); // a day away at x600: 600 game days
+            Assert.That(sw.ElapsedMilliseconds, Is.LessThan(1500));
+        }
+
         [Test]
         public void WorkersKeepProducingWhileAway()
         {
