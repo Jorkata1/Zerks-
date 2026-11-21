@@ -510,7 +510,9 @@ def echo_final(p):
     return fig, piv
 
 # The looks (a proposal): the Commander and the colonists the game names (unity/.../Sim/Texts.cs); also in looks.json
-ACCENT = dict(commander='#ef7433', cook='#ffc65c', agronomist='#4fc06a', geologist='#9a7cff', engineer='#5aa9ff', scientist='#33c5a2')
+ACCENT = dict(commander='#ef7433', cook='#ffc65c', agronomist='#4fc06a', geologist='#9a7cff', engineer='#5aa9ff', scientist='#33c5a2', builder='#e0574f')
+# the tool each profession carries on the right hip (Joro, 21.11.2026: the combination; which tool is a proposal)
+TOOL = dict(cook='tool_ladle', agronomist='tool_trowel', geologist='tool_hammer', engineer='tool_wrench', scientist='tool_tablet')
 LOOKS = [
     # name, profession, skin, hair, style, beard
     ('Commander', 'commander', '#eebf98', '#4a3326', 'short', False),
@@ -535,8 +537,11 @@ def write_looks(path):
     people = {n: dict(profession=pr, skin=sk, hair=hr, style=st, beard=b) for n, pr, sk, hr, st, b in LOOKS}
     json.dump(dict(note='A proposal (14.11.2026): the colours of the professions and how each named person looks. '
                         'The model is colonist.glb: materials accent, skin, hair; show one of hair_short, hair_bun, hair_full, '
-                        'beard if true, stripe and aerial for the Commander only.',
-                   accent=ACCENT, people=people), open(path, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
+                        'beard if true, stripe and aerial for the Commander only. The builder (chapter 2, level 13) is red, '
+                        'a proposal of 20.11.2026. Since 21.11.2026 (the more detailed people, Joro) the model also has '
+                        'tool_hammer, tool_wrench, tool_trowel, tool_ladle and tool_tablet: show only the one in tool for '
+                        'the profession (the Commander and the builder carry none; a proposal).',
+                   accent=ACCENT, tool=TOOL, people=people), open(path, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
 
 def baked(p, look, at=(0, 0), rz=0.0, pose=None):
     name, prof, sk, hr, style, beard = look
@@ -591,13 +596,9 @@ for n, i in zip('123', 'abc'):
     JOBS['echo-' + n] = echo(n)
     JOBS['echo-' + n + '-size'] = echo_size(n, i)
 
-# the chosen ones: colonist and echo are the game's models; the rest is baked for the sheets (mockup/catalog.html)
-JOBS['colonist'] = final_colonist
+# the chosen ones: echo is the game's model. Since 21.11.2026 the people (colonist.glb and the final-* models for the
+# sheets) are the more detailed combination Joro chose and come from elevate.py; person() here is the look of 14.11.
 JOBS['echo'] = final_echo
-JOBS['final-commander'] = lambda p: baked(p, LOOKS[0])
-JOBS['final-colonist'] = lambda p: baked(p, LOOKS[4])
-JOBS['final-crew'] = crew10
-JOBS['final-echo-size'] = final_echo_size
 
 if __name__ == '__main__':
     if not PICK or 'looks' in PICK: write_looks(os.path.join(OUTDIR, 'looks.json'))

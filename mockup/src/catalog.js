@@ -185,7 +185,7 @@ SETS.echoback = { title: 'ЕХО · трите идеи отзад и отгор
   ['ch/echo-3^0.35', 'ЕХО 3 отзад', 15, Math.PI / 4 + Math.PI, 14], ['ch/echo-3', 'ЕХО 3 отгоре', 15, Math.PI / 4, 88],
 ] };
 // the chosen ones (Joro, 14.11.2026): idea A for the people, ECHO 2; lighter models, checked from every side
-SETS.people = { title: 'Космонавтите · избраният вид (А) · проверка от всички страни', cols: 2, big: true, tiles: [
+SETS.people = { title: 'Космонавтите · избраният вид (А, с детайлите от 21.11.2026) · проверка от всички страни', cols: 2, big: true, tiles: [
   ['ch/final-commander', 'Командирът отпред', 7, Math.PI / 4, 12], ['ch/final-commander', 'Командирът отзад', 7, Math.PI / 4 + Math.PI, 12],
   ['ch/final-colonist', 'Колонист (инженер) отдясно', 7, Math.PI / 4 + Math.PI / 2, 4], ['ch/final-colonist', 'Отляво', 7, Math.PI / 4 - Math.PI / 2, 4],
   ['ch/final-colonist', 'Отгоре', 7, Math.PI / 4, 88], ['ch/final-crew', 'Командирът и десетте будни на ниво 10', 2.45, Math.PI / 4, 14],

@@ -221,7 +221,27 @@ def game(v):
         fig, piv = person_v(p, v); finish(fig, 'colonist', piv, on_body=OPTIONAL + TOOLS)
     return f
 
+def crew10v(p, v=4):
+    """the Commander and the ten awake at level 10, in two loose rows (as crew10 in characters.py)"""
+    walk = dict(leg_l=(-24, 0, 0), leg_r=(24, 0, 0), arm_l=(20, 0, 0), arm_r=(-20, 0, 0))
+    walk2 = dict(leg_l=(22, 0, 0), leg_r=(-22, 0, 0), arm_l=(-18, 0, 0), arm_r=(18, 0, 0))
+    spots = [(0.0, -0.75, 0.0, dict(arm_r=(0, 152, 0)))]
+    for k in range(5): spots.append(((k - 2) * 0.98 + 0.49, 0.1 + abs(k - 2) * 0.12, -(k - 2) * 0.1, [None, walk, None, dict(arm_l=(-35, 0, 0)), walk2][k]))
+    for k in range(5): spots.append(((k - 2) * 0.98 - 0.49, 1.05 + abs(k - 2) * 0.1, -(k - 2) * 0.08, [walk2, None, dict(arm_r=(0, 30, 0)), walk, None][k]))
+    for look, (px, py, rz, pose) in zip(LOOKS[:11], spots):
+        vperson(p, v, look, (px, py), rz, pose)
+
+def echo_size4(p):
+    vperson(p, 4, LOOKS[0], (-0.25, 0.0), 0.0, dict(arm_l=(0, -28, 0)))
+    fig, piv = echo_final(p); finish(fig, 'echo', piv, (0.75, -0.25), 0.25, None, 1.02, on_body=('eye_l', 'eye_r'))
+
 VJOBS = {}
+# the game's model since 21.11.2026 (Joro chose the combination) and the models for the sheets (catalog.html#set=people)
+VJOBS['colonist'] = game(4)
+VJOBS['final-commander'] = lambda p: vperson(p, 4, LOOKS[0])
+VJOBS['final-colonist'] = lambda p: vperson(p, 4, LOOKS[4])
+VJOBS['final-crew'] = crew10v
+VJOBS['final-echo-size'] = echo_size4
 for v in range(5):
     VJOBS['v%d-commander' % v] = (lambda v: lambda p: vperson(p, v, LOOKS[0]))(v)
     VJOBS['v%d-colonist' % v] = (lambda v: lambda p: vperson(p, v, LOOKS[4]))(v)

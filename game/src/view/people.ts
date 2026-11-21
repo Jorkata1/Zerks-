@@ -6,11 +6,12 @@ import * as THREE from 'three'
 import { model } from './models'
 
 interface Look { profession: string; skin: string; hair: string; style: string; beard: boolean }
-interface Looks { accent: Record<string, string>; people: Record<string, Look> }
+interface Looks { accent: Record<string, string>; tool?: Record<string, string>; people: Record<string, Look> }
 
 const FILES = import.meta.glob('../assets/models/looks.json', { eager: true, import: 'default' }) as Record<string, Looks>
 const LOOKS = Object.values(FILES)[0]
-const OPTIONAL = ['hair_short', 'hair_bun', 'hair_full', 'beard', 'stripe', 'aerial']
+// since 21.11.2026 the model also has the tool of each profession: only looks.tool[profession] is shown
+const OPTIONAL = ['hair_short', 'hair_bun', 'hair_full', 'beard', 'stripe', 'aerial', 'tool_hammer', 'tool_wrench', 'tool_trowel', 'tool_ladle', 'tool_tablet']
 const tints = new Map<string, THREE.Material>()
 
 /** A person by name, as looks.json describes them; an unknown name gets the first colonist's look. */
@@ -18,7 +19,7 @@ export function person(name: string): THREE.Group {
   if (!LOOKS) throw new Error('looks.json is missing: run npm run models')
   const look = LOOKS.people[name] ?? Object.values(LOOKS.people)[1]!
   const g = new THREE.Group(), m = model('colonist').clone(true)
-  const show = new Set(['hair_' + look.style, ...(look.beard ? ['beard'] : []), ...(look.profession === 'commander' ? ['stripe', 'aerial'] : [])])
+  const show = new Set(['hair_' + look.style, ...(look.beard ? ['beard'] : []), ...(look.profession === 'commander' ? ['stripe', 'aerial'] : []), ...(LOOKS.tool?.[look.profession] ? [LOOKS.tool[look.profession]!] : [])])
   const tint: Record<string, string | undefined> = { accent: LOOKS.accent[look.profession], skin: look.skin, hair: look.hair }
   m.traverse((o) => {
     if (OPTIONAL.includes(o.name)) o.visible = show.has(o.name)

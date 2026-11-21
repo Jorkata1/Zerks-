@@ -18,7 +18,8 @@ draco.setDecoderPath('node_modules/three/examples/jsm/libs/draco/'); gltf.setDRA
 const cache = {};
 const load = async path => (cache[path] ??= (await gltf.loadAsync('models/' + path + '.glb')).scene).clone(true);
 const LOOKS = await (await fetch('models/ch/looks.json')).json();
-const OPTIONAL = ['hair_short', 'hair_bun', 'hair_full', 'beard', 'stripe', 'aerial'];
+// since 21.11.2026 the model also has the tool of each profession: only looks.tool[profession] is shown
+const OPTIONAL = ['hair_short', 'hair_bun', 'hair_full', 'beard', 'stripe', 'aerial', 'tool_hammer', 'tool_wrench', 'tool_trowel', 'tool_ladle', 'tool_tablet'];
 
 function stage() {
   const scene = new THREE.Scene();
@@ -57,7 +58,7 @@ window.__building = async name => {
 };
 async function person(name) {
   const look = LOOKS.people[name], g = tidy(await load('ch/colonist'));
-  const show = new Set(['hair_' + look.style, ...(look.beard ? ['beard'] : []), ...(look.profession === 'commander' ? ['stripe', 'aerial'] : [])]);
+  const show = new Set(['hair_' + look.style, ...(look.beard ? ['beard'] : []), ...(look.profession === 'commander' ? ['stripe', 'aerial'] : []), ...(LOOKS.tool?.[look.profession] ? [LOOKS.tool[look.profession]] : [])]);
   const tint = { accent: LOOKS.accent[look.profession], skin: look.skin, hair: look.hair }, own = {};
   g.traverse(o => {
     if (OPTIONAL.includes(o.name)) o.visible = show.has(o.name);

@@ -88,11 +88,12 @@ function rock(x, z, s, mat = flat(rnd() < 0.5 ? C.rock : C.rock2)) { const m = n
 // The people (Joro, 14.11.2026): the suit with the glass helmet, art/3d/characters/colonist.glb. One model for everyone:
 // the materials accent, skin and hair take the person's colours, one hair style is shown, the beard if he has one,
 // and the stripe and the aerial only on the Commander (art/3d/characters/looks.json).
-const OPTIONAL = ['hair_short', 'hair_bun', 'hair_full', 'beard', 'stripe', 'aerial'];
+// since 21.11.2026 the model also has the tool of each profession: only looks.tool[profession] is shown
+const OPTIONAL = ['hair_short', 'hair_bun', 'hair_full', 'beard', 'stripe', 'aerial', 'tool_hammer', 'tool_wrench', 'tool_trowel', 'tool_ladle', 'tool_tablet'];
 let chGlb = {}, LOOKS = null;
 function person(name) {
   const look = LOOKS.people[name], g = chGlb.colonist.clone(true);
-  const show = new Set(['hair_' + look.style, ...(look.beard ? ['beard'] : []), ...(look.profession === 'commander' ? ['stripe', 'aerial'] : [])]);
+  const show = new Set(['hair_' + look.style, ...(look.beard ? ['beard'] : []), ...(look.profession === 'commander' ? ['stripe', 'aerial'] : []), ...(LOOKS.tool?.[look.profession] ? [LOOKS.tool[look.profession]] : [])]);
   const tint = { accent: LOOKS.accent[look.profession], skin: look.skin, hair: look.hair }, own = {};
   g.traverse(o => {
     if (OPTIONAL.includes(o.name)) o.visible = show.has(o.name);
