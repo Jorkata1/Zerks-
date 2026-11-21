@@ -196,6 +196,21 @@ SETS.echofinal = { title: 'ЕХО · избраният вид (2) · прове
   ['ch/echo^0.35', 'Отстрани', 12, Math.PI / 4 + Math.PI / 2, 6], ['ch/echo', 'Отгоре', 12, Math.PI / 4, 88],
   ['ch/echo^0.35', 'Както го вижда камерата на картата', 12, 0, 36], ['ch/final-echo-size', 'До Командира', 6.6, Math.PI / 4, 12],
 ] };
+// three ways to make the people a little more detailed (Joro, 21.11.2026), on the chosen look A; v0 is the person now
+// (art/3d/characters/src/elevate.py -- mockup/models/ch). The 7th field aims the camera at that share of the height
+// (the face close-up), without widening the picture.
+const VNAME = ['Сега', 'Скафандърът', 'Лицето', 'Екипировката'];
+SETS.elevate = { title: 'Космонавтите: сега и трите варианта', cols: 2, big: true, tiles: [
+  ...[0, 1, 2, 3].map(v => [`ch/v${v}-commander`, v ? `${v} · ${VNAME[v]}` : 'Сега', 7, Math.PI / 4, 12]),
+  ...[0, 1, 2, 3].map(v => [`ch/v${v}-commander`, `${v ? v + ' · ' + VNAME[v] : 'Сега'}: шлемът отблизо`, 15, Math.PI / 4, 10, 0, 0.775]),
+  ...[0, 1, 2, 3].map(v => [`ch/v${v}-crew`, `${v ? v + ' · ' + VNAME[v] : 'Сега'}: от камерата на картата`, 2.9, Math.PI / 4, 36]),
+] };
+for (const v of [1, 2, 3]) SETS['elevate' + v] = { title: `Космонавтите · вариант ${v} · ${VNAME[v]}`, cols: 2, big: true, tiles: [
+  [`ch/v${v}-commander`, 'Командирът отпред', 7, Math.PI / 4, 12], [`ch/v${v}-commander`, 'Командирът отзад', 7, Math.PI / 4 + Math.PI, 12],
+  [`ch/v${v}-colonist`, 'Инженерът отдясно', 7, Math.PI / 4 + Math.PI / 2, 4], [`ch/v${v}-commander`, 'Шлемът отблизо', 15, Math.PI / 4, 10, 0, 0.775],
+  [`ch/v${v}-crew`, 'Командирът, готвачката, агрономката, геологът и инженерът', 2.9, Math.PI / 4, 14], [`ch/v${v}-crew`, 'Същите отзад', 2.9, Math.PI / 4 + Math.PI, 14],
+  [`ch/v${v}-crew`, 'Както ги вижда камерата на картата (36° отгоре)', 2.9, Math.PI / 4, 36], [`kk/kitchen-1+ch/v${v}-crew@1.25,-2.0*0.318`, 'До кухнята, в размера в играта', 4.4, 0, 36],
+] };
 const SET = SETS[(location.hash.match(/set=(\w+)/) || [])[1]];
 const PHONE = location.hash.includes('phone') || !!SET;
 if (SET && !SET.cols) document.body.classList.add('pair');
@@ -217,7 +232,7 @@ draco.setDecoderPath('node_modules/three/examples/jsm/libs/draco/'); gltf.setDRA
 const dirAt = deg => { const e = THREE.MathUtils.degToRad(deg); return new THREE.Vector3(Math.cos(e) * Math.SQRT1_2, Math.sin(e), Math.cos(e) * Math.SQRT1_2); };
 const FOOT = 9.6, PLOT = 14, VIEW = 16; // metres: the building's footprint, the plot, the width of the picture
 
-async function tile(name, fixedK, turn = 0, el = 36, fit = false) {
+async function tile(name, fixedK, turn = 0, el = 36, fit = false, aim = 0) {
   const DIR = dirAt(el);
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0xe9d39a);
@@ -266,7 +281,7 @@ async function tile(name, fixedK, turn = 0, el = 36, fit = false) {
   // fit = the side of the first model's plot in metres (28 for the Ark's 2x2), drawn round its origin
   if (fit) { plot.scale.set(fit / PLOT, 1, fit / PLOT); plot.position.set(-c.x * k, -0.01, -c.z * k); sun.shadow.camera.left = sun.shadow.camera.bottom = -40; sun.shadow.camera.right = sun.shadow.camera.top = 40; sun.shadow.camera.updateProjectionMatrix(); }
   const h = s.y * k, cam = new THREE.OrthographicCamera(-VIEW / 2, VIEW / 2, VIEW / 2, -VIEW / 2, 1, 600);
-  const look = new THREE.Vector3(0, h * 0.36 + lift * k * 0.55, 0);
+  const look = new THREE.Vector3(0, aim ? h * aim : h * 0.36 + lift * k * 0.55, 0);
   cam.position.copy(look).addScaledVector(DIR, 300); cam.lookAt(look); cam.updateMatrixWorld();
   // a tall model (the carbon drill) gets a wider picture, so its top is not cut off
   const box = new THREE.Box3().setFromObject(root), top = new THREE.Vector3(0, box.max.y, 0).applyMatrix4(cam.matrixWorldInverse).y;
@@ -277,7 +292,7 @@ async function tile(name, fixedK, turn = 0, el = 36, fit = false) {
     const lo = { x: Math.min(...pts.map(q => q.x)), y: Math.min(...pts.map(q => q.y)) }, hi = { x: Math.max(...pts.map(q => q.x)), y: Math.max(...pts.map(q => q.y)) };
     const v = Math.max(hi.x - lo.x, hi.y - lo.y) / 2 * 1.08, cx = (lo.x + hi.x) / 2, cy = (lo.y + hi.y) / 2;
     Object.assign(cam, { left: cx - v, right: cx + v, top: cy + v, bottom: cy - v }); cam.updateProjectionMatrix();
-  } else if (top > VIEW / 2 * 0.9) {
+  } else if (!aim && top > VIEW / 2 * 0.9) {
     const v = (top + VIEW / 2) / 1.85; // keep the bottom edge, leave a margin above the top
     Object.assign(cam, { left: -v, right: v, top: v, bottom: -v }); cam.position.addScaledVector(cam.up.clone().applyQuaternion(cam.quaternion), v - VIEW / 2); cam.updateProjectionMatrix();
   }
@@ -286,10 +301,10 @@ async function tile(name, fixedK, turn = 0, el = 36, fit = false) {
 }
 
 const grid = document.getElementById('grid');
-for (const [name, label, k, turn, el, fit] of ONE ? TILES.filter(t => t[0] === ONE) : SET ? SET.tiles : PHONE ? PHONE_TILES : TILES) {
+for (const [name, label, k, turn, el, fit, aim] of ONE ? TILES.filter(t => t[0] === ONE) : SET ? SET.tiles : PHONE ? PHONE_TILES : TILES) {
   if (name === null) { const h = document.createElement('div'); h.className = 'sect'; h.textContent = label; grid.append(h); continue; }
   const card = document.createElement('div'); card.className = 'card';
-  const img = new Image(); img.src = await tile(name, k < 0 ? 0 : (k || (SET && SET.k)), turn || 0, el ?? 36, fit || 0);   // k < 0: fit the tile await img.decode();
+  const img = new Image(); img.src = await tile(name, k < 0 ? 0 : (k || (SET && SET.k)), turn || 0, el ?? 36, fit || 0, aim || 0);   // k < 0: fit the tile await img.decode();
   const cap = document.createElement('div'); cap.textContent = label;
   card.append(img, cap); grid.append(card);
 }
