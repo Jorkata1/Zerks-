@@ -7,6 +7,8 @@
 #     microphone, a name tape in the profession colour.
 #   3 The gear: a forearm computer, knee pads, a tool belt with a pouch, the tool of the profession on the hip,
 #     two air tanks on the pack, the gold sun visor pushed up, a lamp on top of the helmet.
+#   4 The combination (Joro, 21.11.2026: "Комбинация от всичко без ... оранжевото над главите им"): 1, 2 and 3
+#     together, without the gold visor.
 #   python elevate.py -- <out_dir> [names]     (bpy 5.x; the helpers come from characters.py and ../../buildings/src)
 # v0 is the person as it is now (characters.py person()), for the side-by-side sheet.
 import os, sys, runpy, math
@@ -38,12 +40,13 @@ def person_v(p, v, accent='#5aa9ff', sk='#f2c6a0', hr='#4a3326', options=None):
     har = mat('hair-' + hr if baked else 'hair', hr, 0.85)
     white, glint = mat('eyewhite', '#fbf6ee', 0.45), mat('glint', '#ffffff', 0.2, emit='#ffffff', strength=1.2)
     lip, steel = mat('mouth', '#7a3b2e', 0.7), p['steel']
+    S, F, G = v in (1, 4), v in (2, 4), v in (3, 4)    # the suit, the face, the gear; 4 is all three without the visor
     def want(n): return not baked or n in options
     def into(n): return part(fig, 'body' if baked else n)
     for side, s in (('l', 1), ('r', -1)):
         with part(fig, 'leg_' + side):
             capsule(0.1, (s * 0.13, 0, 0.2), (s * 0.13, 0, 0.46), p['cream'], verts=10, seg=3)
-            if v == 1:      # a cream boot on a thick dark sole, with a strap; two folds of the knee joint
+            if S:      # a cream boot on a thick dark sole, with a strap; two folds of the knee joint
                 rbox(0.22, 0.33, 0.07, 0.03, p['char'], (s * 0.13, -0.035, 0.0), seg=2)
                 rbox(0.2, 0.29, 0.12, 0.055, p['cream2'], (s * 0.13, -0.03, 0.04), seg=2)
                 rbox(0.21, 0.05, 0.035, 0.012, p['orange'], (s * 0.13, -0.085, 0.13), seg=1)
@@ -51,26 +54,27 @@ def person_v(p, v, accent='#5aa9ff', sk='#f2c6a0', hr='#4a3326', options=None):
             else:
                 rbox(0.21, 0.31, 0.15, 0.07, p['char'], (s * 0.13, -0.035, 0.0), seg=2)
             ring(0.103, 0.024, p['orange'], (s * 0.13, 0, 0.175), seg=12, mseg=4)
-            if v == 3:      # a knee pad
+            if G:      # a knee pad
                 rbox(0.12, 0.04, 0.09, 0.02, p['char'], (s * 0.13, -0.1, 0.235), seg=2)
         with part(fig, 'arm_' + side):
             capsule(0.08, (s * 0.33, 0, 0.9), (s * 0.33, 0, 0.62), p['cream'], verts=10, seg=3)
             ball(0.105, a, (s * 0.325, 0, 0.955), (1, 1, 0.85), seg=12)
             ring(0.082, 0.02, p['orange'], (s * 0.33, 0, 0.6), seg=12, mseg=4)
             ball(0.092, p['char'], (s * 0.33, 0, 0.53), seg=10)
-            if v == 1:
+            if S:
                 for z in (0.715, 0.75): ring(0.079, 0.011, p['cream2'], (s * 0.33, 0, z), seg=12, mseg=4)   # the elbow folds
                 ring(0.08, 0.015, steel, (s * 0.33, 0, 0.574), seg=12, mseg=4)                            # the glove's lock ring
                 ball(0.036, p['char'], (s * 0.275, -0.06, 0.53), seg=8)                                   # the thumb
                 disc(0.04, 0.02, p['cream2'], (s * 0.407, 0, 0.815), 'x', verts=12)                      # the colony patch
                 disc(0.029, 0.01, a, (s * 0.415, 0, 0.815), 'x', verts=12)
-            if v == 3 and s == 1:   # the computer on the left forearm
-                rbox(0.085, 0.035, 0.09, 0.012, p['char'], (0.33, -0.095, 0.63), seg=2)
-                rbox(0.064, 0.006, 0.058, 0.005, p['teal'], (0.33, -0.114, 0.646), seg=1)
+            if G and s == 1:   # the computer on the left forearm (lower and shorter under the elbow folds)
+                cz, ch, sh = (0.622, 0.075, 0.047) if S else (0.63, 0.09, 0.058)
+                rbox(0.085, 0.035, ch, 0.012, p['char'], (0.33, -0.095, cz), seg=2)
+                rbox(0.064, 0.006, sh, 0.005, p['teal'], (0.33, -0.114, cz + (ch - sh) / 2), seg=1)
     with part(fig, 'body'):
         rbox(0.5, 0.36, 0.6, 0.17, p['cream'], (0, 0, 0.44), seg=3)
         rprism(0.512, 0.372, 0.05, 0.176, p['orange'], (0, 0, 0.63), seg=4)
-        if v == 1:      # the display and control module: a screen, a row of buttons and two knobs
+        if S:      # the display and control module: a screen, a row of buttons and two knobs
             rbox(0.25, 0.07, 0.15, 0.035, p['char'], (0, -0.165, 0.74), seg=2)
             rbox(0.11, 0.01, 0.04, 0.008, p['teal'], (-0.045, -0.2, 0.835), seg=1)
             for bx in (-0.085, -0.045, -0.005): ball(0.011, p['cream2'], (bx, -0.198, 0.785), seg=6)
@@ -81,9 +85,9 @@ def person_v(p, v, accent='#5aa9ff', sk='#f2c6a0', hr='#4a3326', options=None):
             ball(0.022, p['teal'], (-0.05, -0.2, 0.845), seg=6)
             ball(0.024, a, (0.045, -0.2, 0.805), seg=6)
             rbox(0.07, 0.012, 0.022, 0.006, p['cream2'], (0.04, -0.199, 0.855), seg=1)
-        if v == 2:      # the name tape in the profession colour
+        if F:      # the name tape in the profession colour
             rbox(0.14, 0.012, 0.03, 0.008, a, (0, -0.176, 0.9), seg=1)
-        if v == 3:      # a tool belt with a pouch
+        if G:      # a tool belt with a pouch
             rprism(0.49, 0.355, 0.04, 0.17, p['char'], (0, 0, 0.535), seg=3)
             rbox(0.08, 0.045, 0.075, 0.015, p['cream2'], (0.15, -0.165, 0.475), seg=2)
             rbox(0.084, 0.05, 0.022, 0.01, a, (0.15, -0.166, 0.53), seg=1)
@@ -93,12 +97,12 @@ def person_v(p, v, accent='#5aa9ff', sk='#f2c6a0', hr='#4a3326', options=None):
         rprism(0.39, 0.21, 0.06, 0.085, a, (0, 0.27, 0.86), seg=3)
         cyl(0.04, 0.05, p['cream'], (0.09, 0.28, 0.99), bev=0.012, verts=8, seg=2)
         ball(0.055, p['char'], (0.09, 0.28, 1.05), (1, 1, 0.55), seg=8)
-        if v == 1:      # a vent grille and three status lights
+        if S:      # a vent grille and three status lights
             for z in (0.6, 0.632, 0.664): rbox(0.18, 0.012, 0.014, 0.005, p['char'], (0, 0.37, z), seg=1)
             for lx, m in ((-0.06, p['teal']), (0.0, p['orange']), (0.06, p['teal'])): ball(0.016, m, (lx, 0.372, 0.77), seg=6)
         else:
             ball(0.024, p['teal'], (-0.1, 0.372, 0.74), seg=6)
-        if v == 3:      # two air tanks on brackets, with charge strips like the batteries
+        if G:      # two air tanks on brackets, with charge strips like the batteries
             for s in (1, -1):
                 cyl(0.06, 0.42, p['cream'], (s * 0.245, 0.3, 0.5), bev=0.05, verts=12, seg=2)
                 cyl(0.04, 0.035, a, (s * 0.245, 0.3, 0.92), bev=0.01, verts=10, seg=1)
@@ -109,22 +113,24 @@ def person_v(p, v, accent='#5aa9ff', sk='#f2c6a0', hr='#4a3326', options=None):
         # the collar and the helmet
         cyl(0.215, 0.07, p['cream2'], (0, 0, 1.0), bev=0.02, verts=16, seg=2)
         ring(0.215, 0.03, p['orange'], (0, 0, 1.065), seg=16, mseg=5)
-        if v == 1: ring(0.222, 0.017, steel, (0, 0, 1.092), seg=16, mseg=4)          # the ring the helmet locks onto
+        if S: ring(0.222, 0.017, steel, (0, 0, 1.092), seg=16, mseg=4)          # the ring the helmet locks onto
         keep(ball(0.337, p['cream'], (0, 0, 1.36), seg=20), lambda c: c.y > 0.03)
         ball(0.028, p['teal'], (0, 0.18, 1.655), seg=6)
-        if v == 1:      # the frame round the front of the helmet, down to the neck ring, with a lamp on each side
+        if S:      # the frame round the front of the helmet, down to the neck ring, with a lamp on each side
             keep(ring(0.336, 0.019, p['cream2'], (0, 0.03, 1.36), (math.pi / 2, 0, 0), seg=28, mseg=5), lambda c: c.y > -0.26)
             for s in (1, -1):
                 rbox(0.055, 0.08, 0.06, 0.02, p['char'], (s * 0.337, 0.03, 1.44), seg=2)
                 disc(0.021, 0.01, p['lampw'], (s * 0.337, -0.012, 1.47), 'y', verts=10)
-        if v == 3:      # the gold sun visor, pushed up; a lamp on top
+        if v == 3:      # the gold sun visor, pushed up (not in the combination: Joro, 21.11.2026)
             keep(ball(0.342, mat('goldtint', '#e8a53a', 0.15, alpha=0.6), (0, 0, 1.36), seg=24), lambda c: c.y < 0.03 and c.z > 1.5)
-            rbox(0.09, 0.07, 0.05, 0.02, p['char'], (0, 0.06, 1.685), seg=2)
-            disc(0.026, 0.01, p['lampw'], (0, 0.023, 1.71), 'y', verts=10)
+        if G:           # a lamp on top: on the shell, or on the frame when there is one
+            ly, lz = (0.03, 1.705) if S else (0.06, 1.685)
+            rbox(0.09, 0.07, 0.05, 0.02, p['char'], (0, ly, lz), seg=2)
+            disc(0.026, 0.01, p['lampw'], (0, ly - 0.04, lz + 0.025), 'y', verts=10)
         # the face
         ball(0.2, skn, (0, -0.01, 1.3), (1, 0.95, 1.05), seg=20)
         for s in (1, -1):
-            if v == 2:  # eyes with whites, a dark iris and a glint; the brows in the hair colour
+            if F:  # eyes with whites, a dark iris and a glint; the brows in the hair colour
                 ex, ez = s * 0.068, 1.318
                 ball(0.031, white, (ex, fy(ex, ez, -0.012), ez), (1, 0.55, 1.15), seg=10)
                 ball(0.019, x['eye'], (ex * 1.03, fy(ex, ez, 0.002), ez - 0.002), (1, 0.5, 1.1), seg=8)
@@ -133,7 +139,7 @@ def person_v(p, v, accent='#5aa9ff', sk='#f2c6a0', hr='#4a3326', options=None):
             else:
                 ball(0.024, x['eye'], (s * 0.07, -0.192, 1.315), seg=10)
             disc(0.05, 0.035, p['char'], (s * 0.2, 0.0, 1.3), 'x')
-        if v == 2:      # the nose, a small smile and the radio microphone
+        if F:      # the nose, a small smile and the radio microphone
             ball(0.024, skn, (0, fy(0, 1.28, -0.008), 1.28), (0.9, 0.75, 1.0), seg=8)
             on_face([(0.034 * math.cos(t), 1.245 + 0.034 * math.sin(t)) for t in [math.radians(d) for d in range(205, 340, 15)]], 0.0065, lip, 0.004)
             hose([(0.19, -0.045, 1.27), (0.165, -0.14, 1.235), (0.11, fy(0.11, 1.225, 0.03), 1.225), (0.078, fy(0.078, 1.225, 0.028), 1.225)], 0.0065, p['char'])
@@ -143,20 +149,20 @@ def person_v(p, v, accent='#5aa9ff', sk='#f2c6a0', hr='#4a3326', options=None):
         h = dome(0.214, har, (0, 0.012, 1.33), seg=20, sz=0.95); h.rotation_euler = rot
     if want('hair_short'):
         with into('hair_short'):
-            if v == 2: cap((-0.42, 0.22, 0))     # a side parting
+            if F: cap((-0.42, 0.22, 0))     # a side parting
             else: cap()
     if want('hair_bun'):
         with into('hair_bun'):
-            cap((-0.45, -0.12, 0) if v == 2 else (-0.5, 0, 0)); ball(0.075, har, (0, 0.13, 1.53), seg=8)
-            if v == 2: ring(0.05, 0.012, a, (0, 0.1, 1.5), (math.radians(-35), 0, 0), seg=10, mseg=4)   # a hair tie
+            cap((-0.45, -0.12, 0) if F else (-0.5, 0, 0)); ball(0.075, har, (0, 0.13, 1.53), seg=8)
+            if F: ring(0.05, 0.012, a, (0, 0.1, 1.5), (math.radians(-35), 0, 0), seg=10, mseg=4)   # a hair tie
     if want('hair_full'):
         with into('hair_full'):
-            cap((-0.4, -0.18, 0) if v == 2 else (-0.5, 0, 0)); ball(0.2, har, (0, 0.075, 1.27), (1.06, 0.72, 1.0), seg=12)
-            if v == 2:
+            cap((-0.4, -0.18, 0) if F else (-0.5, 0, 0)); ball(0.2, har, (0, 0.075, 1.27), (1.06, 0.72, 1.0), seg=12)
+            if F:
                 for s in (1, -1): capsule(0.04, (s * 0.165, -0.085, 1.37), (s * 0.168, -0.08, 1.2), har, verts=8, seg=2)
     if want('beard'):
         with into('beard'):
-            if v == 2:
+            if F:
                 ball(0.1, har, (0, -0.135, 1.185), (1.22, 0.6, 0.72), seg=10)
                 on_face([(-0.045, 1.252), (-0.02, 1.26), (0.0, 1.258), (0.02, 1.26), (0.045, 1.252)], 0.011, har, 0.006)
             else:
@@ -167,7 +173,7 @@ def person_v(p, v, accent='#5aa9ff', sk='#f2c6a0', hr='#4a3326', options=None):
         with into('aerial'):
             cyl(0.008, 0.34, p['char'], (-0.14, 0.3, 1.0), bev=0.0, verts=6)
             ball(0.022, p['teal'], (-0.14, 0.3, 1.35), seg=6)
-    if v == 3:          # the tool of the profession, hung from the belt on the right hip
+    if G:          # the tool of the profession, hung from the belt on the right hip
         tx, ty = -0.165, -0.19
         loop = lambda: ring(0.02, 0.006, p['char'], (tx, ty + 0.004, 0.548), (math.pi / 2, 0, 0), seg=10, mseg=4)
         if want('tool_hammer'):     # the geologist's hammer, head down
@@ -198,7 +204,7 @@ def person_v(p, v, accent='#5aa9ff', sk='#f2c6a0', hr='#4a3326', options=None):
 def vperson(p, v, look, at=(0, 0), rz=0.0, pose=None):
     name, prof, sk, hr, style, beard = look
     opts = {'hair_' + style} | ({'beard'} if beard else set()) | ({'stripe', 'aerial'} if prof == 'commander' else set())
-    if v == 3 and prof in TOOL_OF: opts.add(TOOL_OF[prof])
+    if v in (3, 4) and prof in TOOL_OF: opts.add(TOOL_OF[prof])
     fig, piv = person(p, ACCENT[prof], sk, hr, opts) if v == 0 else person_v(p, v, ACCENT[prof], sk, hr, opts)
     return finish(fig, name, piv, at, rz, pose)
 
@@ -216,11 +222,11 @@ def game(v):
     return f
 
 VJOBS = {}
-for v in range(4):
+for v in range(5):
     VJOBS['v%d-commander' % v] = (lambda v: lambda p: vperson(p, v, LOOKS[0]))(v)
     VJOBS['v%d-colonist' % v] = (lambda v: lambda p: vperson(p, v, LOOKS[4]))(v)
     VJOBS['v%d-crew' % v] = (lambda v: lambda p: crew5(p, v))(v)
-for v in (1, 2, 3):
+for v in (1, 2, 3, 4):
     VJOBS['v%d-game' % v] = game(v)
 
 for name, fn in VJOBS.items():

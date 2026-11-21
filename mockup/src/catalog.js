@@ -211,6 +211,14 @@ for (const v of [1, 2, 3]) SETS['elevate' + v] = { title: `Космонавти�
   [`ch/v${v}-crew`, 'Командирът, готвачката, агрономката, геологът и инженерът', 2.9, Math.PI / 4, 14], [`ch/v${v}-crew`, 'Същите отзад', 2.9, Math.PI / 4 + Math.PI, 14],
   [`ch/v${v}-crew`, 'Както ги вижда камерата на картата (36° отгоре)', 2.9, Math.PI / 4, 36], [`kk/kitchen-1+ch/v${v}-crew@1.25,-2.0*0.318`, 'До кухнята, в размера в играта', 4.4, 0, 36],
 ] };
+// the combination Joro chose (21.11.2026): 1, 2 and 3 together, without the gold visor; next to the person now
+SETS.elevate4 = { title: 'Космонавтите · комбинацията: 1 + 2 + 3, без златния визьор', cols: 2, big: true, tiles: [
+  ['ch/v0-commander', 'Сега', 7, Math.PI / 4, 12], ['ch/v4-commander', 'Комбинацията', 7, Math.PI / 4, 12],
+  ['ch/v4-commander', 'Командирът отзад', 7, Math.PI / 4 + Math.PI, 12], ['ch/v4-colonist', 'Инженерът отдясно', 7, Math.PI / 4 + Math.PI / 2, 4],
+  ['ch/v0-commander', 'Сега: шлемът отблизо', 15, Math.PI / 4, 10, 0, 0.775], ['ch/v4-commander', 'Комбинацията: шлемът отблизо', 15, Math.PI / 4, 10, 0, 0.775],
+  ['ch/v4-crew', 'Командирът, готвачката, агрономката, геологът и инженерът', 2.9, Math.PI / 4, 14], ['ch/v4-crew', 'Същите отзад', 2.9, Math.PI / 4 + Math.PI, 14],
+  ['ch/v4-crew', 'Както ги вижда камерата на картата (36° отгоре)', 2.9, Math.PI / 4, 36], ['kk/kitchen-1+ch/v4-crew@1.25,-2.0*0.318', 'До кухнята, в размера в играта', 4.4, 0, 36],
+] };
 const SET = SETS[(location.hash.match(/set=(\w+)/) || [])[1]];
 const PHONE = location.hash.includes('phone') || !!SET;
 if (SET && !SET.cols) document.body.classList.add('pair');
