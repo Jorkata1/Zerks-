@@ -2361,6 +2361,107 @@ def b_ark(p, dish_state='folded'):
     e.location = (c * (R + 0.44), s_ * (R + 0.44), pz)
     door(p, c * (R - 0.012), s_ * (R - 0.012), a + math.pi / 2, w=0.26, h=0.3, z=bz + 0.09)
 
+# ======================================================================================
+# the purification station (level 23, docs/levels.md): the water from the homes, the kitchen and the canteen runs down
+#    by itself to the lowest place under the homes and goes through the steps of a station on Earth, left to right:
+#    the screen, the round settler (its sludge into a skip), the basin where bacteria with air break the dirt down
+#    (a blower behind it), then in the hall the sand filter and the UV lamp. Out comes water for the patches on the
+#    Green Belt, not for drinking: into the clean tank, and a pump lifts it up the slope. One engineer, at his desk.
+# ======================================================================================
+def b_pstation(p):
+    dirty = mat('sewage', '#a89c6c', 0.25, alpha=0.92)
+    mixed = mat('aerated', '#b7d4a0', 0.25, alpha=0.9)
+    uv = mat('uv', '#d2c4ff', 0.3, emit='#a98bff', strength=2.6)
+    sludge = mat('sludge', '#6b5a40', 0.9)
+    # ---- the hall on the right: the filter, the UV channel and the engineer's desk behind the front window
+    HX, HY, HW, HD, HH = 0.52, 0.05, 0.95, 0.75, 0.55
+    rbox(HW + 0.08, HD + 0.08, 0.06, 0.18, p['char'], (HX, HY, 0.0))
+    hall = rbox(HW, HD, HH, 0.15, p['cream'], (HX, HY, 0.05), seg=5)
+    def inside(cx, cy, fz):
+        L = frame(cx, cy, 0.0)
+        # the UV channel: a dark trough with the lamps across it, glowing violet
+        rbox(0.2, 0.18, 0.07, 0.02, p['char'], (*L(0.02, 0.02), fz), seg=2)
+        for k in range(4): rbox(0.18, 0.016, 0.016, 0.006, uv, (*L(0.02, -0.04 + k * 0.03), fz + 0.07), seg=1)
+        # the sand filter: a cream vessel with an orange ring and a gauge
+        cyl(0.065, 0.2, p['cream2'], (*L(0.2, 0.05), fz), bev=0.03)
+        torus(0.066, 0.008, p['orange'], (*L(0.2, 0.05), fz + 0.13))
+        light(p, (*L(0.2, -0.02), fz + 0.17), 0.012)
+        # the engineer's desk with a screen
+        desk(p, L, 0.0, fz, u=-0.19, v=0.05, w=0.15)
+    lit_room(p, hall, 0.6, 0.27, 0.42, HX - 0.1, HY - HD / 2 + 0.01, 0.17, 0.0, inside)
+    rbox(HW + 0.02, HD + 0.02, 0.035, 0.15, p['orange'], (HX, HY, 0.14))
+    door(p, HX + 0.33, HY - HD / 2 - 0.02, 0.0, 0.2, 0.44, 0.05)
+    for yy in (HY - 0.12, HY + 0.15): porthole(p, (HX + HW / 2, yy, 0.38), (1, 0), r=0.06)
+    RZ = 0.05 + HH
+    for x in (HX - 0.25, HX + 0.15): vent(p, (x, HY + 0.15, RZ - 0.01), 0.1)
+    light(p, (HX + 0.38, HY - 0.15, RZ + 0.01), 0.02)
+    # ---- the round settler at the front left: the dirty water lies still and the sludge sinks; the bridge turns slowly
+    SX, SY, SR = -0.6, -0.25, 0.36
+    cyl(SR + 0.04, 0.04, p['char'], (SX, SY, 0.0), bev=0.015, verts=48)
+    cyl(SR, 0.16, p['cream'], (SX, SY, 0.03), bev=0.02, verts=48)
+    torus(SR + 0.002, 0.012, p['orange'], (SX, SY, 0.1))
+    cyl(SR - 0.03, 0.012, dirty, (SX, SY, 0.18), bev=0.004, verts=48)
+    torus(SR - 0.015, 0.018, p['cream2'], (SX, SY, 0.192))
+    cyl(0.05, 0.08, p['char'], (SX, SY, 0.17), bev=0.015)                       # the centre pillar
+    rbox(0.1, 0.08, 0.06, 0.02, p['cream2'], (SX, SY, 0.25))                     # its motor
+    light(p, (SX, SY, 0.33), 0.014)
+    rbox(SR, 0.05, 0.025, 0.01, p['orange'], (SX + SR / 2, SY - 0.04, 0.24), seg=2)   # the bridge to the rim
+    for k in (0.12, 0.24): cyl(0.008, 0.07, p['char'], (SX + k, SY - 0.06, 0.26), bev=0.003)
+    rbox(0.22, 0.006, 0.006, 0.003, p['char'], (SX + 0.18, SY - 0.06, 0.33), seg=1)   # its handrail
+    # the sludge goes from the settler into a skip at the side
+    KX, KY = -1.1, -0.6
+    rbox(0.2, 0.16, 0.1, 0.03, p['char'], (KX, KY, 0.0))
+    rbox(0.17, 0.13, 0.02, 0.02, sludge, (KX, KY, 0.09))
+    tube([(SX - SR + 0.02, SY - 0.12, 0.12), (KX + 0.06, KY + 0.02, 0.16)], 0.016, p['char'])
+    # ---- the screen at the left: the inflow from the homes comes down the slope and passes a grid of bars
+    GX, GY = -1.06, 0.15
+    rbox(0.24, 0.22, 0.05, 0.04, p['char'], (GX, GY, 0.0))
+    scr = rbox(0.2, 0.18, 0.2, 0.05, p['cream'], (GX, GY, 0.04))
+    rbox(0.205, 0.185, 0.02, 0.05, p['orange'], (GX, GY, 0.15))
+    for k in range(5): rbox(0.008, 0.012, 0.11, 0.003, p['char'], (GX - 0.06 + k * 0.03, GY - 0.093, 0.06), seg=1)
+    light(p, (GX + 0.07, GY - 0.093, 0.21), 0.012)
+    tube([(GX - 0.06, 1.05, 0.05), (GX - 0.06, GY + 0.1, 0.05), (GX - 0.06, GY + 0.07, 0.09)], 0.025, p['char'])   # from the homes
+    torus(0.03, 0.008, p['orange'], (GX - 0.06, 0.95, 0.05), (math.pi / 2, 0, 0))
+    tube([(GX + 0.06, GY - 0.09, 0.1), (GX + 0.1, GY - 0.13, 0.12), (SX - 0.25, SY + 0.25, 0.12)], 0.02, p['char'])   # into the settler
+    # ---- the basin with air at the back left: bacteria eat the dirt; the blower pushes air through the bottom
+    BX, BY, BW, BD = -0.55, 0.5, 0.74, 0.42
+    rbox(BW + 0.06, BD + 0.06, 0.04, 0.05, p['char'], (BX, BY, 0.0))
+    rbox(BW, BD, 0.16, 0.05, p['cream'], (BX, BY, 0.03))
+    rbox(BW + 0.005, BD + 0.005, 0.02, 0.05, p['orange'], (BX, BY, 0.09))
+    rbox(BW - 0.07, BD - 0.07, 0.012, 0.02, mixed, (BX, BY, 0.183), seg=2)
+    for i in range(4):
+        for j in range(3):
+            ball(0.018 + 0.006 * ((i + j) % 2), p['steam'], (BX - 0.24 + i * 0.16 + 0.03 * (j % 2), BY - 0.11 + j * 0.11, 0.198), (1, 1, 0.5), seg=10)
+    for (dx, dy) in ((-BW / 2 + 0.02, -BD / 2 + 0.02), (BW / 2 - 0.02, -BD / 2 + 0.02)): light(p, (BX + dx, BY + dy, 0.2), 0.012)
+    air_unit(p, (BX + 0.05, BY + BD / 2 + 0.2, 0.0), 0.0, 0.8)
+    tube([(BX + 0.05, BY + BD / 2 + 0.11, 0.2), (BX + 0.05, BY + BD / 2 + 0.11, 0.26), (BX + 0.05, BY + 0.1, 0.26), (BX + 0.05, BY + 0.1, 0.17)], 0.014, p['char'])
+    tube([(SX + 0.15, SY + 0.33, 0.12), (SX + 0.15, BY - BD / 2 - 0.01, 0.12)], 0.018, p['char'])   # settler -> basin
+    # ---- the basin -> the hall (into the filter and the UV)
+    tube([(BX + BW / 2 + 0.01, HY + 0.25, 0.12), (HX - HW / 2 - 0.01, HY + 0.25, 0.12)], 0.02, p['char'])
+    # ---- the clean water: out of the back of the hall into the tank (blue through the glass band), the pump lifts it
+    #      up to the Green Belt along the ground
+    TX, TY = HX + 0.3, HY + HD / 2 + 0.28
+    cyl(0.17, 0.05, p['char'], (TX, TY, 0.0), bev=0.015)
+    cyl(0.14, 0.26, p['cream'], (TX, TY, 0.04), bev=0.03)
+    torus(0.141, 0.012, p['orange'], (TX, TY, 0.14))
+    bpy.ops.mesh.primitive_cylinder_add(vertices=40, radius=0.14, depth=0.1, location=(TX, TY, 0.35), end_fill_type='NOTHING')
+    _done(bpy.context.object, p['glass'])
+    cyl(0.13, 0.09, p['water'], (TX, TY, 0.3), bev=0.0)
+    cyl(0.145, 0.025, p['cream2'], (TX, TY, 0.4), bev=0.01)
+    torus(0.145, 0.01, p['orange'], (TX, TY, 0.425))
+    light(p, (TX, TY, 0.44), 0.014)
+    tube([(TX - 0.12, HY + HD / 2 + 0.01, 0.12), (TX - 0.12, TY - 0.08, 0.12)], 0.018, p['char'])
+    PX, PY = TX + 0.32, TY - 0.05
+    rbox(0.18, 0.14, 0.04, 0.03, p['char'], (PX, PY, 0.0))
+    rbox(0.16, 0.12, 0.13, 0.04, p['cream2'], (PX, PY, 0.035))
+    bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=0.04, depth=0.1, location=(PX, PY - 0.03, 0.1), rotation=(0, math.pi / 2, 0))
+    _done(bpy.context.object, p['char'])
+    light(p, (PX + 0.05, PY - 0.065, 0.15), 0.012)
+    tube([(TX + 0.14, TY - 0.05, 0.1), (PX - 0.08, PY, 0.1)], 0.018, p['char'])
+    tube([(PX + 0.08, PY, 0.1), (PX + 0.2, PY, 0.1), (PX + 0.2, 1.05, 0.05)], 0.022, p['char'])   # up to the Green Belt
+    torus(0.032, 0.008, p['orange'], (PX + 0.2, 0.95, 0.058), (math.pi / 2, 0, 0))
+
+
 BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open'),
          'arkdish-folded': lambda p: b_arkdish(p, 'folded'), 'arkdish-open': lambda p: b_arkdish(p, 'open'), 'dome': b_dome, 'kitchen': lambda p: b_kitchen(p, 10), **{f'kitchen-{l}': (lambda l: lambda p: b_kitchen(p, l))(l) for l in (1, 10, 20)}, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': lambda p: b_greenhouse(p, 10), **{f'greenhouse-{l}': (lambda l: lambda p: b_greenhouse(p, l))(l) for l in (1, 10, 20)},
          'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': lambda p: b_warehouse(p, 10), **{f'warehouse-{l}': (lambda l: lambda p: b_warehouse(p, l))(l) for l in (1, 10, 20)}, 'furnace': b_furnace, 'mine': b_mine,
@@ -2368,7 +2469,7 @@ BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open
          'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover, 'drill': lambda p: b_drill(p, 10), **{f'drill-{l}': (lambda l: lambda p: b_drill(p, l))(l) for l in (1, 10, 20)}, 'smelter': b_smelter, 'claypit': b_claypit, 'brickkiln': b_brickkiln, 'copperworks': b_copperworks,
          **{f'brickhome-{l}': (lambda l: lambda p: b_brickhome(p, l))(l) for l in (1, 10, 20)},
          **{f'canteen-{l}': (lambda l: lambda p: b_canteen(p, l))(l) for l in (1, 10, 20)},
-         **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}}
+         **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}, 'pstation': b_pstation}
 for name, fn in BUILD.items():
     if ONLY and name not in ONLY: continue
     reset(); p = pal(); fn(p)
