@@ -3276,6 +3276,79 @@ def b_dispatch(p):
     for k in range(4): rbox(0.17, (TY1 - TY0) / 4 - 0.02, 0.012, 0.006, p['cream2'], (JX, TY0 + (k + 0.5) * (TY1 - TY0) / 4, 0.035), seg=1)
 
 
+# ======================================================================================
+# the medical post (level 35, docs/levels.md): between the two homes, a small cream building with the doctor's room and
+#    two beds for watching someone overnight. Its sign is a white cross on green, as on chemists' shops (the red cross is
+#    a protected sign), lit at night. The doctor sees people in the evening and checks the seals of the suits: a suit
+#    stands at the pressure tester under the side canopy. A ramp to the door, for someone who cannot walk.
+# ======================================================================================
+def suit_on_stand(p, at, rz=0.0):
+    """an empty suit on its stand, as the colonists wear them: cream body, orange shoulders, the glass helmet"""
+    x, y, z = at
+    cyl(0.05, 0.02, p['char'], (x, y, z), bev=0.006)
+    cyl(0.008, 0.1, p['char'], (x, y, z + 0.02), bev=0.003)
+    rbox(0.1, 0.07, 0.12, 0.035, p['cream'], (x, y, z + 0.1), (0, 0, rz), seg=3)
+    for sx in (-1, 1):
+        ball(0.025, p['orange'], (x + math.cos(rz) * sx * 0.055, y + math.sin(rz) * sx * 0.055, z + 0.2), seg=10)
+        cyl(0.016, 0.1, p['cream'], (x + math.cos(rz) * sx * 0.06, y + math.sin(rz) * sx * 0.06, z + 0.1), bev=0.006)
+    ball(0.05, p['glass'], (x, y, z + 0.27), seg=16)
+    rbox(0.08, 0.04, 0.09, 0.02, p['cream2'], (x - math.sin(rz) * 0.05, y + math.cos(rz) * 0.05, z + 0.12), (0, 0, rz), seg=2)   # the backpack
+
+def b_medpost(p):
+    green = mat('medgreen', '#2fbf6a', 0.4, emit='#2fbf6a', strength=1.2)
+    white = mat('medwhite', '#ffffff', 0.4, emit='#ffffff', strength=0.8)
+    W, D, H = 1.0, 0.64, 0.46
+    rbox(W + 0.08, D + 0.08, 0.07, 0.14, p['char'], (0, 0, 0))
+    body = rbox(W, D, H, 0.13, p['cream'], (0, 0, 0.06), seg=5)
+    # the doctor's room behind the front window: the couch, the cabinet with medicines, the desk with a screen
+    def surgery(cx, cy, fz):
+        L = frame(cx, cy, 0.0)
+        rbox(0.16, 0.08, 0.06, 0.015, p['cream2'], (*L(-0.08, 0.05), fz), seg=2)
+        rbox(0.15, 0.07, 0.015, 0.008, mat('bedsheet', '#7fc8ff', 0.85), (*L(-0.08, 0.05), fz + 0.06), seg=1)
+        rbox(0.04, 0.06, 0.02, 0.01, mat('pillow', '#ffffff', 0.9), (*L(-0.14, 0.05), fz + 0.072), seg=1)
+        rbox(0.08, 0.04, 0.16, 0.01, p['cream'], (*L(0.12, 0.1), fz), seg=1)
+        for r_ in range(2):
+            for k in range(3): cyl(0.009, 0.025, white if (k + r_) % 2 else green, (*L(0.095 + k * 0.025, 0.09), fz + 0.06 + r_ * 0.05), bev=0.003)
+        screen(p, L(0.02, 0.1), 0.0, fz + 0.06)
+    lit_room(p, body, 0.38, 0.24, 0.3, -0.15, -D / 2 + 0.01, 0.18, 0.0, surgery)
+    # the two beds for watching someone, behind the window on the left side
+    room(p, body, -W / 2 + 0.01, 0.05, 0.18, D2R(-90), w=0.3, h=0.22, depth=0.26)
+    rbox(W + 0.02, D + 0.02, 0.035, 0.13, p['orange'], (0, 0, 0.14))
+    # the door with a ramp to it
+    DX = 0.3
+    door(p, DX, -D / 2 - 0.02, 0.0, 0.2, 0.34, 0.06)
+    ramp = rbox(0.28, 0.34, 0.03, 0.01, p['cream2'], (DX, -D / 2 - 0.22, 0.0), (D2R(8), 0, 0), seg=1)
+    for sx in (-1, 1):
+        tube([(DX + sx * 0.14, -D / 2 - 0.36, 0.13), (DX + sx * 0.14, -D / 2 - 0.08, 0.17)], 0.007, p['orange'])   # the handrails
+        for (yy, zz) in ((-D / 2 - 0.36, 0.13), (-D / 2 - 0.08, 0.17)): cyl(0.007, zz, p['char'], (DX + sx * 0.14, yy, 0.0), bev=0.002)
+    # the sign over the door: a white cross on green, on both faces, lit
+    SX_, SY_, SZ_ = DX, -D / 2 - 0.01, 0.06 + H + 0.02
+    rbox(0.04, 0.04, 0.08, 0.01, p['char'], (SX_, SY_ + 0.04, 0.06 + H - 0.04), seg=1)
+    rbox(0.16, 0.03, 0.16, 0.025, green, (SX_, SY_ + 0.04, SZ_), seg=2)
+    for dy in (0.024, 0.056):
+        rbox(0.1, 0.006, 0.032, 0.004, white, (SX_, SY_ + dy, SZ_ + 0.064), seg=1)
+        rbox(0.032, 0.006, 0.1, 0.004, white, (SX_, SY_ + dy, SZ_ + 0.03), seg=1)
+    # the roof: a vent, a light; the air unit at the back
+    RZ = 0.06 + H
+    vent(p, (-0.25, 0.1, RZ - 0.01), 0.09)
+    light(p, (-W / 2 + 0.08, -D / 2 + 0.08, RZ + 0.01), 0.018)
+    air_unit(p, (-0.2, D / 2 + 0.17, 0.0), math.pi, 0.85)
+    tube([(-0.2, D / 2 + 0.07, 0.15), (-0.2, D / 2 - 0.02, 0.15)], 0.018, p['char'])
+    # the suit check under the canopy on the right: a suit on its stand, the pressure tester, its hose to the suit
+    CX = W / 2 + 0.24
+    for sy in (-0.2, 0.2): cyl(0.016, 0.44, p['char'], (CX + 0.16, sy, 0.0), bev=0.005)
+    rbox(0.38, 0.5, 0.025, 0.02, p['orange'], (CX - 0.02, 0.0, 0.44), (0, D2R(-8), 0), seg=2)
+    rbox(0.36, 0.46, 0.02, 0.01, p['cream2'], (CX, 0.0, 0.0), seg=1)
+    suit_on_stand(p, (CX + 0.02, -0.08, 0.02), 0.0)
+    rbox(0.1, 0.08, 0.14, 0.02, p['cream'], (CX + 0.03, 0.14, 0.02), seg=2)
+    rbox(0.07, 0.006, 0.05, 0.004, p['teal'], (CX + 0.03, 0.098, 0.1), seg=1)
+    light(p, (CX + 0.07, 0.1, 0.17), 0.01)
+    tube([(CX + 0.03, 0.1, 0.08), (CX + 0.04, 0.0, 0.1), (CX + 0.03, -0.05, 0.14)], 0.006, p['char'])
+    # outside: a bench and a plant under glass
+    bench(p, (-0.2, -D / 2 - 0.22, 0.0), 0.0)
+    bell(p, (-0.48, -D / 2 - 0.2, 0.0), 0.7)
+
+
 BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open'),
          'arkdish-folded': lambda p: b_arkdish(p, 'folded'), 'arkdish-open': lambda p: b_arkdish(p, 'open'), 'dome': b_dome, 'kitchen': lambda p: b_kitchen(p, 10), **{f'kitchen-{l}': (lambda l: lambda p: b_kitchen(p, l))(l) for l in (1, 10, 20)}, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': lambda p: b_greenhouse(p, 10), **{f'greenhouse-{l}': (lambda l: lambda p: b_greenhouse(p, l))(l) for l in (1, 10, 20)},
          'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': lambda p: b_warehouse(p, 10), **{f'warehouse-{l}': (lambda l: lambda p: b_warehouse(p, l))(l) for l in (1, 10, 20)}, 'furnace': b_furnace, 'mine': b_mine,
@@ -3286,7 +3359,7 @@ BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open
          **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}, 'pstation': b_pstation, 'fieldstation': b_fieldstation, 'nursery': b_nursery, 'woolworks': b_woolworks, 'slagmill': b_slagmill, 'glassworks': b_glassworks, **{f'hull-{h}': (lambda h: lambda p: b_dock(p, 4, h))(h) for h in range(1, 5)},
          **{f'brickhome-{l}i': (lambda l: lambda p: b_brickhome(p, l, True))(l) for l in (1, 10, 20)},
          **{f'canteen-{l}i': (lambda l: lambda p: b_canteen(p, l, True))(l) for l in (1, 10, 20)},
-         **{f'greenhouse-{l}i': (lambda l: lambda p: b_greenhouse(p, l, True))(l) for l in (1, 10, 20)}, 'university': b_university, 'university-b': b_university_b, 'park': b_park, 'dispatch': b_dispatch}
+         **{f'greenhouse-{l}i': (lambda l: lambda p: b_greenhouse(p, l, True))(l) for l in (1, 10, 20)}, 'university': b_university, 'university-b': b_university_b, 'park': b_park, 'dispatch': b_dispatch, 'medpost': b_medpost}
 for name, fn in BUILD.items():
     if ONLY and name not in ONLY: continue
     reset(); p = pal(); fn(p)
