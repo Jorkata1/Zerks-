@@ -172,7 +172,30 @@ for (let i = -7; i <= 7; i++) for (let j = -7; j <= 7; j++) {
 // the Ark stands on a plot of 2x2 in the middle (Joro, 06.11.2026): the four blocks with i, j in {-1, 0}, without the
 // streets between them, so it is 28 m across; its centre is (-8, -8), straight up the screen from the old one
 const ARK_PLOTS = new Set(['0,-2', '-1,-1', '1,-1', '0,0']), ARK_AT = [-8, -8], ARK_HALF = 13.8;
-const padMat = flat(C.pad), edgeMat = flat(C.padEdge), roadMat = flat(LOOK.road);
+// #lvl10-paved: the streets paved as level 36 of the draft would have them (docs/drafts/levels-31-40.md; Joro picked light
+// grey concrete pavers with a warm tone in herringbone and a dark stone kerb). The pattern is drawn once on a canvas
+// with its own little random generator, so the rocks of the map stay where they are.
+const PAVED = (location.hash || '').includes('-paved');
+function pavedMat() {
+  const c = document.createElement('canvas'); c.width = c.height = 512; const g = c.getContext('2d');
+  g.fillStyle = '#9d968a'; g.fillRect(0, 0, 512, 512);
+  let seed = 9; const lcg = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const wd = 32, gap = 2;
+  const box = (x, y, w, h) => {
+    const t = Math.round((lcg() - 0.5) * 14);
+    g.fillStyle = `rgb(${207 + t},${200 + t},${188 + t})`;
+    for (const ox of [-512, 0, 512]) for (const oy of [-512, 0, 512]) g.fillRect(x + ox + gap, y + oy + gap, w - 2 * gap, h - 2 * gap);
+  };
+  for (let i = -24; i <= 24; i++) for (let j = -12; j <= 12; j++) {
+    const bx = (i + 2 * j) * wd, by = (i - 2 * j) * wd;
+    if (bx < -64 || bx > 576 || by < -64 || by > 576) continue;
+    box(bx, by, 2 * wd, wd); box(bx, by + wd, wd, 2 * wd);
+  }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(4, 4);
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  return new THREE.MeshStandardMaterial({ map: t, roughness: 0.85, metalness: 0 });
+}
+const padMat = flat(C.pad), edgeMat = flat(PAVED ? 0x5a4f49 : C.padEdge), roadMat = PAVED ? pavedMat() : flat(LOOK.road);
 function plot(b) {
   // the street around the block, the pavement edge, and the plot itself
   add(rb(PITCH, 0.1, PITCH, roadMat, 0.05, 1), b.cx, 0.03, b.cz);
