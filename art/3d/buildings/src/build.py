@@ -3514,10 +3514,18 @@ def b_patch(p, stage):
 #    with lime from the slag mill. herringbone() lays them in a 90-degree herringbone over a joint-coloured bed.
 # ======================================================================================
 def paver_mats():
-    return mat('paver', '#cfc8bc', 0.8), mat('joint', '#9d968a', 0.9), mat('kerb', '#5a4f49', 0.8)
+    return mat('paver', '#cdc5b7', 0.8), mat('joint', '#7f786d', 0.9), mat('kerb', '#5a4f49', 0.8)
 
-def herringbone(x0, x1, y0, y1, z, wd=0.045, gap=0.005):
-    pav, jnt, _ = paver_mats()
+def paver_tones():
+    """the field in two warm greys, the darker band along the kerb, the brick pavers of the crossings (as on the map)"""
+    return mat('paver', '#cdc5b7', 0.8), mat('paver2', '#b8b0a2', 0.8), mat('paverdark', '#686158', 0.8), mat('paverbrick', '#b2604a', 0.8)
+
+def herringbone(x0, x1, y0, y1, z, wd=0.045, gap=0.005, bands=(), band=0.11, crossings=()):
+    """bands: the sides with a kerb ('y0', 'y1', 'x0', 'x1'), where a band of darker pavers runs; crossings: the
+    centres of the crossings, with brick pavers in the middle and a dark ring round them"""
+    _, jnt, _ = paver_mats(); p1, p2, dark, brick = paver_tones()
+    import random
+    rnd = random.Random(5)
     rbox(x1 - x0, y1 - y0, 0.012, 0.004, jnt, ((x0 + x1) / 2, (y0 + y1) / 2, z), seg=1)
     ox, oy = (x0 + x1) / 2, (y0 + y1) / 2
     n = int(max(x1 - x0, y1 - y0) / wd) + 4
@@ -3526,7 +3534,14 @@ def herringbone(x0, x1, y0, y1, z, wd=0.045, gap=0.005):
             bx, by = ox + (i + 2 * j) * wd, oy + (i - 2 * j) * wd
             for (cx, cy, w, d) in ((bx + wd, by + wd / 2, 2 * wd, wd), (bx + wd / 2, by + 2 * wd, wd, 2 * wd)):
                 if x0 + w / 2 - 1e-6 <= cx <= x1 - w / 2 + 1e-6 and y0 + d / 2 - 1e-6 <= cy <= y1 - d / 2 + 1e-6:
-                    rbox(w - gap, d - gap, 0.016, 0.004, pav, (cx, cy, z), seg=1)
+                    m = p1 if rnd.random() < 0.5 else p2
+                    edge = {'y0': cy - y0, 'y1': y1 - cy, 'x0': cx - x0, 'x1': x1 - cx}
+                    if any(edge[b] < band for b in bands): m = dark
+                    for (qx, qy) in crossings:
+                        r = math.hypot(cx - qx, cy - qy)
+                        if r < 0.24: m = brick
+                        elif r < 0.37: m = dark
+                    rbox(w - gap, d - gap, 0.016, 0.004, m, (cx, cy, z), seg=1)
 
 def b_street(p, paved=True):
     """a piece of street as on the map: 4 m wide, one block long (16 m), with the kerbs and the covers of the service
@@ -3537,7 +3552,7 @@ def b_street(p, paved=True):
         rbox(L, W, 0.012, 0.01, mat('dust', '#f0c08c', 0.95), (0, 0, Z), seg=1)
         for y_ in (-0.18, 0.18): rbox(L - 0.1, 0.06, 0.003, 0.002, mat('track', '#dca777', 0.95), (0, y_, Z + 0.012), seg=1)
         return
-    herringbone(-L / 2 + 0.06, L / 2 - 0.06, -W / 2 + 0.07, W / 2 - 0.2, Z)
+    herringbone(-L / 2 + 0.06, L / 2 - 0.06, -W / 2 + 0.07, W / 2 - 0.2, Z, bands=('y0', 'y1'), crossings=((-L / 2, 0.0), (L / 2, 0.0)))
     for y_ in (-W / 2 + 0.035, W / 2 - 0.035): rbox(L, 0.06, 0.034, 0.012, kerb, (0, y_, Z), seg=2)
     for x_ in (-L / 2 + 0.03, L / 2 - 0.03): rbox(0.06, W - 0.1, 0.02, 0.01, kerb, (x_, 0, Z), seg=1)
     # the covers of the service channel along the far side, flush with the pavers, each with an orange lifting slot
@@ -3608,7 +3623,7 @@ def b_roaddepot(p):
     light(p, (GX - GW / 2 + 0.08, GY - 0.15, RZ + 0.01), 0.018)
     # ---- the paved apron in front of the bays, with the kerb
     _, _, kerb = paver_mats()
-    herringbone(GX - GW / 2, GX + GW / 2 + 0.05, GY - GD / 2 - 0.55, GY - GD / 2 - 0.06, 0.0)
+    herringbone(GX - GW / 2, GX + GW / 2 + 0.05, GY - GD / 2 - 0.55, GY - GD / 2 - 0.06, 0.0, bands=('y0',))
     rbox(GW + 0.11, 0.05, 0.034, 0.012, kerb, (GX + 0.025, GY - GD / 2 - 0.58, 0.0), seg=2)
     # ---- the yard on the right: the piles of crushed stone and slag, the lime bin, the press under its canopy, pallets
     YX = 0.75
@@ -3628,12 +3643,12 @@ def b_roaddepot(p):
     rbox(0.16, 0.12, 0.08, 0.02, p['orange'], (PX, PY + 0.02, 0.2), seg=2)                 # its hopper
     light(p, (PX + 0.09, PY - 0.092, 0.19), 0.012)
     tube([(YX + 0.05, 0.45, 0.06), (PX - 0.05, PY + 0.1, 0.27)], 0.012, p['char'])
-    pav, _, _ = paver_mats()
-    for (qx, qy) in ((PX - 0.05, PY - 0.35), (PX + 0.25, PY - 0.35)):
+    p1, p2, dark, brick = paver_tones()
+    for k, (qx, qy) in enumerate(((PX - 0.05, PY - 0.35), (PX + 0.25, PY - 0.35))):   # the light pavers, and the dark ones for the bands
         rbox(0.22, 0.18, 0.03, 0.008, p['wood'], (qx, qy, 0.0), seg=1)
         for lay in range(3):
             for i in range(4):
-                for j in range(3): rbox(0.05, 0.05, 0.035, 0.005, pav, (qx - 0.075 + i * 0.05, qy - 0.05 + j * 0.05, 0.03 + lay * 0.036), seg=1)
+                for j in range(3): rbox(0.05, 0.05, 0.035, 0.005, (p1 if (i + j + lay) % 2 else p2) if k == 0 else dark, (qx - 0.075 + i * 0.05, qy - 0.05 + j * 0.05, 0.03 + lay * 0.036), seg=1)
 
 
 BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open'),
