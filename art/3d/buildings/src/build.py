@@ -3215,6 +3215,67 @@ def b_park(p):
     tube([(math.cos(ar_) * (R + 0.08), math.sin(ar_) * (R + 0.08), 0.12), (math.cos(ar_) * (R - 0.01), math.sin(ar_) * (R - 0.01), 0.12)], 0.018, p['char'])
 
 
+# ======================================================================================
+# the dispatch room (level 33, docs/levels.md): next to the Ark, a low tower with windows of our glass all round, towards
+#    the colony; up in the glass room the dispatcher sits at a console with the screens of the sensors from every building
+#    (the power, the heat of the furnaces, the carts in the mine, the moisture in the greenhouses), as in the control room
+#    of a factory on Earth. The cables for the sensors come out of the base into a covered tray along the ground, past a
+#    junction box, towards the buildings. One dispatcher, a new profession.
+# ======================================================================================
+def b_dispatch(p):
+    # ---- the base with the door, small windows and the stripe
+    BW, BD, BH = 0.78, 0.66, 0.36
+    rbox(BW + 0.08, BD + 0.08, 0.07, 0.14, p['char'], (0, 0, 0))
+    base = rbox(BW, BD, BH, 0.14, p['cream'], (0, 0, 0.06), seg=5)
+    rbox(BW + 0.02, BD + 0.02, 0.035, 0.14, p['orange'], (0, 0, 0.14))
+    door(p, 0.18, -BD / 2 - 0.02, 0.0, 0.2, 0.3, 0.06)
+    for x_ in (-0.18,): porthole(p, (x_, -BD / 2, 0.27), (0, -1), r=0.055)
+    porthole(p, (-BW / 2, 0.05, 0.27), (-1, 0), r=0.055)
+    # ---- the shaft up to the glass room
+    SR, SZ0, SZ1 = 0.17, 0.06 + BH - 0.02, 0.86
+    cyl(SR, SZ1 - SZ0, p['cream'], (0, 0.05, SZ0), bev=0.03, verts=40)
+    torus(SR + 0.003, 0.012, p['orange'], (0, 0.05, 0.62))
+    for k in range(3): porthole(p, (math.cos(D2R(-100)) * SR, 0.05 + math.sin(D2R(-100)) * SR, 0.48 + k * 0.11), (math.cos(D2R(-100)), math.sin(D2R(-100))), r=0.028)
+    # ---- the glass room: a floor, glass all round on cream mullions, the console with the sensor screens, the chair
+    GR, GZ0, GH = 0.36, SZ1, 0.22
+    cyl(GR + 0.04, 0.05, p['cream'], (0, 0.05, GZ0 - 0.04), bev=0.02, verts=48)
+    torus(GR + 0.04, 0.012, p['orange'], (0, 0.05, GZ0 - 0.015))
+    bpy.ops.mesh.primitive_cylinder_add(vertices=48, radius=GR, depth=GH, location=(0, 0.05, GZ0 + 0.01 + GH / 2), end_fill_type='NOTHING')
+    _done(bpy.context.object, p['glass'])
+    for k in range(8):
+        a = D2R(k * 45 + 22.5)
+        rbox(0.024, 0.024, GH, 0.008, p['cream'], (math.cos(a) * GR, 0.05 + math.sin(a) * GR, GZ0 + 0.01), (0, 0, a), seg=1)
+    cyl(GR - 0.01, 0.01, p['floor'], (0, 0.05, GZ0 + 0.005), bev=0.003, verts=40)
+    for k in range(5):                                                     # the console: an arc of desks facing the colony
+        a = D2R(-150 + k * 30); c, s_ = math.cos(a), math.sin(a); rr = GR - 0.09
+        rbox(0.1, 0.07, 0.07, 0.012, p['cream2'], (c * rr, 0.05 + s_ * rr, GZ0 + 0.01), (0, 0, a + math.pi / 2), seg=2)
+        rbox(0.08, 0.008, 0.05, 0.005, p['teal'], (c * (rr + 0.025), 0.05 + s_ * (rr + 0.025), GZ0 + 0.085), (0, 0, a + math.pi / 2), seg=1)
+    cyl(0.008, 0.05, p['char'], (0, -0.04, GZ0 + 0.01), bev=0.003)
+    rbox(0.07, 0.065, 0.018, 0.008, p['orange'], (0, -0.04, GZ0 + 0.06), seg=2)
+    rbox(0.07, 0.016, 0.06, 0.008, p['orange'], (0, -0.01, GZ0 + 0.075), seg=2)
+    ball(0.025, p['lampw'], (0, 0.05, GZ0 + GH - 0.03), seg=10)
+    # ---- the roof: a cream cap with an overhang, the stripe, a mast with the radio for the robot and the drone, a light
+    RZ = GZ0 + 0.01 + GH
+    cyl(GR + 0.06, 0.04, p['cream'], (0, 0.05, RZ), bev=0.018, verts=48)
+    dome(GR + 0.02, p['cream'], (0, 0.05, RZ + 0.035), seg=40, sz=0.3)
+    torus(GR + 0.06, 0.012, p['orange'], (0, 0.05, RZ + 0.02))
+    cyl(0.012, 0.22, p['char'], (0.08, 0.1, RZ + 0.1), bev=0.004)
+    for k in range(2): rbox(0.08, 0.008, 0.008, 0.003, p['char'], (0.08, 0.1, RZ + 0.2 + k * 0.05), seg=1)
+    light(p, (0.08, 0.1, RZ + 0.33), 0.018)
+    light(p, (-0.1, 0.05, RZ + 0.13), 0.014)
+    # ---- the sensor cables: out of the back of the base into a covered tray, past the junction box, away to the buildings
+    tube([(0.2, BD / 2 - 0.02, 0.12), (0.2, BD / 2 + 0.12, 0.12), (0.2, BD / 2 + 0.16, 0.03)], 0.02, p['char'])
+    JX, JY = 0.2, BD / 2 + 0.28
+    rbox(0.2, 0.16, 0.2, 0.04, p['cream2'], (JX, JY, 0.0))
+    rbox(0.205, 0.165, 0.02, 0.04, p['orange'], (JX, JY, 0.14))
+    for k in range(3): light(p, (JX - 0.06 + k * 0.06, JY - 0.083, 0.17), 0.011)
+    for dx in (-0.04, 0.0, 0.04):
+        tube([(JX + dx, JY + 0.08, 0.04), (JX + dx, JY + 0.13, 0.02)], 0.01, p['char'])
+    TY0, TY1 = JY + 0.12, 1.05                                          # the covered cable tray, straight out to the buildings
+    rbox(0.16, TY1 - TY0, 0.035, 0.012, p['char'], (JX, (TY0 + TY1) / 2, 0.0), seg=1)
+    for k in range(4): rbox(0.17, (TY1 - TY0) / 4 - 0.02, 0.012, 0.006, p['cream2'], (JX, TY0 + (k + 0.5) * (TY1 - TY0) / 4, 0.035), seg=1)
+
+
 BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open'),
          'arkdish-folded': lambda p: b_arkdish(p, 'folded'), 'arkdish-open': lambda p: b_arkdish(p, 'open'), 'dome': b_dome, 'kitchen': lambda p: b_kitchen(p, 10), **{f'kitchen-{l}': (lambda l: lambda p: b_kitchen(p, l))(l) for l in (1, 10, 20)}, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': lambda p: b_greenhouse(p, 10), **{f'greenhouse-{l}': (lambda l: lambda p: b_greenhouse(p, l))(l) for l in (1, 10, 20)},
          'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': lambda p: b_warehouse(p, 10), **{f'warehouse-{l}': (lambda l: lambda p: b_warehouse(p, l))(l) for l in (1, 10, 20)}, 'furnace': b_furnace, 'mine': b_mine,
@@ -3225,7 +3286,7 @@ BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open
          **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}, 'pstation': b_pstation, 'fieldstation': b_fieldstation, 'nursery': b_nursery, 'woolworks': b_woolworks, 'slagmill': b_slagmill, 'glassworks': b_glassworks, **{f'hull-{h}': (lambda h: lambda p: b_dock(p, 4, h))(h) for h in range(1, 5)},
          **{f'brickhome-{l}i': (lambda l: lambda p: b_brickhome(p, l, True))(l) for l in (1, 10, 20)},
          **{f'canteen-{l}i': (lambda l: lambda p: b_canteen(p, l, True))(l) for l in (1, 10, 20)},
-         **{f'greenhouse-{l}i': (lambda l: lambda p: b_greenhouse(p, l, True))(l) for l in (1, 10, 20)}, 'university': b_university, 'university-b': b_university_b, 'park': b_park}
+         **{f'greenhouse-{l}i': (lambda l: lambda p: b_greenhouse(p, l, True))(l) for l in (1, 10, 20)}, 'university': b_university, 'university-b': b_university_b, 'park': b_park, 'dispatch': b_dispatch}
 for name, fn in BUILD.items():
     if ONLY and name not in ONLY: continue
     reset(); p = pal(); fn(p)
