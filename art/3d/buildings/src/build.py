@@ -1962,7 +1962,7 @@ def b_drill(p, lvl=10):
 #    Stage 0 is the empty dock. Set on the Ark's plot with its centre at (2.32, -1.82) from the Ark, unturned:
 #    the pad is then 0.87 from the crane's foot (the jib reaches 0.9) and the dock 0.1 clear of the Ark's leg. About 5.4 x 12.5 m.
 # ======================================================================================
-def b_dock(p, stage):
+def b_dock(p, stage, hull=0):
     PW, PL, PZ = 1.26, 3.0, 0.07
     rbox(PW + 0.04, PL + 0.04, 0.03, 0.12, p['char'], (0, 0, 0.0))
     rbox(PW, PL, 0.05, 0.12, p['cream2'], (0, 0, 0.02))
@@ -2015,9 +2015,67 @@ def b_dock(p, stage):
     if stage >= 4:
         for y in RIBS: tube([(-w(y), y, ZT), (w(y), y, ZT)], 0.016, p['steel'])                   # the deck beams
         rbox(0.16, 0.012, 0.07, 0.008, p['orange'], (0, 1.2 + 0.03, ZT - 0.16), seg=1)              # an orange plate on the transom
+    # ---- the hull (levels 22, 24, 27, 29): steel plates welded on the frame, outside the ribs. Stage 1 the middle of
+    #      the sides (proposal: levels.md does not say), stage 2 the sides, stage 3 the bottom and the back (sandwich
+    #      panels: steel, wool, steel), stage 4 the bow and the stern with their hatches; then the hull is whole.
+    if hull:
+        o_ = 0.03
+        plate = mat('hullplate', '#c3ccd4', 0.4); seam = mat('seam', '#8e99a3', 0.5)
+        def P(y, t, off=o_):
+            return (math.sin(t) * (w(y) + off), y, ZT - math.cos(t) * (h(y) + off))
+        def surf(f, nu, nv, m):
+            bm = bmesh.new()
+            vs = [[bm.verts.new(f(i, j)) for j in range(nv)] for i in range(nu)]
+            for i in range(nu - 1):
+                for j in range(nv - 1): bm.faces.new((vs[i][j], vs[i + 1][j], vs[i + 1][j + 1], vs[i][j + 1]))
+            me = bpy.data.meshes.new('skin'); bm.to_mesh(me); bm.free()
+            ob = bpy.data.objects.new('skin', me); bpy.context.collection.objects.link(ob)
+            return _done(ob, m)
+        def side(y0, y1, t0, t1, nu=None):
+            nu = nu or max(3, int(abs(y1 - y0) / 0.05) + 1); nv = max(3, int(abs(t1 - t0) / 0.12) + 1)
+            surf(lambda i, j: P(y0 + (y1 - y0) * i / (nu - 1), t0 + (t1 - t0) * j / (nv - 1)), nu, nv, plate)
+            for y in [1.2] + RIBS:                                                     # the welds over the ribs
+                if min(y0, y1) + 1e-3 < y < max(y0, y1) - 1e-3:
+                    tube([P(y, t0 + (t1 - t0) * k / 8, o_ + 0.004) for k in range(9)], 0.006, seam)
+        def deck(y0, y1):
+            nu = max(3, int(abs(y1 - y0) / 0.05) + 1)
+            surf(lambda i, j: ((2 * j - 1) * (w(y0 + (y1 - y0) * i / (nu - 1)) + o_), y0 + (y1 - y0) * i / (nu - 1), ZT + 0.025), nu, 2, plate)
+        TS = 0.55                                                                   # where the sides meet the bottom
+        YB, YS = -0.93, 1.05                                                        # the bow and the stern pieces start here
+        if hull == 1:
+            for sg in (-1, 1): side(-0.27, 0.39, sg * TS, sg * math.pi / 2)
+        if hull >= 2:
+            for sg in (-1, 1): side(YB, YS, sg * TS, sg * math.pi / 2)
+        if hull >= 3:
+            side(YB, YS, -TS, TS)
+            deck(YB, YS)
+            for (y0_, y1_) in ((-0.12, -0.11), (0.33, 0.34)):                          # the removable panel in the middle
+                rbox(0.5, 0.025, 0.012, 0.006, p['orange'], (0, (y0_ + y1_) / 2, ZT + 0.025), seg=1)
+            for sx in (-0.25, 0.25): rbox(0.025, 0.47, 0.012, 0.006, p['orange'], (sx, 0.11, ZT + 0.025), seg=1)
+        if hull >= 4:
+            side(-1.29, YB, -math.pi / 2, math.pi / 2, 9)
+            side(YS, 1.2, -math.pi / 2, math.pi / 2, 3)
+            deck(-1.29, YB); deck(YS, 1.2)
+            # the transom: a flat face at the stern, with the cargo hatch
+            bm = bmesh.new()
+            ring = [bm.verts.new((math.sin(t) * (w(1.2) + o_), 1.2 + 0.001, ZT + 0.025 - math.cos(t) * (h(1.2) + o_ + 0.025))) for t in [-math.pi / 2 + k * math.pi / 16 for k in range(17)]]
+            bm.faces.new(ring)
+            me = bpy.data.meshes.new('transom'); bm.to_mesh(me); bm.free()
+            ob = bpy.data.objects.new('transom', me); bpy.context.collection.objects.link(ob); _done(ob, plate)
+            rbox(0.26, 0.03, 0.2, 0.03, p['orange'], (0, 1.2 + o_, ZT - 0.26), seg=2)
+            rbox(0.21, 0.035, 0.16, 0.025, p['char'], (0, 1.2 + o_, ZT - 0.24), seg=2)
+            light(p, (0.16, 1.2 + o_ + 0.01, ZT - 0.05), 0.016)
+            # the round hatch on the back near the bow, and the orange stripe along the sides
+            cyl(0.07, 0.02, p['char'], (0, -1.05, ZT + 0.02), bev=0.008, verts=28)
+            torus(0.072, 0.012, p['orange'], (0, -1.05, ZT + 0.04))
+            for sg in (-1, 1):
+                tube([P(y, sg * 1.25, o_ + 0.006) for y in [1.2 - k * 0.1 for k in range(24)]], 0.012, p['orange'])
     # the gantry: legs on the rails, the orange beam, the trolley and the hook with the next part
     GZ = 0.98
-    gy, tx, load = {0: (PDY, PDX, 'pad'), 1: (RIBS[3], 0.0, 'rib'), 2: (RIBS[7], 0.0, 'rib'), 3: (PDY, 0.0, 'beams'), 4: (PDY, 0.0, None)}[stage]
+    if hull:
+        gy, tx, load = {1: (0.17, 0.0, 'plate'), 2: (-0.71, 0.0, 'plate'), 3: (PDY, 0.0, 'panels'), 4: (PDY, 0.0, None)}[hull]
+    else:
+        gy, tx, load = {0: (PDY, PDX, 'pad'), 1: (RIBS[3], 0.0, 'rib'), 2: (RIBS[7], 0.0, 'rib'), 3: (PDY, 0.0, 'beams'), 4: (PDY, 0.0, None)}[stage]
     for sx in (-1, 1):
         rbox(0.08, 0.2, 0.05, 0.02, p['char'], (sx * RX, gy, PZ + 0.02), seg=2)
         for sy in (-1, 1): cyl(0.022, 0.012, p['char'], (sx * RX + sx * 0.045, gy + sy * 0.06, PZ + 0.02), (0, math.pi / 2, 0), bev=0.004)
@@ -2026,13 +2084,26 @@ def b_dock(p, stage):
     rbox(2 * RX + 0.14, 0.1, 0.08, 0.03, p['orange'], (0, gy, GZ), seg=3)
     rbox(0.14, 0.14, 0.06, 0.02, p['char'], (tx, gy, GZ - 0.06), seg=2)
     ball(0.02, p['lampw'], (tx + 0.1, gy, GZ - 0.01), seg=10)
-    hz = {'pad': PZ + 0.2, 'rib': ZT + 0.2, 'beams': GZ - 0.14, None: GZ - 0.14}[load]
+    hz = {'pad': PZ + 0.2, 'rib': ZT + 0.2, 'beams': GZ - 0.14, 'plate': ZT + 0.2, 'panels': GZ - 0.14, None: GZ - 0.14}[load]
     tube([(tx, gy, GZ - 0.06), (tx, gy, hz + 0.03)], 0.007, p['char'])
     torus(0.022, 0.007, p['char'], (tx, gy, hz), (math.pi / 2, 0, 0))
     if load == 'rib':
         hung = rib_pts(gy, lift=0.12)
         tube(hung, 0.022, p['steel'])
         for e in (hung[0], hung[-1]): tube([(tx, gy, hz - 0.02), e], 0.005, p['char'])
+    elif load == 'plate':                                 # the next side plate on the hook, curved like the hull
+        sg = 1 if hull == 1 else -1
+        pl = [P(gy + dy, sg * t, o_) for dy in (-0.09, 0.09) for t in (0.75, 1.0, 1.25, 1.5)]
+        bm = bmesh.new(); vv = [bm.verts.new((x_, y_, z_ + 0.14)) for (x_, y_, z_) in pl]
+        for j in range(3): bm.faces.new((vv[j], vv[j + 1], vv[j + 5], vv[j + 4]))
+        me = bpy.data.meshes.new('hung'); bm.to_mesh(me); bm.free()
+        ob = bpy.data.objects.new('hung', me); bpy.context.collection.objects.link(ob); _done(ob, plate)
+        for e in (pl[0], pl[3]): tube([(tx, gy, hz - 0.02), (e[0], e[1], e[2] + 0.14)], 0.005, p['char'])
+    elif load == 'panels':                                # the sandwich panels for stage 4 wait on the pad: steel, wool, steel
+        for k in range(3):
+            rbox(0.34, 0.06, 0.012, 0.005, plate, (PDX, PDY - 0.07 + k * 0.07, PZ + 0.009), seg=1)
+            rbox(0.33, 0.055, 0.02, 0.005, mat('wool', '#d9c48c', 0.95), (PDX, PDY - 0.07 + k * 0.07, PZ + 0.021), seg=1)
+            rbox(0.34, 0.06, 0.012, 0.005, plate, (PDX, PDY - 0.07 + k * 0.07, PZ + 0.041), seg=1)
     elif load == 'beams':                                 # the stringers for stage 4 wait on the pad, the hook is up
         for k in range(3): rbox(0.34, 0.05, 0.04, 0.012, p['steel'], (PDX, PDY - 0.07 + k * 0.07, PZ + 0.009), seg=2)
     # two floodlight masts at the front corners, for work at night
@@ -2921,7 +2992,7 @@ BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open
          'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover, 'drill': lambda p: b_drill(p, 10), **{f'drill-{l}': (lambda l: lambda p: b_drill(p, l))(l) for l in (1, 10, 20)}, 'smelter': b_smelter, 'claypit': b_claypit, 'brickkiln': b_brickkiln, 'copperworks': b_copperworks,
          **{f'brickhome-{l}': (lambda l: lambda p: b_brickhome(p, l))(l) for l in (1, 10, 20)},
          **{f'canteen-{l}': (lambda l: lambda p: b_canteen(p, l))(l) for l in (1, 10, 20)},
-         **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}, 'pstation': b_pstation, 'fieldstation': b_fieldstation, 'nursery': b_nursery, 'woolworks': b_woolworks, 'slagmill': b_slagmill, 'glassworks': b_glassworks}
+         **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}, 'pstation': b_pstation, 'fieldstation': b_fieldstation, 'nursery': b_nursery, 'woolworks': b_woolworks, 'slagmill': b_slagmill, 'glassworks': b_glassworks, **{f'hull-{h}': (lambda h: lambda p: b_dock(p, 4, h))(h) for h in range(1, 5)}}
 for name, fn in BUILD.items():
     if ONLY and name not in ONLY: continue
     reset(); p = pal(); fn(p)
