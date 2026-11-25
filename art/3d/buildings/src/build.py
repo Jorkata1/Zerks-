@@ -261,13 +261,20 @@ def b_veglab(p):
     rbox(0.04, 0.03, 0.3, 0.015, p['teal'], (tx - 0.3, ty - 0.02, 0.22), (0, 0, math.pi / 2))
     tube([(tx - 0.3, ty, 0.3), (W / 2 + 0.02, ty, 0.3)], 0.03, p['char'])
 
-def gh_arch(p, xc, yc, L, R, kind):
+def gh_arch(p, xc, yc, L, R, kind, ins=False):
     """one glass arch of the greenhouse along x: cream ribs, glass ends, two beds; kind 'air' (green plants for the air)
     or 'food' (tomatoes on one bed, the seedling bed with small green trays on the other); lamps under the ridge"""
     bpy.ops.mesh.primitive_cylinder_add(vertices=56, radius=R, depth=L, location=(xc, yc, 0.08), rotation=(0, math.pi / 2, 0))
     g = bpy.context.object; cut_below(g, 0.08); _done(g, p['glass'])
     for x in (xc - L / 2, xc + L / 2):
         e = cyl(R, 0.015, p['glass'], (x, yc, 0.08 - 0.0075), (0, math.pi / 2, 0), bev=0.0); cut_below(e, 0.08)
+    if ins:
+        # the insulation (level 29): the back end becomes a solid wall with wool inside, an orange rim; inside, the
+        #    night curtain is rolled up under the ridge (it comes down over the plants at night)
+        e = cyl(R + 0.02, 0.06, p['cream'], (xc - L / 2 - 0.035, yc, 0.08 - 0.03), (0, math.pi / 2, 0), bev=0.02); cut_below(e, 0.08)
+        t = torus(R + 0.02, 0.016, p['orange'], (xc - L / 2 - 0.068, yc, 0.08), (0, math.pi / 2, 0)); cut_half(t, 0.07)
+        light(p, (xc - L / 2 - 0.07, yc, 0.08 + R + 0.03), 0.018)
+        hcyl(0.035, L - 0.12, mat('curtain', '#cdd3da', 0.45), (xc, yc + 0.08, 0.08 + R - 0.07), 'x', bev=0.012)
     nr = max(3, int(round(L / 0.27)) + 1)
     for k in range(nr):
         x = xc - L / 2 + 0.02 + k * (L - 0.04) / (nr - 1)
@@ -292,7 +299,7 @@ def gh_arch(p, xc, yc, L, R, kind):
         tube([(x, yc, 0.08 + R - 0.03), (x, yc, 0.08 + R - 0.12)], 0.005, p['char'])
         ball(0.025, p['lampw'], (x, yc, 0.08 + R - 0.14), seg=10)
 
-def b_greenhouse(p, lvl=10):
+def b_greenhouse(p, lvl=10, ins=False):
     """the greenhouse (level 8, docs/levels.md) at its level 1, 10 and 20: first air only, from its level 16 food too
     (the switch "air only" / "air and food"), from level 17 a seedling bed; an agronomist works it; at night it works
     and its lamps are on. Level 1 a short arch; level 10 the arch as long as the plot; level 20 a second arch beside
@@ -303,7 +310,10 @@ def b_greenhouse(p, lvl=10):
     xc = -0.35 + (1.9 - L) / 2
     span = (2 * R + 0.15) if lvl < 20 else (4 * R + 0.2)
     rbox(L + 0.15, span, 0.08, 0.04, p['cream2'], (xc, 0, 0))
-    for yc, kind in arches: gh_arch(p, xc, yc, L, R, kind)
+    if ins:                                          # the insulated base: a thicker skirt round it with an orange stripe
+        rbox(L + 0.2, span + 0.05, 0.11, 0.05, p['cream'], (xc, 0, 0))
+        rbox(L + 0.215, span + 0.065, 0.025, 0.05, p['orange'], (xc, 0, 0.06))
+    for yc, kind in arches: gh_arch(p, xc, yc, L, R, kind, ins)
     # the service module at the end, with a door, a porthole and a vent; a dark pipe up its side
     mx = xc + L / 2 + 0.42
     MD = 0.92 if lvl < 20 else 2.4
@@ -1729,16 +1739,19 @@ def gable(p, W, D, zb, m, pitch=0.55):
     cut_half(roof, zb)
     return (D + 0.16) / 2 * pitch
 
-def b_brickhome(p, lvl):
+def b_brickhome(p, lvl, ins=False):
     rooms = 2 if lvl < 5 else 5
     two = lvl >= 11
     SL, D, FH = 0.4, 0.9, 0.5
     W = (rooms + 1) * SL + 0.14
+    if ins: D += 0.06                                # the insulation (level 29): wool slabs and a printed skin make the walls thicker
     door_slot = 1 if rooms == 2 else 2
     xs = [-W / 2 + 0.07 + SL * (k + 0.5) for k in range(rooms + 1)]
     H = FH * (2 if two else 1) + 0.04
     rbox(W + 0.1, D + 0.1, 0.08, 0.14, p['char'], (0, 0, 0))
+    if ins: W += 0.06
     body = rbox(W, D, H, 0.12, p['brickwall'], (0, 0, 0.08), seg=5)
+    if ins: rbox(W + 0.02, D + 0.02, 0.035, 0.12, p['orange'], (0, 0, 0.11))   # the new orange stripe where the skin starts
     for z in ((0.08 + FH,) if two else ()): rbox(W + 0.02, D + 0.02, 0.035, 0.12, p['cream'], (0, 0, z))
     for fl in ((0, 1) if two else (0,)):
         for k, x in enumerate(xs):
@@ -1822,11 +1835,13 @@ def stove(p):
         for k in range(3): cyl(0.012, 0.03, [p['tomato'], p['leaf'], p['wood']][k], (*L(-0.04 + k * 0.04, 0.09), fz + 0.178), bev=0.004)
     return f
 
-def b_canteen(p, lvl):
+def b_canteen(p, lvl, ins=False):
     wins = {1: [(0.6, 2, 4)], 10: [(0.6, 2, 4), (0.36, 1, 2)], 20: [(0.6, 2, 4), (0.6, 2, 4), (0.36, 1, 4)]}[lvl]
     HW = {1: 1.1, 10: 1.5, 20: 2.2}[lvl]; HD, HH, HY = 0.8, 0.5, 0.1
+    if ins: HW += 0.06; HD += 0.06                     # the insulation (level 29): thicker walls
     rbox(HW + 0.1, HD + 0.1, 0.08, 0.2, p['char'], (0, HY, 0.0))
     hall = rbox(HW, HD, HH, 0.15, p['cream'], (0, HY, 0.08), seg=5)
+    if ins: rbox(HW + 0.02, HD + 0.02, 0.035, 0.15, p['orange'], (0, HY, 0.11))   # the new orange stripe
     x = -HW / 2 + 0.1
     for (w, n, seats) in wins:
         lit_room(p, hall, w, 0.26, 0.4, x + w / 2, HY - HD / 2 + 0.01, 0.2, 0.0, tables(p, n, seats))
@@ -1839,8 +1854,10 @@ def b_canteen(p, lvl):
     rbox(0.42, 0.18, 0.03, 0.02, p['orange'], (xd, HY - HD / 2 - 0.2, 0.54))
     # the cook's kitchen at the back right: its window on the right side, the flue with steam
     KX, KY, KW, KD, KH = HW / 2 - 0.3, HY + HD / 2 + 0.17, 0.5, 0.4, 0.45
+    if ins: KW += 0.04; KD += 0.04
     rbox(KW + 0.08, KD + 0.08, 0.08, 0.12, p['char'], (KX, KY, 0.0))
     kit = rbox(KW, KD, KH, 0.12, p['cream'], (KX, KY, 0.08), seg=5)
+    if ins: rbox(KW + 0.02, KD + 0.02, 0.03, 0.12, p['orange'], (KX, KY, 0.11))
     lit_room(p, kit, 0.2, 0.2, 0.22, KX + KW / 2 - 0.01, KY, 0.2, math.pi / 2, stove(p))
     rbox(KW + 0.02, KD + 0.02, 0.03, 0.12, p['orange'], (KX, KY, 0.08 + KH - 0.12))
     cyl(0.05, 0.22, p['cream2'], (KX - 0.1, KY + 0.06, 0.08 + KH - 0.01), bev=0.015)
@@ -2992,7 +3009,10 @@ BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open
          'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover, 'drill': lambda p: b_drill(p, 10), **{f'drill-{l}': (lambda l: lambda p: b_drill(p, l))(l) for l in (1, 10, 20)}, 'smelter': b_smelter, 'claypit': b_claypit, 'brickkiln': b_brickkiln, 'copperworks': b_copperworks,
          **{f'brickhome-{l}': (lambda l: lambda p: b_brickhome(p, l))(l) for l in (1, 10, 20)},
          **{f'canteen-{l}': (lambda l: lambda p: b_canteen(p, l))(l) for l in (1, 10, 20)},
-         **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}, 'pstation': b_pstation, 'fieldstation': b_fieldstation, 'nursery': b_nursery, 'woolworks': b_woolworks, 'slagmill': b_slagmill, 'glassworks': b_glassworks, **{f'hull-{h}': (lambda h: lambda p: b_dock(p, 4, h))(h) for h in range(1, 5)}}
+         **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}, 'pstation': b_pstation, 'fieldstation': b_fieldstation, 'nursery': b_nursery, 'woolworks': b_woolworks, 'slagmill': b_slagmill, 'glassworks': b_glassworks, **{f'hull-{h}': (lambda h: lambda p: b_dock(p, 4, h))(h) for h in range(1, 5)},
+         **{f'brickhome-{l}i': (lambda l: lambda p: b_brickhome(p, l, True))(l) for l in (1, 10, 20)},
+         **{f'canteen-{l}i': (lambda l: lambda p: b_canteen(p, l, True))(l) for l in (1, 10, 20)},
+         **{f'greenhouse-{l}i': (lambda l: lambda p: b_greenhouse(p, l, True))(l) for l in (1, 10, 20)}}
 for name, fn in BUILD.items():
     if ONLY and name not in ONLY: continue
     reset(); p = pal(); fn(p)
