@@ -2647,6 +2647,100 @@ def b_nursery(p):
     tube([(0.18, D / 2 + 0.12, 0.02), (YX0 + 0.05, D / 2 + 0.12, 0.012), (YX0 + 0.05, YY0 + 0.05, 0.012)], 0.007, hose())
 
 
+# ======================================================================================
+# the stone-wool workshop (level 27, docs/levels.md): next to the smelters, one engineer. As stone wool is made on Earth:
+#    stone from the mine goes up a belt into an electric melter (three electrodes, about 1 500 C, no smoke but a lot of
+#    power from the transformer behind it); the glowing melt runs down a spout onto spinning wheels that throw it into
+#    thin fibres (seen through the window), the fibres settle into a mat, the mat comes out of the right wall on rollers,
+#    is cut and rolled; the rolls wait on a pallet. The air of the spinning room goes out through a filter on the roof.
+# ======================================================================================
+def belt(p, S, E, w=0.12, m=None):
+    """a covered belt from S to E (Vectors): a cream box along the line with an orange edge, on two dark legs"""
+    d = E - S; L = d.length; mid = (S + E) / 2
+    q = d.normalized().to_track_quat('Y', 'Z').to_euler()
+    rbox(w, L, 0.05, 0.02, m or p['cream2'], (mid.x, mid.y, mid.z - 0.025), tuple(q), seg=2)
+    for t in (0.25, 0.75):
+        pt = S + d * t
+        cyl(0.012, max(0.02, pt.z - 0.03), p['char'], (pt.x, pt.y, 0.0), bev=0.004)
+
+def b_woolworks(p):
+    wool = mat('wool', '#d9c48c', 0.95)
+    # ---- the hall: the spinning room behind the front window, the door, the filter on the roof
+    HX, HY, HW, HD, HH = 0.38, 0.05, 1.0, 0.7, 0.55
+    rbox(HW + 0.08, HD + 0.08, 0.06, 0.18, p['char'], (HX, HY, 0.0))
+    hall = rbox(HW, HD, HH, 0.15, p['cream'], (HX, HY, 0.05), seg=5)
+    def spin(cx, cy, fz):
+        L = frame(cx, cy, 0.0)
+        rbox(0.08, 0.05, 0.03, 0.01, p['orange'], (*L(-0.2, 0.06), fz + 0.2), (0, 0, 0), seg=1)          # the spout
+        cyl(0.009, 0.08, p['fire'], (*L(-0.17, 0.06), fz + 0.12), bev=0.003, verts=12)                  # the melt falling
+        for k, (dx, dz) in enumerate(((-0.17, 0.09), (-0.12, 0.07), (-0.13, 0.13))):                   # the spinning wheels
+            x, y = L(dx, 0.07)
+            bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=0.032, depth=0.02, location=(x, y, fz + dz), rotation=(math.pi / 2, 0, 0))
+            _done(bpy.context.object, p['char'])
+            torus(0.032, 0.006, p['orange'], (x, y - 0.012, fz + dz), (math.pi / 2, 0, 0))
+        for k in range(6):                                                                            # the fibres blown away
+            ball(0.03 + 0.008 * (k % 2), wool, (*L(-0.06 + k * 0.045, 0.06 - 0.01 * (k % 3)), fz + 0.1 - k * 0.01), (1.2, 1, 0.8), seg=10)
+        rbox(0.26, 0.12, 0.025, 0.01, wool, (*L(0.12, 0.04), fz + 0.03), seg=1)                         # the mat on the belt
+        for k in range(4): hcyl(0.012, 0.13, p['char'], (*L(0.02 + k * 0.07, 0.04), fz + 0.02), 'y', bev=0.003)
+    lit_room(p, hall, 0.62, 0.28, 0.42, HX - 0.1, HY - HD / 2 + 0.01, 0.17, 0.0, spin)
+    rbox(HW + 0.02, HD + 0.02, 0.035, 0.15, p['orange'], (HX, HY, 0.14))
+    door(p, HX + 0.36, HY - HD / 2 - 0.02, 0.0, 0.2, 0.44, 0.05)
+    RZ = 0.05 + HH
+    rbox(0.3, 0.24, 0.16, 0.05, p['cream2'], (HX + 0.15, HY + 0.12, RZ - 0.02))                          # the filter for the air
+    rbox(0.305, 0.245, 0.02, 0.05, p['orange'], (HX + 0.15, HY + 0.12, RZ + 0.08))
+    vent(p, (HX + 0.15, HY + 0.12, RZ + 0.13), 0.09)
+    vent(p, (HX - 0.3, HY + 0.15, RZ - 0.01), 0.08)
+    light(p, (HX + 0.42, HY - 0.15, RZ + 0.01), 0.02)
+    # ---- the electric melter on the left: three electrodes through the lid, a peek of fire, the spout into the hall
+    MX, MY, MR = -0.42, 0.12, 0.25
+    LZ = 0.06 + 0.42
+    cyl(MR + 0.05, 0.08, p['char'], (MX, MY, 0.0), bev=0.025, verts=48)
+    cyl(MR, 0.42, p['cream'], (MX, MY, 0.06), bev=0.04, verts=48)
+    torus(MR + 0.003, 0.02, p['orange'], (MX, MY, 0.3))
+    dome(MR - 0.015, p['char'], (MX, MY, LZ - 0.01), seg=40, sz=0.3)
+    porthole(p, (MX + math.cos(D2R(-110)) * MR, MY + math.sin(D2R(-110)) * MR, 0.2), (math.cos(D2R(-110)), math.sin(D2R(-110))), r=0.05, mat_key='fire')
+    for ang in (90, 210, 330):
+        a = D2R(ang); ex, ey = MX + math.cos(a) * 0.11, MY + math.sin(a) * 0.11
+        cyl(0.045, 0.04, p['orange'], (ex, ey, LZ + 0.02), bev=0.012)
+        cyl(0.03, 0.26, p['char'], (ex, ey, LZ + 0.04), bev=0.008, verts=20)
+        torus(0.034, 0.01, p['cream2'], (ex, ey, LZ + 0.24))
+    tube([(MX + MR - 0.02, MY - 0.05, 0.26), (HX - HW / 2 - 0.01, MY - 0.05, 0.24)], 0.026, p['orange'])   # the spout
+    light(p, (MX - MR - 0.005, MY, 0.36), 0.016)
+    # the transformer behind the melter, its fat cables to the electrodes
+    TX, TY = -0.42, 0.62
+    rbox(0.34, 0.24, 0.05, 0.05, p['char'], (TX, TY, 0.0))
+    rbox(0.3, 0.2, 0.3, 0.05, p['cream'], (TX, TY, 0.04))
+    rbox(0.305, 0.205, 0.025, 0.05, p['orange'], (TX, TY, 0.24))
+    for k in range(4): rbox(0.04, 0.012, 0.18, 0.005, p['char'], (TX - 0.165, TY - 0.06 + k * 0.04, 0.07), seg=1)   # the cooling fins
+    for k in range(2): light(p, (TX - 0.06 + k * 0.12, TY - 0.102, 0.31), 0.016)
+    for ang in (90, 210, 330):
+        a = D2R(ang); ex, ey = MX + math.cos(a) * 0.11, MY + math.sin(a) * 0.11
+        tube([(ex, ey, LZ + 0.24), (ex + (TX - ex) * 0.5, ey + (TY - ey) * 0.5, LZ + 0.3), (TX + (ex - MX) * 0.4, TY - 0.04, 0.36)], 0.014, p['char'])
+    # ---- the stone: the hopper on legs at the back left, the belt up into the melter's lid
+    PX, PY = -1.0, 0.18
+    for sx in (-1, 1):
+        for sy in (-1, 1): cyl(0.016, 0.26, p['char'], (PX + sx * 0.11, PY + sy * 0.09, 0.0), bev=0.006)
+    hop = rbox(0.3, 0.24, 0.18, 0.04, p['orange'], (PX, PY, 0.24))
+    cut(hop, cutter(0.26, 0.2, 0.18, (PX, PY, 0.28), r=0.03))
+    ball(1.0, p['rock'], (PX, PY, 0.38), (0.12, 0.09, 0.05), seg=14)
+    for (dx, dy) in ((-0.06, 0.03), (0.05, -0.02), (0.0, 0.05)): ball(0.026, p['rock2'], (PX + dx, PY + dy, 0.42), (1.1, 1, 0.8), seg=10)
+    belt(p, Vector((PX + 0.12, PY, 0.3)), Vector((MX - 0.09, MY, LZ + 0.07)))
+    # ---- the wool out of the right wall on rollers, the cutter, the rolls on a pallet
+    WX = HX + HW / 2
+    rbox(0.42, 0.18, 0.04, 0.02, p['char'], (WX + 0.21, HY - 0.1, 0.1), seg=1)
+    for k in range(5): hcyl(0.014, 0.17, p['grey'], (WX + 0.04 + k * 0.085, HY - 0.1, 0.15), 'y', bev=0.004)
+    for sx in (0.05, 0.37): cyl(0.014, 0.1, p['char'], (WX + sx, HY - 0.1, 0.0), bev=0.005)
+    rbox(0.3, 0.15, 0.025, 0.01, wool, (WX + 0.15, HY - 0.1, 0.165), seg=1)
+    CX = WX + 0.3
+    rbox(0.14, 0.24, 0.2, 0.04, p['cream2'], (CX, HY - 0.1, 0.14))                                          # the cutter over the belt
+    rbox(0.145, 0.245, 0.02, 0.04, p['orange'], (CX, HY - 0.1, 0.27))
+    light(p, (CX, HY - 0.225, 0.3), 0.014)
+    rbox(0.34, 0.3, 0.03, 0.01, p['wood'], (CX + 0.05, HY + 0.32, 0.0), seg=1)
+    for (dx, dy, dz) in ((-0.07, -0.07, 0.0), (0.07, -0.07, 0.0), (-0.07, 0.07, 0.0), (0.07, 0.07, 0.0), (0.0, 0.0, 0.11)):
+        hcyl(0.055, 0.12, wool, (CX + 0.05 + dx, HY + 0.32 + dy, 0.085 + dz), 'x', bev=0.02)
+        torus(0.056, 0.007, p['orange'], (CX + 0.05 + dx, HY + 0.32 + dy, 0.085 + dz), (0, math.pi / 2, 0))
+
+
 BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open'),
          'arkdish-folded': lambda p: b_arkdish(p, 'folded'), 'arkdish-open': lambda p: b_arkdish(p, 'open'), 'dome': b_dome, 'kitchen': lambda p: b_kitchen(p, 10), **{f'kitchen-{l}': (lambda l: lambda p: b_kitchen(p, l))(l) for l in (1, 10, 20)}, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': lambda p: b_greenhouse(p, 10), **{f'greenhouse-{l}': (lambda l: lambda p: b_greenhouse(p, l))(l) for l in (1, 10, 20)},
          'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': lambda p: b_warehouse(p, 10), **{f'warehouse-{l}': (lambda l: lambda p: b_warehouse(p, l))(l) for l in (1, 10, 20)}, 'furnace': b_furnace, 'mine': b_mine,
@@ -2654,7 +2748,7 @@ BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open
          'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover, 'drill': lambda p: b_drill(p, 10), **{f'drill-{l}': (lambda l: lambda p: b_drill(p, l))(l) for l in (1, 10, 20)}, 'smelter': b_smelter, 'claypit': b_claypit, 'brickkiln': b_brickkiln, 'copperworks': b_copperworks,
          **{f'brickhome-{l}': (lambda l: lambda p: b_brickhome(p, l))(l) for l in (1, 10, 20)},
          **{f'canteen-{l}': (lambda l: lambda p: b_canteen(p, l))(l) for l in (1, 10, 20)},
-         **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}, 'pstation': b_pstation, 'fieldstation': b_fieldstation, 'nursery': b_nursery}
+         **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}, 'pstation': b_pstation, 'fieldstation': b_fieldstation, 'nursery': b_nursery, 'woolworks': b_woolworks}
 for name, fn in BUILD.items():
     if ONLY and name not in ONLY: continue
     reset(); p = pal(); fn(p)
