@@ -2741,6 +2741,98 @@ def b_woolworks(p):
         torus(0.056, 0.007, p['orange'], (CX + 0.05 + dx, HY + 0.32 + dy, 0.085 + dz), (0, math.pi / 2, 0))
 
 
+# ======================================================================================
+# the slag mill (level 28, docs/levels.md): next to the smelters, two lines and two places. The slag heap from the
+#    smelters at the back; a short belt feeds the jaw crusher; the crushed slag goes on a belt under a hanging magnet
+#    that pulls out the drops and bits of iron into a bin (back to the smelters) - the geologist works this line from
+#    his booth. The rest goes into the hall, where the ball mill grinds it to a powder with lime, silicon and a little
+#    phosphorus (the engineer): sacks of fertilizer for the patches, and from level 30 the lime silo for the glass.
+# ======================================================================================
+def b_slagmill(p):
+    slag = mat('slag', '#5d5652', 0.8)
+    powder = mat('powder', '#cfc6b8', 0.95)
+    # ---- the hall on the right with the ball mill behind the window
+    HX, HY, HW, HD, HH = 0.48, 0.02, 0.92, 0.66, 0.55
+    rbox(HW + 0.08, HD + 0.08, 0.06, 0.18, p['char'], (HX, HY, 0.0))
+    hall = rbox(HW, HD, HH, 0.15, p['cream'], (HX, HY, 0.05), seg=5)
+    def mill(cx, cy, fz):
+        L = frame(cx, cy, 0.0)
+        for u in (-0.17, 0.11): rbox(0.05, 0.12, 0.08, 0.01, p['char'], (*L(u, 0.05), fz), seg=1)       # the cradle
+        x, y = L(-0.03, 0.05)
+        hcyl(0.085, 0.3, p['orange'], (x, y, fz + 0.14), 'x', bev=0.02)                                   # the drum
+        for u in (-0.1, 0.0, 0.1): torus(0.087, 0.008, p['char'], (*L(-0.03 + u, 0.05), fz + 0.14), (0, math.pi / 2, 0))
+        for u in (-0.19, 0.13): hcyl(0.04, 0.03, p['char'], (*L(u, 0.05), fz + 0.14), 'x', bev=0.008)    # the trunnions
+        rbox(0.07, 0.09, 0.07, 0.015, p['cream2'], (*L(0.2, 0.05), fz), seg=2)                            # the motor
+        light(p, (*L(0.2, 0.0), fz + 0.08), 0.01)
+    lit_room(p, hall, 0.58, 0.28, 0.42, HX - 0.1, HY - HD / 2 + 0.01, 0.17, 0.0, mill)
+    rbox(HW + 0.02, HD + 0.02, 0.035, 0.15, p['orange'], (HX, HY, 0.14))
+    door(p, HX + 0.33, HY - HD / 2 - 0.02, 0.0, 0.2, 0.44, 0.05)
+    RZ = 0.05 + HH
+    rbox(0.28, 0.22, 0.14, 0.05, p['cream2'], (HX + 0.12, HY + 0.1, RZ - 0.02))                  # the dust filter
+    rbox(0.285, 0.225, 0.02, 0.05, p['orange'], (HX + 0.12, HY + 0.1, RZ + 0.07))
+    vent(p, (HX + 0.12, HY + 0.1, RZ + 0.11), 0.08)
+    light(p, (HX - 0.3, HY - 0.15, RZ + 0.01), 0.02)
+    porthole(p, (HX + HW / 2, HY + 0.12, 0.38), (1, 0), r=0.055)
+    # ---- the slag heap from the smelters at the back left, and the short belt to the crusher
+    SX, SY = -0.95, 0.5
+    for (dx, dy, r, sz) in ((0, 0, 0.26, 0.55), (0.16, -0.08, 0.17, 0.5), (-0.12, 0.1, 0.16, 0.45), (0.06, 0.14, 0.14, 0.5)):
+        dome(r, slag, (SX + dx, SY + dy, 0.0), seg=20, sz=sz)
+    for (dx, dy) in ((-0.2, -0.16), (0.22, -0.2), (0.0, -0.24)): ball(0.04, slag, (SX + dx, SY + dy, 0.03), (1.2, 1, 0.7), seg=8)
+    CX, CY = -0.6, 0.02
+    belt(p, Vector((SX + 0.12, SY - 0.2, 0.08)), Vector((CX - 0.08, CY + 0.1, 0.36)))
+    # ---- the jaw crusher: a cream box, the dark jaws in the opening on top, a flywheel at the side
+    rbox(0.28, 0.26, 0.05, 0.04, p['char'], (CX, CY, 0.0))
+    cr = rbox(0.24, 0.22, 0.32, 0.05, p['cream'], (CX, CY, 0.04))
+    cut(cr, cutter(0.14, 0.12, 0.1, (CX, CY + 0.02, 0.3), r=0.02))
+    rbox(0.245, 0.225, 0.025, 0.05, p['orange'], (CX, CY, 0.22))
+    for dx in (-0.035, 0.035): rbox(0.03, 0.1, 0.08, 0.01, p['char'], (CX + dx, CY + 0.02, 0.27), (0, D2R(-12 if dx < 0 else 12), 0), seg=1)
+    bpy.ops.mesh.primitive_cylinder_add(vertices=28, radius=0.09, depth=0.03, location=(CX - 0.14, CY, 0.2), rotation=(0, math.pi / 2, 0))
+    _done(bpy.context.object, p['char'])
+    torus(0.09, 0.01, p['orange'], (CX - 0.155, CY, 0.2), (0, math.pi / 2, 0))
+    light(p, (CX + 0.08, CY - 0.112, 0.31), 0.012)
+    # ---- the belt from the crusher to the hall, under the hanging magnet; the iron drops into the bin beside it
+    BY = CY - 0.05
+    rbox(HX - HW / 2 - (CX + 0.12) - 0.01, 0.12, 0.04, 0.015, p['char'], ((CX + 0.12 + HX - HW / 2) / 2, BY, 0.16), seg=1)
+    rbox(HX - HW / 2 - (CX + 0.12) - 0.03, 0.1, 0.012, 0.005, slag, ((CX + 0.12 + HX - HW / 2) / 2, BY, 0.2), seg=1)
+    for k in range(3): ball(0.02, slag, (CX + 0.2 + k * 0.12, BY, 0.215), (1.2, 1, 0.7), seg=8)
+    for x_ in (CX + 0.2, HX - HW / 2 - 0.08): cyl(0.012, 0.16, p['char'], (x_, BY, 0.0), bev=0.004)
+    MGX = -0.22
+    for sy in (-1, 1): cyl(0.014, 0.42, p['char'], (MGX + 0.12, BY + sy * 0.13, 0.0), bev=0.005)
+    tube([(MGX + 0.12, BY - 0.13, 0.42), (MGX + 0.12, BY + 0.13, 0.42), (MGX, BY + 0.13, 0.42)], 0.012, p['char'])
+    rbox(0.2, 0.15, 0.08, 0.03, p['cream2'], (MGX, BY, 0.28))                       # the magnet over the belt
+    rbox(0.205, 0.155, 0.025, 0.03, p['orange'], (MGX, BY, 0.28))
+    tube([(MGX, BY + 0.075, 0.33), (MGX, BY + 0.13, 0.42)], 0.008, p['char'])
+    light(p, (MGX - 0.1, BY - 0.075, 0.34), 0.012)
+    rbox(0.12, 0.05, 0.015, 0.006, p['char'], (MGX, BY - 0.12, 0.25), (D2R(35), 0, 0), seg=1)   # the chute off the side
+    IBX, IBY = MGX, BY - 0.3
+    rbox(0.22, 0.16, 0.12, 0.03, p['orange'], (IBX, IBY, 0.0))                           # the bin of iron for the smelters
+    rbox(0.19, 0.13, 0.01, 0.01, p['char'], (IBX, IBY, 0.115), seg=1)
+    for (dx, dy) in ((-0.05, 0.02), (0.04, -0.02), (0.0, 0.04), (0.06, 0.03)): ball(0.022, p['steel'], (IBX + dx, IBY + dy, 0.13), (1.2, 1, 0.7), seg=8)
+    # the geologist's booth by the line: a window towards the belt, a door
+    GX, GY = -0.62, -0.42
+    rbox(0.3, 0.26, 0.05, 0.05, p['char'], (GX, GY, 0.0))
+    booth = rbox(0.26, 0.22, 0.32, 0.07, p['cream'], (GX, GY, 0.04))
+    lit_room(p, booth, 0.14, 0.12, 0.1, GX + 0.13, GY + 0.02, 0.18, D2R(90), lambda cx, cy, fz: screen(p, (cx, cy), D2R(90), fz + 0.02))
+    rbox(0.265, 0.225, 0.02, 0.07, p['orange'], (GX, GY, 0.12))
+    door(p, GX - 0.05, GY - 0.12, 0.0, 0.12, 0.22, 0.04)
+    vent(p, (GX, GY + 0.03, 0.35), 0.06)
+    # ---- out of the hall: the sacks of fertilizer at the right; the lime silo at the back (for the glass, level 30)
+    rbox(0.32, 0.22, 0.03, 0.01, p['wood'], (HX + HW / 2 + 0.2, HY - 0.15, 0.0), seg=1)
+    for (dx, dy, dz, r) in ((-0.07, -0.05, 0.03, 0.1), (0.07, -0.05, 0.03, -0.1), (0.0, 0.05, 0.03, 0.05), (0.0, -0.01, 0.1, 0.2)):
+        rbox(0.13, 0.09, 0.07, 0.035, powder, (HX + HW / 2 + 0.2 + dx, HY - 0.15 + dy, dz), (0, 0, r), seg=3)
+        rbox(0.02, 0.095, 0.02, 0.008, p['orange'], (HX + HW / 2 + 0.2 + dx + 0.035 * math.cos(r), HY - 0.15 + dy + 0.035 * math.sin(r), dz + 0.055), (0, 0, r), seg=1)
+    LX, LY = HX + 0.25, HY + HD / 2 + 0.24
+    for sx in (-1, 1):
+        for sy in (-1, 1): cyl(0.014, 0.29, p['char'], (LX + sx * 0.085, LY + sy * 0.085, 0.0), bev=0.005)
+    cone(0.04, 0.13, 0.12, p['cream2'], (LX, LY, 0.16 + 0.06))
+    cyl(0.13, 0.4, p['cream'], (LX, LY, 0.28), bev=0.03)
+    for zz in (0.42, 0.6): torus(0.131, 0.01, p['orange'], (LX, LY, zz))
+    dome(0.13, p['cream2'], (LX, LY, 0.68), seg=24, sz=0.5)
+    light(p, (LX, LY, 0.76), 0.014)
+    tube([(LX - 0.06, HY + HD / 2 + 0.01, 0.45), (LX - 0.06, LY - 0.13, 0.5)], 0.016, p['char'])          # from the mill up into the silo
+    tube([(LX, LY, 0.16), (LX, LY + 0.3, 0.1), (LX + 0.35, LY + 0.3, 0.05)], 0.016, p['char'])          # to the glass furnace
+
+
 BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open'),
          'arkdish-folded': lambda p: b_arkdish(p, 'folded'), 'arkdish-open': lambda p: b_arkdish(p, 'open'), 'dome': b_dome, 'kitchen': lambda p: b_kitchen(p, 10), **{f'kitchen-{l}': (lambda l: lambda p: b_kitchen(p, l))(l) for l in (1, 10, 20)}, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': lambda p: b_greenhouse(p, 10), **{f'greenhouse-{l}': (lambda l: lambda p: b_greenhouse(p, l))(l) for l in (1, 10, 20)},
          'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': lambda p: b_warehouse(p, 10), **{f'warehouse-{l}': (lambda l: lambda p: b_warehouse(p, l))(l) for l in (1, 10, 20)}, 'furnace': b_furnace, 'mine': b_mine,
@@ -2748,7 +2840,7 @@ BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open
          'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover, 'drill': lambda p: b_drill(p, 10), **{f'drill-{l}': (lambda l: lambda p: b_drill(p, l))(l) for l in (1, 10, 20)}, 'smelter': b_smelter, 'claypit': b_claypit, 'brickkiln': b_brickkiln, 'copperworks': b_copperworks,
          **{f'brickhome-{l}': (lambda l: lambda p: b_brickhome(p, l))(l) for l in (1, 10, 20)},
          **{f'canteen-{l}': (lambda l: lambda p: b_canteen(p, l))(l) for l in (1, 10, 20)},
-         **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}, 'pstation': b_pstation, 'fieldstation': b_fieldstation, 'nursery': b_nursery, 'woolworks': b_woolworks}
+         **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}, 'pstation': b_pstation, 'fieldstation': b_fieldstation, 'nursery': b_nursery, 'woolworks': b_woolworks, 'slagmill': b_slagmill}
 for name, fn in BUILD.items():
     if ONLY and name not in ONLY: continue
     reset(); p = pal(); fn(p)
