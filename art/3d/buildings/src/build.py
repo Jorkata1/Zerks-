@@ -3002,6 +3002,77 @@ def b_glassworks(p):
     rbox(0.34, 0.03, 0.02, 0.008, p['orange'], (RX, RY, 0.37), seg=1)
 
 
+# ======================================================================================
+# the university (level 31, docs/levels.md): next to the brick home, one place for a scientist who teaches. The lecture
+#    hall is under a roof of our glass from level 30, the first building of our glass: through it the rows of seats
+#    stepping up, the teacher's desk and the glowing board. Two colonists learn each other's work in the evenings, so
+#    the hall is lit and there is a lamp by the porch. On the left the small library with its shelves of books.
+# ======================================================================================
+def b_university(p):
+    W, D, H, Z0, T = 1.2, 0.84, 0.4, 0.07, 0.06
+    rbox(W + 0.1, D + 0.1, Z0, 0.14, p['char'], (0, 0, 0))
+    rbox(W - 0.04, D - 0.04, 0.02, 0.03, p['floor'], (0, 0, Z0), seg=1)
+    walls = [rbox(W, T, H, 0.03, p['cream'], (0, -D / 2 + T / 2, Z0), seg=3), rbox(W, T, H, 0.03, p['cream'], (0, D / 2 - T / 2, Z0), seg=3),
+             rbox(T, D, H, 0.03, p['cream'], (-W / 2 + T / 2, 0, Z0), seg=3), rbox(T, D, H, 0.03, p['cream'], (W / 2 - T / 2, 0, Z0), seg=3)]
+    # two tall windows in the front wall (the library is against the left wall); the hall behind them is lit
+    for x_ in (-0.35, 0.02):
+        cut(walls[0], cutter(0.22, 0.2, 0.22, (x_, -D / 2 + T / 2, Z0 + 0.1), r=0.03))
+        rbox(0.22, 0.012, 0.22, 0.02, p['glass'], (x_, -D / 2 + 0.01, Z0 + 0.1), seg=1)
+        rbox(0.27, 0.06, 0.03, 0.01, p['orange'], (x_, -D / 2 - 0.01, Z0 + 0.075), seg=1)
+    for (w_, d_, x_, y_) in ((W + 0.02, 0.025, 0, -D / 2), (W + 0.02, 0.025, 0, D / 2), (0.025, D + 0.02, -W / 2, 0), (0.025, D + 0.02, W / 2, 0)):
+        rbox(w_, d_, 0.035, 0.012, p['orange'], (x_, y_, Z0 + 0.05), seg=1)            # the stripe, in pieces so the hall stays open
+    # inside: the board on the right wall, the teacher's desk, four rows of seats stepping up to the left
+    BX = W / 2 - T - 0.01
+    rbox(0.02, 0.46, 0.22, 0.01, p['char'], (BX, 0.05, Z0 + 0.12), seg=1)
+    rbox(0.006, 0.42, 0.18, 0.006, p['teal'], (BX - 0.012, 0.05, Z0 + 0.14), seg=1)
+    rbox(0.1, 0.22, 0.08, 0.02, p['cream2'], (BX - 0.15, 0.05, Z0 + 0.02), seg=2)
+    screen(p, (BX - 0.15, 0.1), D2R(90), Z0 + 0.1)
+    for k in range(4):
+        x_ = BX - 0.36 - k * 0.17; zt = Z0 + 0.02 + k * 0.035
+        rbox(0.17, D - 0.16, zt - Z0, 0.01, p['cream2'], (x_, 0.02, Z0), seg=1)
+        for j in range(4):
+            y_ = -0.22 + j * 0.15
+            rbox(0.06, 0.09, 0.035, 0.012, p['orange'], (x_ + 0.03, y_, zt), seg=2)
+            rbox(0.015, 0.09, 0.05, 0.006, p['orange'], (x_ + 0.065, y_, zt + 0.03), seg=1)
+            rbox(0.04, 0.1, 0.012, 0.004, p['cream'], (x_ - 0.04, y_, zt + 0.07), seg=1)      # the desk shelf in front
+    for x_ in (-0.3, 0.2): ball(0.03, p['lampw'], (x_, 0.0, Z0 + H + 0.1), seg=10)
+    # the roof of our glass: a glass gable on cream rafters, a cream ridge
+    zb = Z0 + H
+    for (w_, d_, x_, y_) in ((W, 0.05, 0, -D / 2 + 0.025), (W, 0.05, 0, D / 2 - 0.025), (0.05, D, -W / 2 + 0.025, 0), (0.05, D, W / 2 - 0.025, 0)):
+        rbox(w_, d_, 0.04, 0.015, p['cream'], (x_, y_, zb - 0.01), seg=2)
+    rh = gable(p, W + 0.06, D - 0.1, zb + 0.02, p['glass'], pitch=0.62)
+    hcyl(0.026, W + 0.1, p['cream'], (0, 0, zb + 0.02 + rh - 0.015), 'x', bev=0.01)
+    half = (D - 0.1 + 0.16) / 2; ang = math.atan2(rh, half)
+    for x_ in (-W / 2 + 0.03, -0.3, 0.0, 0.3, W / 2 - 0.03):
+        for sg in (-1, 1):
+            rbox(0.026, half * 1.02 / math.cos(ang), 0.018, 0.006, p['cream'], (x_, sg * half / 2, zb + 0.02 + rh / 2 - 0.006), (-sg * ang, 0, 0), seg=1)
+    light(p, (W / 2 + 0.02, 0.0, zb + rh + 0.02), 0.02)
+    # the porch at the front right: an orange canopy on two posts over the door, a lamp for the evenings
+    PX = 0.4
+    door(p, PX, -D / 2 - 0.02, 0.0, 0.2, 0.3, Z0)
+    for sx in (-1, 1): cyl(0.022, 0.38, p['cream'], (PX + sx * 0.17, -D / 2 - 0.2, 0.0), bev=0.008)
+    rbox(0.44, 0.26, 0.03, 0.02, p['orange'], (PX, -D / 2 - 0.12, 0.38), seg=2)
+    cyl(0.012, 0.42, p['char'], (PX + 0.38, -D / 2 - 0.25, 0.0), bev=0.004)
+    ball(0.03, p['lampw'], (PX + 0.38, -D / 2 - 0.25, 0.44), seg=10)
+    # the library on the left: shelves of books behind its window, a reading lamp
+    LX, LY, LW, LD, LH = -W / 2 - 0.24, 0.08, 0.42, 0.56, 0.46
+    rbox(LW + 0.08, LD + 0.08, 0.07, 0.12, p['char'], (LX, LY, 0.0))
+    lib = rbox(LW, LD, LH, 0.12, p['cream'], (LX, LY, 0.06), seg=5)
+    def books(cx, cy, fz):
+        L = frame(cx, cy, 0.0)
+        cols = [p['orange'], p['teal'], p['wood'], p['navy'], p['leaf'], p['cream2']]
+        for r_ in range(2):
+            rbox(0.22, 0.04, 0.008, 0.003, p['wood'], (*L(0.0, 0.09), fz + 0.04 + r_ * 0.07), seg=1)
+            for k in range(7): rbox(0.022, 0.035, 0.05 - 0.006 * (k % 3), 0.003, cols[(k + r_) % 6], (*L(-0.09 + k * 0.03, 0.09), fz + 0.048 + r_ * 0.07), seg=1)
+        cyl(0.006, 0.07, p['char'], (*L(0.07, 0.0), fz), bev=0.002)
+        ball(0.02, p['lampw'], (*L(0.07, 0.0), fz + 0.08), seg=8)
+    lit_room(p, lib, 0.26, 0.2, 0.26, LX, LY - LD / 2 + 0.01, 0.18, 0.0, books)
+    rbox(LW + 0.02, LD + 0.02, 0.03, 0.12, p['orange'], (LX, LY, 0.13))
+    vent(p, (LX, LY + 0.1, 0.06 + LH - 0.01), 0.07)
+    bench(p, (LX - 0.02, LY - LD / 2 - 0.22, 0.0), 0.0)
+    bell(p, (LX + 0.25, LY - LD / 2 - 0.2, 0.0), 0.7)
+
+
 BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open'),
          'arkdish-folded': lambda p: b_arkdish(p, 'folded'), 'arkdish-open': lambda p: b_arkdish(p, 'open'), 'dome': b_dome, 'kitchen': lambda p: b_kitchen(p, 10), **{f'kitchen-{l}': (lambda l: lambda p: b_kitchen(p, l))(l) for l in (1, 10, 20)}, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': lambda p: b_greenhouse(p, 10), **{f'greenhouse-{l}': (lambda l: lambda p: b_greenhouse(p, l))(l) for l in (1, 10, 20)},
          'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': lambda p: b_warehouse(p, 10), **{f'warehouse-{l}': (lambda l: lambda p: b_warehouse(p, l))(l) for l in (1, 10, 20)}, 'furnace': b_furnace, 'mine': b_mine,
@@ -3012,7 +3083,7 @@ BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open
          **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}, 'pstation': b_pstation, 'fieldstation': b_fieldstation, 'nursery': b_nursery, 'woolworks': b_woolworks, 'slagmill': b_slagmill, 'glassworks': b_glassworks, **{f'hull-{h}': (lambda h: lambda p: b_dock(p, 4, h))(h) for h in range(1, 5)},
          **{f'brickhome-{l}i': (lambda l: lambda p: b_brickhome(p, l, True))(l) for l in (1, 10, 20)},
          **{f'canteen-{l}i': (lambda l: lambda p: b_canteen(p, l, True))(l) for l in (1, 10, 20)},
-         **{f'greenhouse-{l}i': (lambda l: lambda p: b_greenhouse(p, l, True))(l) for l in (1, 10, 20)}}
+         **{f'greenhouse-{l}i': (lambda l: lambda p: b_greenhouse(p, l, True))(l) for l in (1, 10, 20)}, 'university': b_university}
 for name, fn in BUILD.items():
     if ONLY and name not in ONLY: continue
     reset(); p = pal(); fn(p)
