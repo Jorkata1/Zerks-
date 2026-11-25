@@ -3724,79 +3724,89 @@ def b_weather(p):
 #    under lamps; sealed boxes of seed from the Ark's bank wait on a pallet; the edge of the Ice Hollow in front.
 # ======================================================================================
 def b_seedvault(p):
-    # Joro (25.11.2026): no mountain, rather a vault. The halls with the seed are under the ground, in the frozen soil next
-    #    to the Ice Hollow, as Svalbard's are in its rock; above it stands the entrance: a low heavy block with thick
-    #    walls and a round steel vault door with its handwheel, the stairs and the lift go down behind it. The flat
-    #    roof of the halls shows as a low slab with frosted vents. The glass room, the boxes and the ice as before.
+    # Joro (25.11.2026): no mountain, a big massive building that plainly is a vault. A monolith with thick battered
+    #    walls (stone wool from level 27 inside them keeps the planet's cold in, so the seed stays frozen without power),
+    #    buttresses, no windows, a heavy dark plinth; in the middle of the front a huge round steel vault door in a deep
+    #    steel frame, with its bolts, handwheel and hinge blocks. On the roof the cold-air vents with frost; on the right
+    #    the hatch where the robot brings the sealed boxes; on the left the small room of our glass with the trial beds.
     import random
     rnd = random.Random(3)
-    frost = mat('frost', '#eef6ff', 0.6)
-    # ---- the roof of the halls under the ground: a low slab behind the entrance, frosted vents in a row
-    rbox(1.5, 0.78, 0.04, 0.05, p['char'], (-0.05, 0.52, 0.0), seg=2)
-    rbox(1.44, 0.72, 0.05, 0.06, p['cream2'], (-0.05, 0.52, 0.03), seg=3)
-    rbox(1.452, 0.732, 0.015, 0.06, p['orange'], (-0.05, 0.52, 0.055), seg=2)
-    for x_ in (-0.55, -0.15, 0.25, 0.6):
-        cyl(0.07, 0.05, p['cream'], (x_, 0.62, 0.08), bev=0.015)
-        ball(0.09, p['char'], (x_, 0.62, 0.15), (1, 1, 0.5), seg=16)
-        t = torus(0.085, 0.018, frost, (x_, 0.62, 0.085)); t.scale = (1, 1, 0.4); bpy.ops.object.transform_apply(scale=True)
-    for k in range(10):
-        ball(rnd.uniform(0.04, 0.07), frost, (rnd.uniform(-0.7, 0.6), rnd.uniform(0.25, 0.85), 0.085), (1.8, 0.9, 0.2), seg=8)
-    # ---- the entrance block: thick rounded walls, the stripe, the round vault door with its handwheel and bolts
-    EW, ED, EH, EY = 0.7, 0.5, 0.5, 0.0
-    rbox(EW + 0.1, ED + 0.1, 0.06, 0.12, p['char'], (0, EY, 0.0))
-    blk = rbox(EW, ED, EH, 0.14, p['cream'], (0, EY, 0.05), seg=5)
-    rbox(EW + 0.02, ED + 0.02, 0.04, 0.14, p['orange'], (0, EY, 0.14))
-    FY = EY - ED / 2
-    DZ, DR = 0.28, 0.17
-    bpy.ops.mesh.primitive_torus_add(major_radius=DR + 0.03, minor_radius=0.03, major_segments=48, minor_segments=12, location=(0, FY - 0.01, DZ), rotation=(math.pi / 2, 0, 0))
+    frost = mat('frost', '#eef6ff', 0.6); dsteel = mat('steeldark', '#8d969e', 0.4)
+    W, D, H = 1.5, 1.0, 0.72
+    rbox(W + 0.16, D + 0.16, 0.09, 0.1, p['char'], (0, 0.05, 0.0), seg=2)
+    body = rbox(W, D, H, 0.12, p['cream'], (0, 0.05, 0.08), seg=4)
+    for v in body.data.vertices:                                           # battered walls: narrower at the top
+        f = 1 - 0.09 * max(0.0, (v.co.z - 0.08) / H)
+        v.co.x *= f; v.co.y = 0.05 + (v.co.y - 0.05) * f
+    rbox(W + 0.03, D + 0.03, 0.05, 0.12, p['orange'], (0, 0.05, 0.2))
+    rbox(W * 0.91 + 0.04, D * 0.91 + 0.04, 0.05, 0.08, p['cream2'], (0, 0.05, 0.08 + H - 0.02))     # the parapet
+    # the buttresses: at the corners and along the long walls
+    for sx in (-1, 1):
+        for sy in (-1, 1): rbox(0.16, 0.16, H * 0.82, 0.05, p['cream2'], (sx * (W / 2 - 0.02), 0.05 + sy * (D / 2 - 0.02), 0.08), seg=3)
+    for x_ in (-0.62, 0.62):
+        rbox(0.12, 0.12, H * 0.7, 0.04, p['cream2'], (x_, 0.05 - D / 2 + 0.01, 0.08), seg=3)
+        rbox(0.12, 0.12, H * 0.7, 0.04, p['cream2'], (x_, 0.05 + D / 2 - 0.01, 0.08), seg=3)
+    # ---- the vault door: a deep steel frame on the front, the round door, bolts, handwheel, hinges, the lit strip
+    FY = 0.05 - D / 2
+    rbox(0.78, 0.14, 0.66, 0.04, mat('frame', '#4a4440', 0.6), (0, FY - 0.02, 0.08), seg=2)
+    DZ, DR = 0.41, 0.26
+    bpy.ops.mesh.primitive_torus_add(major_radius=DR + 0.035, minor_radius=0.035, major_segments=56, minor_segments=12, location=(0, FY - 0.09, DZ), rotation=(math.pi / 2, 0, 0))
     _done(bpy.context.object, p['char'])
-    bpy.ops.mesh.primitive_cylinder_add(vertices=48, radius=DR, depth=0.05, location=(0, FY - 0.02, DZ), rotation=(math.pi / 2, 0, 0))
+    bpy.ops.mesh.primitive_cylinder_add(vertices=56, radius=DR, depth=0.07, location=(0, FY - 0.1, DZ), rotation=(math.pi / 2, 0, 0))
     _done(bpy.context.object, p['steel'])
-    bpy.ops.mesh.primitive_torus_add(major_radius=DR - 0.02, minor_radius=0.008, major_segments=48, minor_segments=8, location=(0, FY - 0.048, DZ), rotation=(math.pi / 2, 0, 0))
-    _done(bpy.context.object, mat('steeldark', '#8d969e', 0.4))
-    for k in range(12):                                                    # the bolts round the rim
-        a = k * math.pi / 6
-        ball(0.011, p['char'], (math.cos(a) * (DR - 0.035), FY - 0.05, DZ + math.sin(a) * (DR - 0.035)), seg=8)
-    bpy.ops.mesh.primitive_cylinder_add(vertices=20, radius=0.03, depth=0.04, location=(0, FY - 0.06, DZ), rotation=(math.pi / 2, 0, 0))
+    for rr in (DR - 0.03, DR - 0.12):
+        bpy.ops.mesh.primitive_torus_add(major_radius=rr, minor_radius=0.009, major_segments=48, minor_segments=8, location=(0, FY - 0.137, DZ), rotation=(math.pi / 2, 0, 0))
+        _done(bpy.context.object, dsteel)
+    for k in range(16):
+        a = k * math.pi / 8
+        ball(0.014, p['char'], (math.cos(a) * (DR - 0.055), FY - 0.14, DZ + math.sin(a) * (DR - 0.055)), seg=8)
+    bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=0.045, depth=0.05, location=(0, FY - 0.15, DZ), rotation=(math.pi / 2, 0, 0))
     _done(bpy.context.object, p['orange'])
-    for k in range(4):                                                     # the handwheel: four spokes and a rim
-        a = k * math.pi / 4
-        tube([(math.cos(a) * 0.07, FY - 0.075, DZ + math.sin(a) * 0.07), (-math.cos(a) * 0.07, FY - 0.075, DZ - math.sin(a) * 0.07)], 0.006, p['char'])
-    bpy.ops.mesh.primitive_torus_add(major_radius=0.07, minor_radius=0.009, major_segments=32, minor_segments=8, location=(0, FY - 0.075, DZ), rotation=(math.pi / 2, 0, 0))
+    for k in range(3):
+        a = k * math.pi / 3
+        tube([(math.cos(a) * 0.12, FY - 0.17, DZ + math.sin(a) * 0.12), (-math.cos(a) * 0.12, FY - 0.17, DZ - math.sin(a) * 0.12)], 0.009, p['char'])
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.12, minor_radius=0.013, major_segments=36, minor_segments=8, location=(0, FY - 0.17, DZ), rotation=(math.pi / 2, 0, 0))
     _done(bpy.context.object, p['char'])
-    for sx in (-1, 1): rbox(0.03, 0.04, 0.08, 0.01, p['char'], (sx * (DR + 0.05), FY - 0.005, DZ - 0.04), seg=1)   # the hinges
-    rbox(EW - 0.16, 0.02, 0.04, 0.01, p['teal'], (0, FY - 0.006, EH - 0.02), seg=1)                               # the lit strip
-    RZ = 0.05 + EH
-    vent(p, (0.15, EY + 0.08, RZ - 0.01), 0.07)
-    light(p, (-0.22, EY + 0.05, RZ + 0.01), 0.016)
-    for k in range(5): ball(rnd.uniform(0.03, 0.05), frost, (rnd.uniform(-0.3, 0.3), EY + rnd.uniform(-0.18, 0.18), RZ - 0.005), (1.8, 1, 0.22), seg=8)
-    # ---- the glass room by the entrance: beds of trial seeds under lamps
-    GX0, GX1, GY0, GY1, GH = EW / 2 + 0.03, EW / 2 + 0.5, FY - 0.02, FY + 0.36, 0.32
+    for dz in (-0.14, 0.14): rbox(0.07, 0.08, 0.1, 0.015, p['char'], (DR + 0.07, FY - 0.11, DZ + dz - 0.05), seg=2)   # the hinge blocks
+    rbox(0.5, 0.025, 0.035, 0.01, p['teal'], (0, FY - 0.095, 0.08 + 0.66 + 0.01), seg=1)
+    for sx in (-1, 1): light(p, (sx * 0.34, FY - 0.1, 0.62), 0.016)
+    # ---- the roof: the cold-air vents with frost, frost on the roof
+    RZ = 0.08 + H
+    for x_ in (-0.4, 0.0, 0.4):
+        cyl(0.09, 0.08, p['cream2'], (x_, 0.15, RZ - 0.02), bev=0.02)
+        for k in range(4): torus(0.091, 0.006, p['char'], (x_, 0.15, RZ + k * 0.016))
+        dome(0.1, p['char'], (x_, 0.15, RZ + 0.06), seg=16, sz=0.4)
+        t = torus(0.1, 0.02, frost, (x_, 0.15, RZ + 0.065)); t.scale = (1, 1, 0.3); bpy.ops.object.transform_apply(scale=True)
+    for k in range(12): ball(rnd.uniform(0.05, 0.08), frost, (rnd.uniform(-0.6, 0.6), 0.05 + rnd.uniform(-0.36, 0.36), RZ + 0.045), (1.8, 1, 0.2), seg=8)
+    light(p, (0.6, 0.05 - 0.38, RZ + 0.02), 0.018)
+    # ---- the hatch on the right wall where the robot brings the sealed boxes; boxes waiting on a pallet
+    hatch(p, W / 2 + 0.03, 0.12, -math.pi / 2, 0.28, 0.26, 0.08)
+    rbox(0.24, 0.3, 0.03, 0.01, p['wood'], (W / 2 + 0.3, 0.12, 0.0), seg=1)
+    for (dx, dy, dz) in ((-0.05, -0.07, 0.03), (-0.05, 0.07, 0.03), (0.06, -0.07, 0.03), (0.06, 0.07, 0.03), (0.0, 0.0, 0.12)):
+        rbox(0.09, 0.12, 0.08, 0.02, p['cream'], (W / 2 + 0.3 + dx, 0.12 + dy, dz), seg=2)
+        rbox(0.095, 0.125, 0.02, 0.02, p['orange'], (W / 2 + 0.3 + dx, 0.12 + dy, dz + 0.06), seg=2)
+    # ---- the glass room on the left: the trial beds under lamps, its door into the vault
+    GX0, GX1, GY0, GY1, GH = -W / 2 - 0.55, -W / 2 - 0.06, -0.22, 0.2, 0.32
     rbox(GX1 - GX0 + 0.04, GY1 - GY0 + 0.04, 0.05, 0.03, p['char'], ((GX0 + GX1) / 2, (GY0 + GY1) / 2, 0.0))
     rbox(GX1 - GX0, GY1 - GY0, 0.06, 0.03, p['cream'], ((GX0 + GX1) / 2, (GY0 + GY1) / 2, 0.04))
-    for (w_, d_, x_, y_) in ((GX1 - GX0, 0.012, (GX0 + GX1) / 2, GY0), (GX1 - GX0, 0.012, (GX0 + GX1) / 2, GY1), (0.012, GY1 - GY0, GX1, (GY0 + GY1) / 2)):
+    for (w_, d_, x_, y_) in ((GX1 - GX0, 0.012, (GX0 + GX1) / 2, GY0), (GX1 - GX0, 0.012, (GX0 + GX1) / 2, GY1), (0.012, GY1 - GY0, GX0, (GY0 + GY1) / 2)):
         rbox(w_, d_, GH - 0.1, 0.004, p['glass'], (x_, y_, 0.1), seg=1)
     for (x_, y_) in ((GX0, GY0), (GX1, GY0), (GX1, GY1), (GX0, GY1)): rbox(0.03, 0.03, GH - 0.06, 0.01, p['cream'], (x_, y_, 0.1), seg=1)
     rbox(GX1 - GX0 + 0.03, GY1 - GY0 + 0.03, 0.012, 0.006, p['glass'], ((GX0 + GX1) / 2, (GY0 + GY1) / 2, GH + 0.04), seg=1)
     for y_ in (GY0, GY1): rbox(GX1 - GX0 + 0.04, 0.03, 0.03, 0.01, p['cream'], ((GX0 + GX1) / 2, y_, GH + 0.03), seg=1)
-    for k, y_ in enumerate((GY0 + 0.1, GY0 + 0.26)):
-        rbox(GX1 - GX0 - 0.1, 0.1, 0.03, 0.01, p['soil'], ((GX0 + GX1) / 2 + 0.02, y_, 0.1), seg=1)
+    for k, y_ in enumerate((GY0 + 0.11, GY0 + 0.29)):
+        rbox(GX1 - GX0 - 0.1, 0.1, 0.03, 0.01, p['soil'], ((GX0 + GX1) / 2, y_, 0.1), seg=1)
         for i in range(6):
             for j in range(2):
-                ball(0.009, p['leaf2'] if (i + k) % 3 else straw(), ((GX0 + GX1) / 2 - 0.12 + i * 0.05 + 0.02, y_ - 0.025 + j * 0.05, 0.14), (1, 1, 1.6), seg=6)
-        ball(0.018, p['lampw'], ((GX0 + GX1) / 2 + 0.02, y_, GH - 0.02), seg=8)
-    light(p, (GX1, GY0, GH + 0.06), 0.012)
-    # ---- sealed boxes of seed from the Ark's bank on a pallet, brought by the robot; a lamp
-    rbox(0.3, 0.22, 0.03, 0.01, p['wood'], (-0.6, FY - 0.05, 0.0), seg=1)
-    for (dx, dy, dz) in ((-0.07, -0.05, 0.03), (0.07, -0.05, 0.03), (-0.07, 0.05, 0.03), (0.07, 0.05, 0.03), (0.0, 0.0, 0.12)):
-        rbox(0.12, 0.09, 0.08, 0.02, p['cream'], (-0.6 + dx, FY - 0.05 + dy, dz), seg=2)
-        rbox(0.125, 0.095, 0.02, 0.02, p['orange'], (-0.6 + dx, FY - 0.05 + dy, dz + 0.06), seg=2)
-    cyl(0.012, 0.36, p['char'], (-0.36, FY - 0.2, 0.0), bev=0.004)
-    ball(0.028, p['lampw'], (-0.36, FY - 0.2, 0.38), seg=10)
-    # ---- the edge of the Ice Hollow in front
-    ice = cyl(0.42, 0.03, p['ice'], (-0.75, -0.85, 0.0), bev=0.012, verts=40)
-    _wobble(ice, -0.75, -0.85, lambda a: 1 + 0.15 * math.sin(3 * a + 0.5) + 0.07 * math.sin(7 * a))
-    for k in range(5): ball(0.035, frost, (-0.75 + rnd.uniform(-0.3, 0.3), -0.85 + rnd.uniform(-0.25, 0.25), 0.03), (1.4, 1, 0.3), seg=8)
+                ball(0.009, p['leaf2'] if (i + k) % 3 else straw(), ((GX0 + GX1) / 2 - 0.13 + i * 0.05, y_ - 0.025 + j * 0.05, 0.14), (1, 1, 1.6), seg=6)
+        ball(0.018, p['lampw'], ((GX0 + GX1) / 2, y_, GH - 0.02), seg=8)
+    light(p, (GX0, GY0, GH + 0.06), 0.012)
+    # ---- a lamp by the door, and the edge of the Ice Hollow in front
+    cyl(0.012, 0.42, p['char'], (0.55, FY - 0.3, 0.0), bev=0.004)
+    ball(0.03, p['lampw'], (0.55, FY - 0.3, 0.44), seg=10)
+    ice = cyl(0.42, 0.03, p['ice'], (-0.95, -0.95, 0.0), bev=0.012, verts=40)
+    _wobble(ice, -0.95, -0.95, lambda a: 1 + 0.15 * math.sin(3 * a + 0.5) + 0.07 * math.sin(7 * a))
+    for k in range(5): ball(0.035, frost, (-0.95 + rnd.uniform(-0.3, 0.3), -0.95 + rnd.uniform(-0.25, 0.25), 0.03), (1.4, 1, 0.3), seg=8)
 
 
 BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open'),
