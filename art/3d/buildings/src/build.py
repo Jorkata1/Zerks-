@@ -3349,6 +3349,60 @@ def b_medpost(p):
     bell(p, (-0.48, -D / 2 - 0.2, 0.0), 0.7)
 
 
+# ======================================================================================
+# a green patch on the Green Belt (levels 21-26, docs/levels.md): not a building, a piece of the terrace that grows by
+#    itself. Stage 1 (level 21): lichens in spots on the bare damp rock. Stage 2: moss over most of it, the drip hose
+#    from the purification station (level 23) along it. Stage 3 (level 25): a thin soil with grass sown by the drone,
+#    some of it ripe. Stage 4 (level 26): sea-buckthorn shrubs planted by hand in strips across the slope.
+# ======================================================================================
+def b_patch(p, stage):
+    import random
+    rnd = random.Random(7)
+    lich = [mat('lichen1', '#a3b27f', 0.9), mat('lichen2', '#d9a441', 0.9), mat('lichen3', '#cfcfa6', 0.9)]
+    moss = mat('moss', '#6f9240', 0.95)
+    rockf = mat('rockflat', '#c8764a', 0.9)
+    # the rock: a soft irregular slab with a few stones on it
+    for (dx, dy, r) in ((0, 0, 0.62), (0.32, 0.18, 0.42), (-0.3, -0.2, 0.44), (0.25, -0.28, 0.36), (-0.28, 0.26, 0.38)):
+        o = cyl(r, 0.05, rockf, (dx, dy, 0.0), bev=0.02, verts=40)
+    for k in range(9):
+        a = rnd.uniform(0, 6.28); r_ = rnd.uniform(0.5, 0.78)
+        ball(rnd.uniform(0.03, 0.06), p['rock2'], (math.cos(a) * r_, math.sin(a) * r_, 0.04), (1.2, 1, 0.6), seg=8)
+    Z = 0.052
+    if stage == 1:
+        for k in range(26):
+            a = rnd.uniform(0, 6.28); r_ = rnd.uniform(0.0, 0.7)
+            cyl(rnd.uniform(0.03, 0.08), 0.006, lich[k % 3], (math.cos(a) * r_, math.sin(a) * r_, Z), bev=0.002, verts=16)
+        return
+    if stage == 2:
+        for (dx, dy, r) in ((0, 0, 0.5), (0.28, 0.16, 0.34), (-0.26, -0.18, 0.36), (0.2, -0.24, 0.28), (-0.24, 0.22, 0.3)):
+            cyl(r, 0.014, moss, (dx, dy, Z), bev=0.006, verts=36)
+        moss2 = mat('moss2', '#7fa34a', 0.95)
+        for k in range(40):                                                   # cushions of moss
+            a = rnd.uniform(0, 6.28); r_ = rnd.uniform(0.0, 0.55)
+            dome(rnd.uniform(0.03, 0.07), moss if k % 2 else moss2, (math.cos(a) * r_, math.sin(a) * r_, Z + 0.01), seg=12, sz=0.4)
+        for k in range(10):
+            a = rnd.uniform(0, 6.28); r_ = rnd.uniform(0.55, 0.75)
+            cyl(rnd.uniform(0.03, 0.06), 0.006, lich[k % 3], (math.cos(a) * r_, math.sin(a) * r_, Z), bev=0.002, verts=16)
+    if stage >= 3:
+        for (dx, dy, r) in ((0, 0, 0.56), (0.3, 0.17, 0.38), (-0.28, -0.19, 0.4), (0.22, -0.26, 0.32), (-0.26, 0.24, 0.34)):
+            cyl(r, 0.02, p['soil'], (dx, dy, Z), bev=0.008, verts=36)
+            cyl(r - 0.03, 0.006, mat('lawn', '#7cc865', 0.8), (dx, dy, Z + 0.018), bev=0.003, verts=36)
+        n = 0
+        for i in range(-6, 7):
+            for j in range(-6, 7):
+                x_, y_ = i * 0.09 + (0.04 if j % 2 else 0) + rnd.uniform(-0.03, 0.03), j * 0.09 + rnd.uniform(-0.03, 0.03)
+                if math.hypot(x_, y_) < 0.66 and (stage == 3 or abs(y_ - round(y_ / 0.36) * 0.36) > 0.08):
+                    tuft(p, (x_, y_, Z + 0.02), 0.9, seed=(n % 5 == 0)); n += 1
+    if stage == 4:
+        for row in (-0.36, 0.0, 0.36):                                            # strips across the slope
+            for k in range(-2, 3):
+                x_ = k * 0.22 + (0.11 if row == 0.0 else 0)
+                if math.hypot(x_, row) < 0.62: shrub(p, (x_, row, Z + 0.02), 1.0)
+    # the drip hose from the purification station comes in at the back and runs along the patch
+    pts = [(0.85, 0.7, 0.012), (0.55, 0.45, 0.03)] + [(math.cos(D2R(a)) * 0.5, math.sin(D2R(a)) * 0.5, Z + 0.03) for a in range(40, 330, 20)]
+    tube(pts, 0.008, hose())
+
+
 BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open'),
          'arkdish-folded': lambda p: b_arkdish(p, 'folded'), 'arkdish-open': lambda p: b_arkdish(p, 'open'), 'dome': b_dome, 'kitchen': lambda p: b_kitchen(p, 10), **{f'kitchen-{l}': (lambda l: lambda p: b_kitchen(p, l))(l) for l in (1, 10, 20)}, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': lambda p: b_greenhouse(p, 10), **{f'greenhouse-{l}': (lambda l: lambda p: b_greenhouse(p, l))(l) for l in (1, 10, 20)},
          'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': lambda p: b_warehouse(p, 10), **{f'warehouse-{l}': (lambda l: lambda p: b_warehouse(p, l))(l) for l in (1, 10, 20)}, 'furnace': b_furnace, 'mine': b_mine,
@@ -3359,7 +3413,7 @@ BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open
          **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}, 'pstation': b_pstation, 'fieldstation': b_fieldstation, 'nursery': b_nursery, 'woolworks': b_woolworks, 'slagmill': b_slagmill, 'glassworks': b_glassworks, **{f'hull-{h}': (lambda h: lambda p: b_dock(p, 4, h))(h) for h in range(1, 5)},
          **{f'brickhome-{l}i': (lambda l: lambda p: b_brickhome(p, l, True))(l) for l in (1, 10, 20)},
          **{f'canteen-{l}i': (lambda l: lambda p: b_canteen(p, l, True))(l) for l in (1, 10, 20)},
-         **{f'greenhouse-{l}i': (lambda l: lambda p: b_greenhouse(p, l, True))(l) for l in (1, 10, 20)}, 'university': b_university, 'university-b': b_university_b, 'park': b_park, 'dispatch': b_dispatch, 'medpost': b_medpost}
+         **{f'greenhouse-{l}i': (lambda l: lambda p: b_greenhouse(p, l, True))(l) for l in (1, 10, 20)}, 'university': b_university, 'university-b': b_university_b, 'park': b_park, 'dispatch': b_dispatch, 'medpost': b_medpost, **{f'patch-{k}': (lambda k: lambda p: b_patch(p, k))(k) for k in range(1, 5)}}
 for name, fn in BUILD.items():
     if ONLY and name not in ONLY: continue
     reset(); p = pal(); fn(p)
