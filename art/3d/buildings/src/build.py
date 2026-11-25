@@ -3108,7 +3108,7 @@ def b_university_b(p):
     dome(R - 0.01, p['glass'], (0, 0, zb), seg=48, sz=SZ)
     for k in range(6):
         bpy.ops.mesh.primitive_torus_add(major_radius=R - 0.005, minor_radius=0.014, major_segments=48, minor_segments=8, location=(0, 0, zb), rotation=(math.pi / 2, 0, D2R(k * 30)))
-        rib = _done(bpy.context.object, p['cream']); rib.scale = (1, 1, SZ); bpy.ops.object.transform_apply(scale=True); cut_half(rib, zb)
+        rib = _done(bpy.context.object, p['cream']); bpy.ops.object.transform_apply(rotation=True); rib.scale = (1, 1, SZ); bpy.ops.object.transform_apply(scale=True); cut_half(rib, zb)
     cyl(0.07, 0.05, p['cream2'], (0, 0, zb + (R - 0.01) * SZ - 0.02), bev=0.015)
     light(p, (0, 0, zb + (R - 0.01) * SZ + 0.05), 0.02)
     # the portico at the front: an orange roof on four cream columns over the door
@@ -3143,6 +3143,78 @@ def b_university_b(p):
     for (x_, y_) in ((0.5, -R - 0.15), (-0.62, 0.25)): bell(p, (x_, y_, 0.0), 0.7)
 
 
+# ======================================================================================
+# the park (level 32, docs/levels.md): the first building for happiness, next to the homes and the university, under a
+#    dome of our glass (the second building of our glass). Inside: grass from the Green Belt's seed, sea-buckthorn shrubs
+#    from the nursery (grown, with their orange berries), a ring path with benches and lamps, drip hoses along the beds
+#    because water is precious, two sprinklers. In by the airlock at the front; the gardener's shed with his tools and
+#    the air unit that keeps the air in the dome at the back. One gardener (agronomist).
+# ======================================================================================
+def shrub(p, at, s=1.0):
+    """a grown sea-buckthorn shrub: silvery-green leaves, orange berries on the outside"""
+    x, y, z = at
+    sea = mat('buckthorn', '#9dbb87', 0.75)
+    for (dx, dy, dz, r) in ((0, 0, 0.09, 0.08), (0.06, 0.03, 0.07, 0.06), (-0.05, 0.04, 0.07, 0.06), (0.01, -0.05, 0.06, 0.055)):
+        ball(r * s, sea, (x + dx * s, y + dy * s, z + dz * s), (1, 1, 0.9), seg=10)
+    for (dx, dy, dz) in ((0.07, -0.03, 0.08), (-0.06, -0.03, 0.09), (0.02, -0.08, 0.07), (0.0, 0.05, 0.14), (-0.07, 0.06, 0.06)):
+        ball(0.012 * s, p['orange'], (x + dx * s, y + dy * s, z + dz * s), seg=6)
+
+def b_park(p):
+    R, ZB = 0.88, 0.16
+    cyl(R + 0.06, 0.05, p['char'], (0, 0, 0), bev=0.02, verts=72)
+    cyl(R, ZB - 0.04, p['cream'], (0, 0, 0.04), bev=0.02, verts=72)
+    torus(R + 0.003, 0.016, p['orange'], (0, 0, 0.1))
+    cyl(R - 0.05, 0.012, mat('lawn', '#7cc865', 0.8), (0, 0, ZB - 0.005), bev=0.004, verts=64)
+    # the ring path, a path in from the airlock, the benches and the lamps on it
+    pt = torus(0.46, 0.045, p['cream2'], (0, 0, ZB + 0.005)); pt.scale = (1, 1, 0.18); bpy.ops.object.transform_apply(scale=True)
+    a_in = D2R(-60)
+    for k in range(4):
+        r_ = 0.5 + k * 0.08
+        rbox(0.09, 0.08, 0.008, 0.02, p['cream2'], (math.cos(a_in) * r_, math.sin(a_in) * r_, ZB + 0.002), (0, 0, a_in), seg=1)
+    for a in (150, 30, 250):
+        ar = D2R(a); bench(p, (math.cos(ar) * 0.36, math.sin(ar) * 0.36, ZB), ar + math.pi / 2)
+    for a in (90, 210, -15):
+        ar = D2R(a); x_, y_ = math.cos(ar) * 0.56, math.sin(ar) * 0.56
+        cyl(0.008, 0.16, p['char'], (x_, y_, ZB), bev=0.003); ball(0.022, p['lampw'], (x_, y_, ZB + 0.17), seg=8)
+    # the beds: shrubs outside the ring and a group in the middle, grass tufts, the drip hose round the outer beds
+    for a in (120, 175, 225, 280, 330, 15, 65):
+        ar = D2R(a); shrub(p, (math.cos(ar) * 0.7, math.sin(ar) * 0.7, ZB), 1.0)
+    for (x_, y_, s_) in ((0.0, 0.08, 1.2), (-0.12, -0.06, 0.9), (0.12, -0.08, 0.8)): shrub(p, (x_, y_, ZB), s_)
+    for k in range(14):
+        ar = D2R(k * 26 + 7); r_ = 0.24 + 0.05 * (k % 3)
+        tuft(p, (math.cos(ar) * r_, math.sin(ar) * r_, ZB), 1.0, seed=(k % 4 == 0))
+    hz = torus(0.62, 0.006, hose(), (0, 0, ZB + 0.01))
+    for a in (40, 200):
+        ar = D2R(a); x_, y_ = math.cos(ar) * 0.78, math.sin(ar) * 0.78
+        cyl(0.01, 0.05, p['char'], (x_, y_, ZB), bev=0.003); light(p, (x_, y_, ZB + 0.06), 0.01)       # the sprinklers
+    # the dome of our glass: four ribs over the top and a ring round its middle
+    SZ = 0.55; RD = R - 0.02
+    dome(RD, p['glass'], (0, 0, ZB), seg=56, sz=SZ)
+    for k in range(4):
+        bpy.ops.mesh.primitive_torus_add(major_radius=RD + 0.004, minor_radius=0.014, major_segments=56, minor_segments=8, location=(0, 0, ZB), rotation=(math.pi / 2, 0, D2R(k * 45)))
+        rib = _done(bpy.context.object, p['cream']); bpy.ops.object.transform_apply(rotation=True); rib.scale = (1, 1, SZ); bpy.ops.object.transform_apply(scale=True); cut_half(rib, ZB)
+    torus(RD * math.cos(D2R(40)) + 0.004, 0.012, p['cream'], (0, 0, ZB + RD * SZ * math.sin(D2R(40))))
+    cyl(0.07, 0.04, p['cream2'], (0, 0, ZB + RD * SZ - 0.015), bev=0.012)
+    light(p, (0, 0, ZB + RD * SZ + 0.04), 0.02)
+    # the airlock at the front right, where the path comes in
+    ax, ay = math.cos(a_in) * (R + 0.1), math.sin(a_in) * (R + 0.1)
+    rbox(0.36, 0.34, 0.06, 0.08, p['char'], (ax, ay, 0.0), (0, 0, a_in + math.pi / 2))
+    rbox(0.3, 0.28, 0.34, 0.09, p['cream'], (ax, ay, 0.05), (0, 0, a_in + math.pi / 2), seg=4)
+    rbox(0.305, 0.285, 0.025, 0.09, p['orange'], (ax, ay, 0.12), (0, 0, a_in + math.pi / 2))
+    door(p, ax + math.cos(a_in) * 0.15, ay + math.sin(a_in) * 0.15, a_in + math.pi / 2, 0.16, 0.26, 0.05)
+    # the gardener's shed at the back left, with a lit window; the air unit beside it, its pipe into the dome
+    gr = D2R(125); gx, gy = math.cos(gr) * (R + 0.18), math.sin(gr) * (R + 0.18)
+    rbox(0.4, 0.32, 0.06, 0.08, p['char'], (gx, gy, 0.0), (0, 0, gr + math.pi / 2))
+    shed = rbox(0.34, 0.26, 0.32, 0.08, p['cream'], (gx, gy, 0.05), (0, 0, gr + math.pi / 2))
+    rbox(0.345, 0.265, 0.025, 0.08, p['orange'], (gx, gy, 0.12), (0, 0, gr + math.pi / 2))
+    vent(p, (gx, gy, 0.37), 0.07)
+    for k, (du) in enumerate((-0.05, 0.0, 0.05)):                     # the tools on the outer wall: rake, spade, hoe
+        tx_, ty_ = gx + math.cos(gr) * 0.135 + math.cos(gr + math.pi / 2) * du, gy + math.sin(gr) * 0.135 + math.sin(gr + math.pi / 2) * du
+        tube([(tx_, ty_, 0.07), (tx_, ty_, 0.33)], 0.006, p['wood'])
+    ar_ = D2R(165); air_unit(p, (math.cos(ar_) * (R + 0.18), math.sin(ar_) * (R + 0.18), 0.0), ar_ - math.pi / 2, 0.8)
+    tube([(math.cos(ar_) * (R + 0.08), math.sin(ar_) * (R + 0.08), 0.12), (math.cos(ar_) * (R - 0.01), math.sin(ar_) * (R - 0.01), 0.12)], 0.018, p['char'])
+
+
 BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open'),
          'arkdish-folded': lambda p: b_arkdish(p, 'folded'), 'arkdish-open': lambda p: b_arkdish(p, 'open'), 'dome': b_dome, 'kitchen': lambda p: b_kitchen(p, 10), **{f'kitchen-{l}': (lambda l: lambda p: b_kitchen(p, l))(l) for l in (1, 10, 20)}, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': lambda p: b_greenhouse(p, 10), **{f'greenhouse-{l}': (lambda l: lambda p: b_greenhouse(p, l))(l) for l in (1, 10, 20)},
          'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': lambda p: b_warehouse(p, 10), **{f'warehouse-{l}': (lambda l: lambda p: b_warehouse(p, l))(l) for l in (1, 10, 20)}, 'furnace': b_furnace, 'mine': b_mine,
@@ -3153,7 +3225,7 @@ BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open
          **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}, 'pstation': b_pstation, 'fieldstation': b_fieldstation, 'nursery': b_nursery, 'woolworks': b_woolworks, 'slagmill': b_slagmill, 'glassworks': b_glassworks, **{f'hull-{h}': (lambda h: lambda p: b_dock(p, 4, h))(h) for h in range(1, 5)},
          **{f'brickhome-{l}i': (lambda l: lambda p: b_brickhome(p, l, True))(l) for l in (1, 10, 20)},
          **{f'canteen-{l}i': (lambda l: lambda p: b_canteen(p, l, True))(l) for l in (1, 10, 20)},
-         **{f'greenhouse-{l}i': (lambda l: lambda p: b_greenhouse(p, l, True))(l) for l in (1, 10, 20)}, 'university': b_university, 'university-b': b_university_b}
+         **{f'greenhouse-{l}i': (lambda l: lambda p: b_greenhouse(p, l, True))(l) for l in (1, 10, 20)}, 'university': b_university, 'university-b': b_university_b, 'park': b_park}
 for name, fn in BUILD.items():
     if ONLY and name not in ONLY: continue
     reset(); p = pal(); fn(p)
