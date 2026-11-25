@@ -3716,6 +3716,82 @@ def b_weather(p):
     torus(0.031, 0.005, p['orange'], (GX, GY, 0.25))
 
 
+# ======================================================================================
+# the seed vault (level 38, the draft docs/drafts/levels-31-40.md): dug into the frozen rock of the canyon wall next to
+#    the Ice Hollow, as Svalbard is on Earth; not in the hollow itself, whose ice will melt as the air thickens. Outside:
+#    the narrow cream portal sticking out of the rock, with the orange stripe and a lit strip over the steel door; frost
+#    on the rock. Next to the door the small room of our glass where the agronomist tests which seeds sprout here, beds
+#    under lamps; sealed boxes of seed from the Ark's bank wait on a pallet; the edge of the Ice Hollow in front.
+# ======================================================================================
+def b_seedvault(p):
+    import random
+    rnd = random.Random(3)
+    frost = mat('frost', '#eef6ff', 0.6)
+    # ---- the slope of the canyon wall the portal comes out of, as Svalbard's out of its mountain: one rounded mass of
+    #      rock with the thin dark lines of its strata (as on the map), frost on it, broken boulders at its foot
+    tones = [mat('strata1', '#c8744e', 0.92), mat('strata2', '#b6603c', 0.92), mat('strata3', '#d0865c', 0.92)]
+    line = mat('strataline', '#8f4a2e', 0.9)
+    RX, RY, RZ_, CY = 1.25, 0.78, 0.82, 1.02
+    o = ball(1.0, tones[0], (0, CY, 0), (RX, RY, RZ_), seg=48); cut_below(o, 0.0)
+    for c in (0.16, 0.32, 0.48, 0.64):
+        k = math.sqrt(max(0.0, 1 - (c / RZ_) ** 2))
+        pts = [(RX * k * 1.004 * math.cos(t), CY - RY * k * 1.004 * math.sin(t), c) for t in [D2R(8 + i * 8) for i in range(21)]]
+        tube(pts, 0.006, line)
+    for q in range(14):
+        t = rnd.uniform(0.2, 2.9); c = rnd.uniform(0.25, 0.75); k = math.sqrt(max(0.0, 1 - (c / RZ_) ** 2))
+        ball(rnd.uniform(0.04, 0.08), frost, (RX * k * math.cos(t), CY - RY * k * math.sin(t) - 0.01, c), (1.8, 0.9, 0.3), seg=8)
+    def crag(at, r, h, m):
+        bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=1.0, location=(0, 0, 0))
+        o = bpy.context.object
+        for v in o.data.vertices: v.co *= rnd.uniform(0.82, 1.12)
+        o.scale = (r, r * 0.85, h); o.location = at; bpy.ops.object.transform_apply(location=True, scale=True)
+        cut_below(o, 0.0); return _done(o, m, smooth=False)
+    for k in range(7):
+        x_ = rnd.uniform(-1.05, 1.05)
+        if abs(x_) < 0.6: x_ = math.copysign(0.6 + abs(x_) * 0.6, x_)
+        crag((x_, rnd.uniform(0.38, 0.48), 0.0), rnd.uniform(0.06, 0.12), rnd.uniform(0.06, 0.12), tones[k % 3])
+    # ---- the portal: a long narrow box sticking out of the rock, the stripe, the lit strip, the steel door
+    PW, PD, PH, PY = 0.38, 0.9, 0.52, 0.18
+    rbox(PW + 0.06, PD, 0.05, 0.04, p['char'], (0, PY, 0.0))
+    rbox(PW, PD, PH, 0.06, p['cream'], (0, PY, 0.04), seg=4)
+    rbox(PW + 0.012, PD + 0.012, 0.03, 0.06, p['orange'], (0, PY, 0.12))
+    FY = PY - PD / 2
+    rbox(0.2, 0.03, 0.3, 0.02, p['orange'], (0, FY - 0.005, 0.04), seg=2)
+    rbox(0.16, 0.035, 0.27, 0.015, p['steel'], (0, FY - 0.01, 0.04), seg=2)
+    rbox(0.01, 0.04, 0.27, 0.003, p['char'], (0, FY - 0.012, 0.04), seg=1)
+    rbox(PW - 0.06, 0.02, 0.12, 0.01, p['teal'], (0, FY - 0.006, 0.36), seg=1)      # the lit strip over the door
+    light(p, (0.15, FY - 0.02, 0.33), 0.014)
+    vent(p, (0.0, PY + 0.2, 0.04 + PH - 0.01), 0.06)
+    # ---- the glass room by the door: beds of trial seeds under lamps, the agronomist's table
+    GX0, GX1, GY0, GY1, GH = PW / 2 + 0.02, PW / 2 + 0.5, FY - 0.02, FY + 0.38, 0.32
+    rbox(GX1 - GX0 + 0.04, GY1 - GY0 + 0.04, 0.05, 0.03, p['char'], ((GX0 + GX1) / 2, (GY0 + GY1) / 2, 0.0))
+    rbox(GX1 - GX0, GY1 - GY0, 0.06, 0.03, p['cream'], ((GX0 + GX1) / 2, (GY0 + GY1) / 2, 0.04))
+    for (w_, d_, x_, y_) in ((GX1 - GX0, 0.012, (GX0 + GX1) / 2, GY0), (GX1 - GX0, 0.012, (GX0 + GX1) / 2, GY1), (0.012, GY1 - GY0, GX1, (GY0 + GY1) / 2)):
+        rbox(w_, d_, GH - 0.1, 0.004, p['glass'], (x_, y_, 0.1), seg=1)
+    for (x_, y_) in ((GX0, GY0), (GX1, GY0), (GX1, GY1), (GX0, GY1)): rbox(0.03, 0.03, GH - 0.06, 0.01, p['cream'], (x_, y_, 0.1), seg=1)
+    rbox(GX1 - GX0 + 0.03, GY1 - GY0 + 0.03, 0.012, 0.006, p['glass'], ((GX0 + GX1) / 2, (GY0 + GY1) / 2, GH + 0.04), seg=1)
+    rbox(GX1 - GX0 + 0.04, 0.03, 0.03, 0.01, p['cream'], ((GX0 + GX1) / 2, GY0, GH + 0.03), seg=1)
+    rbox(GX1 - GX0 + 0.04, 0.03, 0.03, 0.01, p['cream'], ((GX0 + GX1) / 2, GY1, GH + 0.03), seg=1)
+    for k, y_ in enumerate((GY0 + 0.1, GY0 + 0.27)):
+        rbox(GX1 - GX0 - 0.12, 0.1, 0.03, 0.01, p['soil'], ((GX0 + GX1) / 2 + 0.03, y_, 0.1), seg=1)
+        for i in range(6):
+            for j in range(2):
+                ball(0.009, p['leaf2'] if (i + k) % 3 else straw(), ((GX0 + GX1) / 2 - 0.12 + i * 0.05 + 0.03, y_ - 0.025 + j * 0.05, 0.14), (1, 1, 1.6), seg=6)
+        ball(0.018, p['lampw'], ((GX0 + GX1) / 2 + 0.03, y_, GH - 0.02), seg=8)
+    light(p, (GX1, GY0, GH + 0.06), 0.012)
+    # ---- sealed boxes of seed from the Ark's bank on a pallet, brought by the robot
+    rbox(0.3, 0.22, 0.03, 0.01, p['wood'], (-0.42, FY + 0.05, 0.0), seg=1)
+    for (dx, dy, dz) in ((-0.07, -0.05, 0.03), (0.07, -0.05, 0.03), (-0.07, 0.05, 0.03), (0.07, 0.05, 0.03), (0.0, 0.0, 0.12)):
+        rbox(0.12, 0.09, 0.08, 0.02, p['cream'], (-0.42 + dx, FY + 0.05 + dy, dz), seg=2)
+        rbox(0.125, 0.095, 0.02, 0.02, p['orange'], (-0.42 + dx, FY + 0.05 + dy, dz + 0.06), seg=2)
+    cyl(0.012, 0.36, p['char'], (-0.25, FY - 0.15, 0.0), bev=0.004)
+    ball(0.028, p['lampw'], (-0.25, FY - 0.15, 0.38), seg=10)
+    # ---- the edge of the Ice Hollow in front
+    ice = cyl(0.42, 0.03, p['ice'], (-0.7, -0.75, 0.0), bev=0.012, verts=40)
+    _wobble(ice, -0.7, -0.75, lambda a: 1 + 0.15 * math.sin(3 * a + 0.5) + 0.07 * math.sin(7 * a))
+    for k in range(5): ball(0.035, frost, (-0.7 + rnd.uniform(-0.3, 0.3), -0.75 + rnd.uniform(-0.25, 0.25), 0.03), (1.4, 1, 0.3), seg=8)
+
+
 BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open'),
          'arkdish-folded': lambda p: b_arkdish(p, 'folded'), 'arkdish-open': lambda p: b_arkdish(p, 'open'), 'dome': b_dome, 'kitchen': lambda p: b_kitchen(p, 10), **{f'kitchen-{l}': (lambda l: lambda p: b_kitchen(p, l))(l) for l in (1, 10, 20)}, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': lambda p: b_greenhouse(p, 10), **{f'greenhouse-{l}': (lambda l: lambda p: b_greenhouse(p, l))(l) for l in (1, 10, 20)},
          'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': lambda p: b_warehouse(p, 10), **{f'warehouse-{l}': (lambda l: lambda p: b_warehouse(p, l))(l) for l in (1, 10, 20)}, 'furnace': b_furnace, 'mine': b_mine,
@@ -3726,7 +3802,7 @@ BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open
          **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}, 'pstation': b_pstation, 'fieldstation': b_fieldstation, 'nursery': b_nursery, 'woolworks': b_woolworks, 'slagmill': b_slagmill, 'glassworks': b_glassworks, **{f'hull-{h}': (lambda h: lambda p: b_dock(p, 4, h))(h) for h in range(1, 5)},
          **{f'brickhome-{l}i': (lambda l: lambda p: b_brickhome(p, l, True))(l) for l in (1, 10, 20)},
          **{f'canteen-{l}i': (lambda l: lambda p: b_canteen(p, l, True))(l) for l in (1, 10, 20)},
-         **{f'greenhouse-{l}i': (lambda l: lambda p: b_greenhouse(p, l, True))(l) for l in (1, 10, 20)}, 'university': b_university, 'university-b': b_university_b, 'park': b_park, 'dispatch': b_dispatch, 'medpost': b_medpost, **{f'patch-{k}': (lambda k: lambda p: b_patch(p, k))(k) for k in range(1, 5)}, 'roaddepot': b_roaddepot, 'street-paved': b_street, 'street-dust': lambda p: b_street(p, False), 'weather': b_weather}
+         **{f'greenhouse-{l}i': (lambda l: lambda p: b_greenhouse(p, l, True))(l) for l in (1, 10, 20)}, 'university': b_university, 'university-b': b_university_b, 'park': b_park, 'dispatch': b_dispatch, 'medpost': b_medpost, **{f'patch-{k}': (lambda k: lambda p: b_patch(p, k))(k) for k in range(1, 5)}, 'roaddepot': b_roaddepot, 'street-paved': b_street, 'street-dust': lambda p: b_street(p, False), 'weather': b_weather, 'seedvault': b_seedvault}
 for name, fn in BUILD.items():
     if ONLY and name not in ONLY: continue
     reset(); p = pal(); fn(p)
