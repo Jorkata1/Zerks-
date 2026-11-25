@@ -177,22 +177,32 @@ const ARK_PLOTS = new Set(['0,-2', '-1,-1', '1,-1', '0,0']), ARK_AT = [-8, -8], 
 // with its own little random generator, so the rocks of the map stay where they are.
 const PAVED = (location.hash || '').includes('-paved');
 function pavedMat() {
-  const c = document.createElement('canvas'); c.width = c.height = 512; const g = c.getContext('2d');
-  g.fillStyle = '#9d968a'; g.fillRect(0, 0, 512, 512);
+  // one texture for a whole block of 16 m (64 px a metre): herringbone pavers in two warm greys over dark joints, a band
+  // of darker pavers along the kerb on both sides of every street, and at the crossings (the corners of four blocks)
+  // a ring of dark pavers round a circle of brick pavers from our kiln (proposal), so the paving reads from far away
+  const S = 1024, PX = S / 16, c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d');
+  g.fillStyle = '#7f786d'; g.fillRect(0, 0, S, S);
   let seed = 9; const lcg = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-  const wd = 32, gap = 2;
-  const box = (x, y, w, h) => {
-    const t = Math.round((lcg() - 0.5) * 14);
-    g.fillStyle = `rgb(${207 + t},${200 + t},${188 + t})`;
-    for (const ox of [-512, 0, 512]) for (const oy of [-512, 0, 512]) g.fillRect(x + ox + gap, y + oy + gap, w - 2 * gap, h - 2 * gap);
+  const tone = (r, gg, b, v) => { const t = Math.round((lcg() - 0.5) * v); return `rgb(${r + t},${gg + t},${b + t})`; };
+  const wd = 16, gap = 2;
+  const col = (x, y) => {
+    const mx = (x - S / 2) / PX, my = (y - S / 2) / PX;                     // metres from the middle of the block
+    const rc = Math.hypot(Math.abs(mx) - 8, Math.abs(my) - 8);                // to the nearest crossing
+    if (rc < 1.0) return tone(178, 96, 70, 16);                              // brick pavers in the middle of the crossing
+    if (rc < 1.55) return tone(96, 89, 80, 10);                              // the dark ring round it
+    const cheb = Math.max(Math.abs(mx), Math.abs(my));
+    if (cheb > 6.15 && cheb < 6.75) return tone(104, 97, 88, 10);            // the band along the kerb
+    if (cheb > 9.25) return tone(104, 97, 88, 10);                           // (the next block's band)
+    return lcg() < 0.5 ? tone(205, 197, 183, 10) : tone(184, 176, 162, 10);   // the field: two warm greys
   };
-  for (let i = -24; i <= 24; i++) for (let j = -12; j <= 12; j++) {
+  for (let i = -80; i <= 80; i++) for (let j = -40; j <= 40; j++) {
     const bx = (i + 2 * j) * wd, by = (i - 2 * j) * wd;
-    if (bx < -64 || bx > 576 || by < -64 || by > 576) continue;
-    box(bx, by, 2 * wd, wd); box(bx, by + wd, wd, 2 * wd);
+    if (bx < -48 || bx > S + 16 || by < -48 || by > S + 16) continue;
+    for (const [x, y, w, h] of [[bx, by, 2 * wd, wd], [bx, by + wd, wd, 2 * wd]]) {
+      g.fillStyle = col(x + w / 2, y + h / 2); g.fillRect(x + gap, y + gap, w - 2 * gap, h - 2 * gap);
+    }
   }
-  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(4, 4);
-  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
   return new THREE.MeshStandardMaterial({ map: t, roughness: 0.85, metalness: 0 });
 }
 const padMat = flat(C.pad), edgeMat = flat(PAVED ? 0x5a4f49 : C.padEdge), roadMat = PAVED ? pavedMat() : flat(LOOK.road);
