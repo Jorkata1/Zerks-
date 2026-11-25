@@ -2562,6 +2562,91 @@ def b_fieldstation(p):
     tube([(VX + 0.05, VY - 0.06, 0.03), (VX + 0.07, VY - 0.25, hz), (CX1 - 0.06, -0.2, hz), (TX - 0.27, TY + 0.06, hz), (TX - 0.27, TY - 0.04, hz), (TX + 0.24, TY - 0.04, 0.052)], 0.008, hose())
 
 
+# ======================================================================================
+# the nursery (level 26, docs/levels.md): next to the field station; a small glass house where the seeds of the sea
+#    buckthorn sprout on benches (warm air from a heater at the back, water from the tank), and a yard under a net where
+#    the saplings in pots get used to the cold and the wind before they go out (hardening, as in nurseries on Earth):
+#    a net over them and a net on the windward side. One male to every eight females, so the males have an orange tag.
+#    The agronomist takes them out in the barrow and plants them by hand. One agronomist.
+# ======================================================================================
+def sapling(p, at, s=1.0, male=False):
+    x, y, z = at
+    cyl(0.03 * s, 0.045 * s, p['orange'], (x, y, z), bev=0.008 * s, verts=16, seg=2)
+    cyl(0.026 * s, 0.006, p['soil'], (x, y, z + 0.042 * s), bev=0.002, verts=16, seg=1)
+    tube([(x, y, z + 0.045 * s), (x, y, z + 0.13 * s)], 0.004 * s, p['wood'])
+    sea = mat('buckthorn', '#9dbb87', 0.75)
+    for (dx, dy, dz, r) in ((0, 0, 0.13, 0.03), (0.022, 0.01, 0.105, 0.022), (-0.02, -0.01, 0.1, 0.022)):
+        ball(r * s, sea, (x + dx * s, y + dy * s, z + dz * s), (1, 1, 1.2), seg=8)
+    if male: rbox(0.03 * s, 0.006, 0.018 * s, 0.003, p['orange'], (x + 0.012 * s, y, z + 0.07 * s), seg=1)
+
+def b_nursery(p):
+    netm = mat('net', '#3d4d3a', 0.8, alpha=0.38)
+    W, D, Z0, ZW = 0.9, 0.62, 0.06, 0.46
+    # ---- the glass house: a low cream base, glass walls on cream posts, a glass gable roof with cream rafters
+    rbox(W + 0.1, D + 0.1, Z0, 0.1, p['char'], (0, 0, 0))
+    rbox(W, D, 0.11, 0.05, p['cream'], (0, 0, Z0), seg=3)
+    rbox(W + 0.012, D + 0.012, 0.03, 0.05, p['orange'], (0, 0, Z0 + 0.08))
+    zg = Z0 + 0.11
+    for (w_, d_, x_, y_) in ((W - 0.04, 0.012, 0, -D / 2 + 0.01), (W - 0.04, 0.012, 0, D / 2 - 0.01), (0.012, D - 0.04, -W / 2 + 0.01, 0), (0.012, D - 0.04, W / 2 - 0.01, 0)):
+        rbox(w_, d_, ZW - zg, 0.004, p['glass'], (x_, y_, zg), seg=1)
+    for x_ in (-W / 2 + 0.02, -0.15, 0.15, W / 2 - 0.02):
+        for y_ in (-D / 2 + 0.02, D / 2 - 0.02): rbox(0.035, 0.035, ZW - zg, 0.012, p['cream'], (x_, y_, zg), seg=2)
+    for y_ in (-D / 2 + 0.02, D / 2 - 0.02): rbox(W, 0.04, 0.035, 0.012, p['cream'], (0, y_, ZW - 0.01), seg=2)
+    for x_ in (-W / 2 + 0.02, W / 2 - 0.02): rbox(0.04, D, 0.035, 0.012, p['cream'], (x_, 0, ZW - 0.01), seg=2)
+    rh = gable(p, W + 0.06, D - 0.12, ZW + 0.02, p['glass'], pitch=0.7)
+    hcyl(0.022, W + 0.1, p['cream'], (0, 0, ZW + 0.02 + rh - 0.015), 'x', bev=0.008)
+    half = (D - 0.12 + 0.16) / 2; ang = math.atan2(rh, half)
+    for x_ in (-W / 2 + 0.03, -0.15, 0.15, W / 2 - 0.03):
+        for sg in (-1, 1):
+            rbox(0.022, half * 1.02 / math.cos(ang), 0.016, 0.006, p['cream'], (x_, sg * half / 2, ZW + 0.02 + rh / 2 - 0.006), (-sg * ang, 0, 0), seg=1)
+    door(p, 0.27, -D / 2 - 0.02, 0.0, 0.18, 0.34, Z0)
+    light(p, (-W / 2 + 0.02, -D / 2 - 0.02, ZW + 0.05), 0.016)
+    # inside: two benches of seed trays under lamps, the potting table at the back with pots and a sack
+    for y_ in (-0.13, 0.13):
+        for sx in (-0.33, 0.07): rbox(0.02, 0.02, 0.14, 0.005, p['char'], (sx, y_, zg), seg=1)
+        rbox(0.5, 0.17, 0.02, 0.008, p['cream2'], (-0.13, y_, zg + 0.14), seg=1)
+        for k in range(3):
+            xt = -0.3 + k * 0.17
+            rbox(0.14, 0.13, 0.022, 0.006, p['orange'], (xt, y_, zg + 0.16), seg=1)
+            rbox(0.125, 0.115, 0.006, 0.004, p['soil'], (xt, y_, zg + 0.177), seg=1)
+            for a in range(3):
+                for b in range(2): ball(0.012, p['leaf2'], (xt - 0.04 + a * 0.04, y_ - 0.025 + b * 0.05, zg + 0.19), seg=6)
+    for x_ in (-0.3, 0.04): ball(0.022, p['lampw'], (x_, 0, ZW - 0.06), seg=10)
+    rbox(0.18, 0.4, 0.02, 0.008, p['wood'], (0.3, 0.05, zg + 0.12), seg=1)
+    for sy in (-0.15, 0.15): rbox(0.02, 0.02, 0.12, 0.005, p['char'], (0.3, 0.05 + sy, zg), seg=1)
+    for k in range(3): cyl(0.022, 0.035, p['orange'], (0.27 + 0.03 * (k % 2), -0.06 + k * 0.08, zg + 0.14), bev=0.006)
+    sack(p, (0.31, 0.2, zg + 0.14), 1.57)
+    # the heater at the back keeps the glass house warm for the sprouting; the water tank, its pipe to the benches
+    air_unit(p, (-0.2, D / 2 + 0.17, 0.0), math.pi, 0.8)
+    tube([(-0.2, D / 2 + 0.08, 0.13), (-0.2, D / 2 + 0.005, 0.13)], 0.016, p['char'])
+    tank(p, (0.28, D / 2 + 0.2, 0.0), r=0.1, h=0.3)
+    tube([(0.28, D / 2 + 0.1, 0.25), (0.28, D / 2 + 0.005, 0.25)], 0.012, p['char'])
+    # ---- the yard under the net on the left: the saplings in pots harden in the cold and the wind
+    YX0, YX1, YY0, YY1 = -W / 2 - 0.12, -W / 2 - 0.86, -0.42, 0.42
+    rbox(abs(YX1 - YX0) + 0.04, YY1 - YY0 + 0.04, 0.025, 0.02, p['cream2'], ((YX0 + YX1) / 2, 0, 0.0), seg=2)
+    for x_ in (YX0, YX1):
+        for y_ in (YY0, YY1): cyl(0.015, 0.4, p['char'], (x_, y_, 0.0), bev=0.005)
+    rbox(abs(YX1 - YX0), YY1 - YY0, 0.012, 0.004, netm, ((YX0 + YX1) / 2, 0, 0.39), seg=1)
+    rbox(abs(YX1 - YX0), 0.012, 0.36, 0.004, netm, ((YX0 + YX1) / 2, YY1, 0.03), seg=1)        # the windward side
+    rbox(0.012, YY1 - YY0, 0.36, 0.004, netm, (YX1, 0, 0.03), seg=1)
+    for (x_, y_) in ((YX0, YY0), (YX1, YY1)): light(p, (x_, y_, 0.42), 0.014)
+    n = 0
+    for i in range(4):
+        for j in range(4):
+            sapling(p, (YX1 + 0.12 + i * 0.16, YY0 + 0.12 + j * 0.19, 0.025), 1.0, male=(n % 9 == 4)); n += 1
+    # the barrow with saplings for the planting, ready by the yard; the crate of seed from the Ark's bank by the door
+    BX, BY = YX0 - 0.1, YY0 - 0.2
+    rbox(0.28, 0.18, 0.03, 0.01, p['cream2'], (BX, BY, 0.06), seg=1)
+    for sx in (-0.1, 0.1):
+        bpy.ops.mesh.primitive_cylinder_add(vertices=20, radius=0.035, depth=0.02, location=(BX + sx, BY - 0.1, 0.035), rotation=(math.pi / 2, 0, 0))
+        _done(bpy.context.object, p['char'])
+    tube([(BX + 0.14, BY, 0.08), (BX + 0.25, BY, 0.16)], 0.008, p['char'])
+    for k in range(3): sapling(p, (BX - 0.08 + k * 0.08, BY, 0.09), 0.9)
+    container(p, (W / 2 + 0.2, -0.12), 0.0, 0.2, 0.15, 0.13)
+    # the drip line from the tank along the pots
+    tube([(0.18, D / 2 + 0.12, 0.02), (YX0 + 0.05, D / 2 + 0.12, 0.012), (YX0 + 0.05, YY0 + 0.05, 0.012)], 0.007, hose())
+
+
 BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open'),
          'arkdish-folded': lambda p: b_arkdish(p, 'folded'), 'arkdish-open': lambda p: b_arkdish(p, 'open'), 'dome': b_dome, 'kitchen': lambda p: b_kitchen(p, 10), **{f'kitchen-{l}': (lambda l: lambda p: b_kitchen(p, l))(l) for l in (1, 10, 20)}, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': lambda p: b_greenhouse(p, 10), **{f'greenhouse-{l}': (lambda l: lambda p: b_greenhouse(p, l))(l) for l in (1, 10, 20)},
          'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': lambda p: b_warehouse(p, 10), **{f'warehouse-{l}': (lambda l: lambda p: b_warehouse(p, l))(l) for l in (1, 10, 20)}, 'furnace': b_furnace, 'mine': b_mine,
@@ -2569,7 +2654,7 @@ BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open
          'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover, 'drill': lambda p: b_drill(p, 10), **{f'drill-{l}': (lambda l: lambda p: b_drill(p, l))(l) for l in (1, 10, 20)}, 'smelter': b_smelter, 'claypit': b_claypit, 'brickkiln': b_brickkiln, 'copperworks': b_copperworks,
          **{f'brickhome-{l}': (lambda l: lambda p: b_brickhome(p, l))(l) for l in (1, 10, 20)},
          **{f'canteen-{l}': (lambda l: lambda p: b_canteen(p, l))(l) for l in (1, 10, 20)},
-         **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}, 'pstation': b_pstation, 'fieldstation': b_fieldstation}
+         **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}, 'pstation': b_pstation, 'fieldstation': b_fieldstation, 'nursery': b_nursery}
 for name, fn in BUILD.items():
     if ONLY and name not in ONLY: continue
     reset(); p = pal(); fn(p)
