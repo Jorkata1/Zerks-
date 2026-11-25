@@ -1,4 +1,4 @@
-<!-- Синхронизирано с документа „Zerks-X6: бележки“ (https://claude.ai/artifact/8kvHeAVcx15sZRertKdhzx) при rev 241. -->
+<!-- Синхронизирано с документа „Zerks-X6: бележки“ (https://claude.ai/artifact/8kvHeAVcx15sZRertKdhzx) при rev 250. -->
 
 # Zerks-X6: бележки
 
