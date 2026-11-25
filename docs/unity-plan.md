@@ -334,6 +334,10 @@ unity setup claude
 
 Проверката е с кадри в размер на iPhone от Unity (Game изглед 1170×2532 или 390×844) и на истински iPhone. Текстът в играта е на английски.
 
+## Новите модели за главите 3 и 4 (25.11.2026, Жоро)
+
+В art/3d/buildings има нови модели, одобрени от Жоро на 25.11.2026 (README там, с листовете `*-views.jpg`). В Unity влизат с Zerks → Sync from repo, когато стигне до съответното ниво: `pstation` (23), `fieldstation` (25), `nursery` (26), `woolworks` (27), `slagmill` (28), `glassworks` (30), `hull-1` … `hull-4` (етапите на корпуса в дока на нивата 22, 24, 27, 29, вместо `dock-4` от ниво 22), `brickhome-*i`, `canteen-*i`, `greenhouse-*i` (изолацията на ниво 29), `park` (32), `dispatch` (33), `medpost` (35), `patch-1` … `patch-4` (зелените петна по етапи). Втората топилня и четвъртата оранжерия са `smelter` и `greenhouse-*`. За университета (31) има два варианта, `university` и `university-b`, и изборът чака Пацо и Жоро. За черновата 36–39 (още не е одобрена): `roaddepot`, `street-paved` / `street-dust`, `weather`, `seedvault`, `reactor-1` … `reactor-4`; павираните улици на картата са `mockup/map.html#lvl10-paved` (текстура на блок от 16 м).
+
 ## Отворено
 
 - Моделите: преместване в `Assets/` или копие (стъпка 7).
