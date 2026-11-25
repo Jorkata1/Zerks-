@@ -3073,6 +3073,76 @@ def b_university(p):
     bell(p, (LX + 0.25, LY - LD / 2 - 0.2, 0.0), 0.7)
 
 
+# ---- the university, idea B (Joro asked for a second one, 25.11.2026): a round hall under a glass dome of our glass,
+#      like the old university rotundas; inside the seats step up in a horseshoe round the teacher's floor, the board
+#      stands at the back; a portico on columns at the front; the library is a small wing joined by a glass passage.
+def b_university_b(p):
+    R, H, Z0, T = 0.55, 0.42, 0.07, 0.06
+    cyl(R + 0.06, Z0, p['char'], (0, 0, 0), bev=0.03, verts=64)
+    cyl(R - 0.02, 0.02, p['floor'], (0, 0, Z0), bev=0.005, verts=48)
+    wall = cyl(R, H, p['cream'], (0, 0, Z0), bev=0.02, verts=64)
+    cut(wall, cyl(R - T, H + 0.2, None, (0, 0, Z0 - 0.1), bev=0.0, verts=64))
+    # tall windows round the hall (not where the door and the passage are); the hall is lit inside
+    for a in (-150, -30, 0, 135, 180):
+        ar = D2R(a); c, s_ = math.cos(ar), math.sin(ar)
+        cut(wall, cutter(0.16, 0.3, 0.22, (c * (R - T / 2), s_ * (R - T / 2), Z0 + 0.1), (0, 0, ar + math.pi / 2), r=0.03))
+        rbox(0.16, 0.012, 0.22, 0.02, p['glass'], (c * (R - 0.01), s_ * (R - 0.01), Z0 + 0.1), (0, 0, ar + math.pi / 2), seg=1)
+        rbox(0.2, 0.05, 0.025, 0.01, p['orange'], (c * (R + 0.012), s_ * (R + 0.012), Z0 + 0.08), (0, 0, ar + math.pi / 2), seg=1)
+    torus(R + 0.004, 0.016, p['orange'], (0, 0, Z0 + 0.05))
+    torus(R + 0.004, 0.022, p['cream2'], (0, 0, Z0 + H))
+    # inside: the teacher's floor, the board at the back, the horseshoe of seats stepping up to the front and the sides
+    cyl(0.15, 0.03, p['cream2'], (0, 0.05, Z0 + 0.02), bev=0.01, verts=32)
+    rbox(0.26, 0.02, 0.18, 0.01, p['char'], (0, 0.3, Z0 + 0.1), seg=1)
+    rbox(0.22, 0.006, 0.14, 0.006, p['teal'], (0, 0.289, Z0 + 0.12), seg=1)
+    for sx in (-0.1, 0.1): cyl(0.008, 0.1, p['char'], (sx, 0.3, Z0 + 0.02), bev=0.003)
+    rbox(0.12, 0.06, 0.06, 0.015, p['cream'], (0.0, 0.12, Z0 + 0.05), seg=2)
+    for k in range(3):
+        rr = 0.26 + k * 0.08; zt = Z0 + 0.02 + k * 0.035
+        for j in range(8):
+            a = D2R(195 + j * 21.4); c, s_ = math.cos(a), math.sin(a)
+            rbox(0.06, 0.055, zt - Z0, 0.01, p['cream2'], (c * rr, s_ * rr, Z0), (0, 0, a + math.pi / 2), seg=1)
+            rbox(0.05, 0.045, 0.03, 0.01, p['orange'], (c * rr, s_ * rr, zt), (0, 0, a + math.pi / 2), seg=2)
+    ball(0.035, p['lampw'], (0, 0, Z0 + H + 0.12), seg=10)
+    # the dome of our glass on six cream ribs, an oculus with a light at the top
+    zb, SZ = Z0 + H + 0.01, 0.72
+    dome(R - 0.01, p['glass'], (0, 0, zb), seg=48, sz=SZ)
+    for k in range(6):
+        bpy.ops.mesh.primitive_torus_add(major_radius=R - 0.005, minor_radius=0.014, major_segments=48, minor_segments=8, location=(0, 0, zb), rotation=(math.pi / 2, 0, D2R(k * 30)))
+        rib = _done(bpy.context.object, p['cream']); rib.scale = (1, 1, SZ); bpy.ops.object.transform_apply(scale=True); cut_half(rib, zb)
+    cyl(0.07, 0.05, p['cream2'], (0, 0, zb + (R - 0.01) * SZ - 0.02), bev=0.015)
+    light(p, (0, 0, zb + (R - 0.01) * SZ + 0.05), 0.02)
+    # the portico at the front: an orange roof on four cream columns over the door
+    door(p, 0.0, -R - 0.01, 0.0, 0.2, 0.3, Z0)
+    for x_ in (-0.3, -0.11, 0.11, 0.3): cyl(0.024, 0.38, p['cream'], (x_, -R - 0.2, Z0), bev=0.008)
+    rbox(0.76, 0.3, 0.035, 0.02, p['orange'], (0, -R - 0.12, Z0 + 0.38), seg=2)
+    rbox(0.8, 0.34, 0.05, 0.02, p['char'], (0, -R - 0.14, 0.0), seg=2)
+    light(p, (0.36, -R - 0.27, Z0 + 0.43), 0.016)
+    # the library wing at the back right, joined by a short glass passage
+    LX, LY, LW, LD, LH = 0.78, 0.5, 0.44, 0.42, 0.44
+    rbox(LW + 0.08, LD + 0.08, 0.07, 0.12, p['char'], (LX, LY, 0.0))
+    lib = rbox(LW, LD, LH, 0.12, p['cream'], (LX, LY, 0.06), seg=5)
+    def books(cx, cy, fz):
+        L = frame(cx, cy, 0.0)
+        cols = [p['orange'], p['teal'], p['wood'], p['navy'], p['leaf'], p['cream2']]
+        for r_ in range(2):
+            rbox(0.22, 0.04, 0.008, 0.003, p['wood'], (*L(0.0, 0.09), fz + 0.04 + r_ * 0.07), seg=1)
+            for k in range(7): rbox(0.022, 0.035, 0.05 - 0.006 * (k % 3), 0.003, cols[(k + r_) % 6], (*L(-0.09 + k * 0.03, 0.09), fz + 0.048 + r_ * 0.07), seg=1)
+        cyl(0.006, 0.07, p['char'], (*L(0.07, 0.0), fz), bev=0.002)
+        ball(0.02, p['lampw'], (*L(0.07, 0.0), fz + 0.08), seg=8)
+    lit_room(p, lib, 0.26, 0.2, 0.26, LX + 0.02, LY - LD / 2 + 0.01, 0.18, 0.0, books)
+    rbox(LW + 0.02, LD + 0.02, 0.03, 0.12, p['orange'], (LX, LY, 0.13))
+    vent(p, (LX + 0.1, LY + 0.08, 0.06 + LH - 0.01), 0.07)
+    a = math.atan2(LY, LX); px, py = math.cos(a) * (R + 0.02), math.sin(a) * (R + 0.02)
+    mx, my = (px + LX - LW / 2 + 0.02) / 2, (py + LY - 0.05) / 2
+    rbox(0.18, 0.16, 0.26, 0.04, p['glass'], (mx + 0.02, my, Z0), (0, 0, a), seg=2)
+    rbox(0.2, 0.18, 0.03, 0.03, p['cream'], (mx + 0.02, my, Z0 + 0.26), (0, 0, a), seg=2)
+    # outside: a lamp post and a bench by the portico, plants under glass bells
+    cyl(0.012, 0.42, p['char'], (-0.55, -R - 0.25, 0.0), bev=0.004)
+    ball(0.03, p['lampw'], (-0.55, -R - 0.25, 0.44), seg=10)
+    bench(p, (-0.7, -0.15, 0.0), D2R(90))
+    for (x_, y_) in ((0.5, -R - 0.15), (-0.62, 0.25)): bell(p, (x_, y_, 0.0), 0.7)
+
+
 BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open'),
          'arkdish-folded': lambda p: b_arkdish(p, 'folded'), 'arkdish-open': lambda p: b_arkdish(p, 'open'), 'dome': b_dome, 'kitchen': lambda p: b_kitchen(p, 10), **{f'kitchen-{l}': (lambda l: lambda p: b_kitchen(p, l))(l) for l in (1, 10, 20)}, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': lambda p: b_greenhouse(p, 10), **{f'greenhouse-{l}': (lambda l: lambda p: b_greenhouse(p, l))(l) for l in (1, 10, 20)},
          'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': lambda p: b_warehouse(p, 10), **{f'warehouse-{l}': (lambda l: lambda p: b_warehouse(p, l))(l) for l in (1, 10, 20)}, 'furnace': b_furnace, 'mine': b_mine,
@@ -3083,7 +3153,7 @@ BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open
          **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}, 'pstation': b_pstation, 'fieldstation': b_fieldstation, 'nursery': b_nursery, 'woolworks': b_woolworks, 'slagmill': b_slagmill, 'glassworks': b_glassworks, **{f'hull-{h}': (lambda h: lambda p: b_dock(p, 4, h))(h) for h in range(1, 5)},
          **{f'brickhome-{l}i': (lambda l: lambda p: b_brickhome(p, l, True))(l) for l in (1, 10, 20)},
          **{f'canteen-{l}i': (lambda l: lambda p: b_canteen(p, l, True))(l) for l in (1, 10, 20)},
-         **{f'greenhouse-{l}i': (lambda l: lambda p: b_greenhouse(p, l, True))(l) for l in (1, 10, 20)}, 'university': b_university}
+         **{f'greenhouse-{l}i': (lambda l: lambda p: b_greenhouse(p, l, True))(l) for l in (1, 10, 20)}, 'university': b_university, 'university-b': b_university_b}
 for name, fn in BUILD.items():
     if ONLY and name not in ONLY: continue
     reset(); p = pal(); fn(p)
