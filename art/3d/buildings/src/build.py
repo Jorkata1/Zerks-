@@ -2462,6 +2462,106 @@ def b_pstation(p):
     torus(0.032, 0.008, p['orange'], (PX + 0.2, 0.95, 0.058), (math.pi / 2, 0, 0))
 
 
+# ======================================================================================
+# the field station (level 25, docs/levels.md): a small building on the edge of the Green Belt, with a store for seeds,
+#    tools and a mast that measures the moisture and the wind; one agronomist. He sows the patches (the drone sprays the
+#    grass), gathers the grass seed when it is ripe (the seed bin at the back) and lays the drip hoses: the water from the
+#    purification station comes up the slope to the valves at the side and goes out to the patches. A small test bed of
+#    grass in front, the tools and the barrow under the canopy, sacks of seed by the wall.
+# ======================================================================================
+def straw():
+    return mat('straw', '#e8c86a', 0.7)
+
+def hose():
+    return mat('hose', '#3f9a4a', 0.5)
+
+def tuft(p, at, s=1.0, seed=False):
+    """a tuft of grass: three blades leaning out; a ripe one has a seed head"""
+    x, y, z = at
+    for k, (dx, dy) in enumerate(((0, 0), (0.012, 0.008), (-0.01, 0.01))):
+        ball(1.0, p['leaf'] if k else p['leaf2'], (x + dx * s, y + dy * s, z + 0.03 * s), (0.012 * s, 0.012 * s, 0.045 * s), seg=8)
+    if seed: ball(1.0, straw(), (x, y, z + 0.075 * s), (0.011 * s, 0.011 * s, 0.022 * s), seg=8)
+
+def sack(p, at, rz=0.0):
+    x, y, z = at
+    rbox(0.13, 0.09, 0.07, 0.035, mat('sack', '#ead6a8', 0.9), (x, y, z), (0, 0, rz), seg=3)
+    rbox(0.02, 0.095, 0.02, 0.008, p['orange'], (x + 0.035 * math.cos(rz), y + 0.035 * math.sin(rz), z + 0.055), (0, 0, rz), seg=1)
+
+def b_fieldstation(p):
+    W, D, H = 0.9, 0.62, 0.46
+    rbox(W + 0.1, D + 0.1, 0.07, 0.14, p['char'], (0, 0, 0))
+    body = rbox(W, D, H, 0.12, p['cream'], (0, 0, 0.06), seg=5)
+    def inside(cx, cy, fz):
+        L = frame(cx, cy, 0.0)
+        # the seed shelf on the back wall: jars of seed and soil; the sorting table with trays of sprouts
+        rbox(0.26, 0.05, 0.012, 0.004, p['cream2'], (*L(0.0, 0.11), fz + 0.12), seg=1)
+        jars(p, L, 0.0, fz + 0.132, 0.0, 0.11, 4)
+        rbox(0.2, 0.09, 0.012, 0.006, p['cream2'], (*L(0.0, -0.01), fz + 0.07), seg=1)
+        for sx in (-1, 1): rbox(0.012, 0.07, 0.07, 0.004, p['char'], (*L(sx * 0.085, -0.01), fz), seg=1)
+        for k in (-1, 1):
+            rbox(0.08, 0.06, 0.016, 0.006, p['soil'], (*L(k * 0.05, -0.01), fz + 0.082), seg=1)
+            for j in range(3): ball(0.01, p['leaf2'], (*L(k * 0.05 - 0.02 + j * 0.02, -0.01), fz + 0.1), seg=8)
+    lit_room(p, body, 0.36, 0.22, 0.3, -0.18, -D / 2 + 0.01, 0.17, 0.0, inside)
+    rbox(W + 0.02, D + 0.02, 0.035, 0.12, p['orange'], (0, 0, 0.14))
+    door(p, 0.25, -D / 2 - 0.02, 0.0, 0.2, 0.38, 0.06)
+    porthole(p, (W / 2, 0.08, 0.32), (1, 0), r=0.055)
+    # the roof: a soft cream gable with an orange ridge, a solar panel on the front slope, a vent and a light
+    zb = 0.06 + H
+    rh = gable(p, W + 0.1, D, zb, p['cream'])
+    hcyl(0.03, W + 0.12, p['orange'], (0, 0, zb + rh - 0.02), 'x', bev=0.01)
+    half = (D + 0.16) / 2; ang = math.atan2(rh, half)
+    rbox(0.32, 0.22, 0.02, 0.02, p['navy'], (0.16, -half / 2 - math.sin(ang) * 0.02, zb + rh / 2 + math.cos(ang) * 0.02 - 0.01), (ang, 0, 0))
+    vent(p, (-0.22, 0.08, zb + rh * 0.55), 0.08)
+    light(p, (W / 2 + 0.02, 0.0, zb + rh + 0.02), 0.022)
+    # the canopy on the left: the tools on the wall and the barrow with a sack of seed
+    CX0, CX1 = -W / 2 - 0.02, -W / 2 - 0.42
+    for yy in (-0.22, 0.24): cyl(0.016, 0.42, p['char'], (CX1 + 0.03, yy, 0.0), bev=0.005)
+    rbox(0.44, 0.56, 0.025, 0.02, p['orange'], ((CX0 + CX1) / 2, 0.01, 0.42), (0, D2R(-8), 0), seg=2)
+    for k, yy in enumerate((-0.12, -0.04, 0.04)):                              # a rake, a spade, a hoe leaning on the wall
+        tube([(CX0 - 0.03, yy, 0.05), (CX0 - 0.005, yy, 0.36)], 0.007, p['wood'])
+        if k == 1: rbox(0.012, 0.05, 0.07, 0.006, p['grey'], (CX0 - 0.032, yy, 0.0), seg=1)
+        else: rbox(0.012, 0.07, 0.014, 0.004, p['char'], (CX0 - 0.03, yy, 0.04), seg=1)
+    BX, BY = CX1 + 0.18, 0.16                                                   # the barrow
+    rbox(0.16, 0.12, 0.07, 0.03, p['orange'], (BX, BY, 0.07))
+    bpy.ops.mesh.primitive_cylinder_add(vertices=20, radius=0.035, depth=0.02, location=(BX - 0.1, BY, 0.035), rotation=(math.pi / 2, 0, 0))
+    _done(bpy.context.object, p['char'])
+    for dy in (-0.04, 0.04): tube([(BX + 0.06, BY + dy, 0.09), (BX + 0.17, BY + dy, 0.05)], 0.007, p['char'])
+    sack(p, (BX, BY, 0.13), 0.3)
+    # the seed bin at the back right: the ripe grass seed goes in at the top, a chute into the store
+    SX, SY = W / 2 - 0.05, D / 2 + 0.2
+    cyl(0.16, 0.04, p['char'], (SX, SY, 0.0), bev=0.015)
+    cyl(0.13, 0.36, p['cream'], (SX, SY, 0.03), bev=0.03)
+    for zz in (0.12, 0.3): torus(0.131, 0.01, p['orange'], (SX, SY, zz))
+    dome(0.13, p['cream2'], (SX, SY, 0.39), seg=24, sz=0.6)
+    light(p, (SX, SY, 0.48), 0.014)
+    tube([(SX - 0.1, SY - 0.06, 0.12), (SX - 0.14, D / 2 + 0.01, 0.2)], 0.018, p['char'])
+    # sacks of seed on a pallet by the right wall
+    rbox(0.3, 0.2, 0.03, 0.01, p['wood'], (W / 2 + 0.2, -0.12, 0.0), seg=1)
+    for (dx, dy, dz, r) in ((-0.06, -0.04, 0.03, 0.1), (0.07, -0.04, 0.03, -0.1), (0.0, 0.05, 0.03, 0.05), (0.0, 0.0, 0.1, 0.2)):
+        sack(p, (W / 2 + 0.2 + dx, -0.12 + dy, dz), r)
+    # the mast for the moisture and the wind, with the moisture probe in the ground at its foot
+    MX, MY = W / 2 + 0.22, -D / 2 - 0.22
+    anemometer(p, (MX, MY, 0.0), 0.62)
+    # the test bed in front: thin soil, grass in rows, some ripe; the drip hose along it
+    TX, TY = -0.42, -D / 2 - 0.26
+    rbox(0.5, 0.26, 0.05, 0.03, p['soil'], (TX, TY, 0.0), seg=2)
+    for i in range(6):
+        for j in range(3):
+            tuft(p, (TX - 0.2 + i * 0.08 + 0.02 * (j % 2), TY - 0.08 + j * 0.08, 0.045), 1.0, seed=(i + j) % 3 == 0)
+    cyl(0.008, 0.08, p['char'], (MX + 0.07, MY + 0.03, 0.0), bev=0.003)     # the moisture probe at the mast's foot
+    light(p, (MX + 0.07, MY + 0.03, 0.09), 0.012)
+    # the water from the purification station comes up the slope to the valves; the green drip hoses go out to the patches
+    VX, VY = -W / 2 - 0.2, D / 2 + 0.22
+    tube([(-1.05, D / 2 + 0.5, 0.05), (VX - 0.08, VY + 0.04, 0.05)], 0.022, p['char'])
+    rbox(0.18, 0.12, 0.12, 0.03, p['cream2'], (VX, VY, 0.0))
+    for k in range(3):
+        torus(0.018, 0.005, p['orange'], (VX - 0.05 + k * 0.05, VY - 0.065, 0.09), (math.pi / 2, 0, 0))
+    hz = 0.012
+    tube([(VX - 0.05, VY - 0.06, 0.03), (VX - 0.05, VY - 0.12, hz), (-1.05, VY - 0.12, hz)], 0.009, hose())
+    tube([(VX, VY - 0.06, 0.03), (VX, VY - 0.18, hz), (-1.05, VY - 0.3, hz)], 0.009, hose())
+    tube([(VX + 0.05, VY - 0.06, 0.03), (VX + 0.07, VY - 0.25, hz), (CX1 - 0.06, -0.2, hz), (TX - 0.27, TY + 0.06, hz), (TX - 0.27, TY - 0.04, hz), (TX + 0.24, TY - 0.04, 0.052)], 0.008, hose())
+
+
 BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open'),
          'arkdish-folded': lambda p: b_arkdish(p, 'folded'), 'arkdish-open': lambda p: b_arkdish(p, 'open'), 'dome': b_dome, 'kitchen': lambda p: b_kitchen(p, 10), **{f'kitchen-{l}': (lambda l: lambda p: b_kitchen(p, l))(l) for l in (1, 10, 20)}, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': lambda p: b_greenhouse(p, 10), **{f'greenhouse-{l}': (lambda l: lambda p: b_greenhouse(p, l))(l) for l in (1, 10, 20)},
          'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': lambda p: b_warehouse(p, 10), **{f'warehouse-{l}': (lambda l: lambda p: b_warehouse(p, l))(l) for l in (1, 10, 20)}, 'furnace': b_furnace, 'mine': b_mine,
@@ -2469,7 +2569,7 @@ BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open
          'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover, 'drill': lambda p: b_drill(p, 10), **{f'drill-{l}': (lambda l: lambda p: b_drill(p, l))(l) for l in (1, 10, 20)}, 'smelter': b_smelter, 'claypit': b_claypit, 'brickkiln': b_brickkiln, 'copperworks': b_copperworks,
          **{f'brickhome-{l}': (lambda l: lambda p: b_brickhome(p, l))(l) for l in (1, 10, 20)},
          **{f'canteen-{l}': (lambda l: lambda p: b_canteen(p, l))(l) for l in (1, 10, 20)},
-         **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}, 'pstation': b_pstation}
+         **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}, 'pstation': b_pstation, 'fieldstation': b_fieldstation}
 for name, fn in BUILD.items():
     if ONLY and name not in ONLY: continue
     reset(); p = pal(); fn(p)
