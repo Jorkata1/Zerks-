@@ -3350,57 +3350,162 @@ def b_medpost(p):
 
 
 # ======================================================================================
-# a green patch on the Green Belt (levels 21-26, docs/levels.md): not a building, a piece of the terrace that grows by
-#    itself. Stage 1 (level 21): lichens in spots on the bare damp rock. Stage 2: moss over most of it, the drip hose
-#    from the purification station (level 23) along it. Stage 3 (level 25): a thin soil with grass sown by the drone,
-#    some of it ripe. Stage 4 (level 26): sea-buckthorn shrubs planted by hand in strips across the slope.
+# a green patch on the Green Belt (levels 21-26, docs/levels.md): not a building, a piece of the rocky terrace that
+#    grows by itself (Joro, 25.11.2026: more real and more detailed, in our style). The bare rock has low outcrops,
+#    cracks, pebbles and darker damp hollows where the morning frost melts. Stage 1 (level 21): crusts of lichen with a
+#    pale rim on the stones and round the cracks, a few leafy ones. Stage 2: moss in cushions, starting in the cracks and
+#    hollows; the drip hose with its emitters (level 23). Stage 3 (level 25): a thin soil over most of it, grass in clumps
+#    of different height and colour, some ripe, the rocks still poking through. Stage 4 (level 26): sea buckthorn
+#    planted by hand in strips across the slope, each in its watering hollow, a drip line along every strip.
 # ======================================================================================
+def _wobble(o, cx, cy, fn):
+    """push the outline of a flat round object in or out by fn(angle) (1 = unchanged)"""
+    for v in o.data.vertices:
+        dx, dy = v.co.x - cx, v.co.y - cy
+        if abs(dx) + abs(dy) < 1e-6: continue
+        f = fn(math.atan2(dy, dx)); v.co.x = cx + dx * f; v.co.y = cy + dy * f
+    return o
+
+def lichen(rnd, at, r, col, rim):
+    """a crust of lichen: an irregular flat disc with a paler rim, as they grow on stone"""
+    x, y, z = at
+    ph = rnd.uniform(0, 6.28)
+    o = cyl(r, 0.004, col, (x, y, z), bev=0.0015, verts=18, seg=1)
+    _wobble(o, x, y, lambda a: 1 + 0.18 * math.sin(3 * a + ph) + 0.08 * math.sin(5 * a + 2 * ph))
+    t = torus(r * 0.98, 0.0035, rim, (x, y, z + 0.004)); t.scale = (1, 1, 0.5); bpy.ops.object.transform_apply(scale=True)
+    _wobble(t, x, y, lambda a: 1 + 0.18 * math.sin(3 * a + ph) + 0.08 * math.sin(5 * a + 2 * ph))
+
+def leafy_lichen(rnd, at, s, col):
+    x, y, z = at
+    for k in range(5):
+        a = k * 1.256 + rnd.uniform(-0.3, 0.3)
+        ball(0.016 * s, col, (x + math.cos(a) * 0.014 * s, y + math.sin(a) * 0.014 * s, z + 0.004), (1.4, 1.0, 0.35), seg=8)
+
+def moss_cushion(rnd, at, s, cols):
+    x, y, z = at
+    dome(0.05 * s, cols[0], (x, y, z), seg=12, sz=0.25)                     # the mat, and the tight cushion of shoots on it
+    for k in range(rnd.randint(9, 14)):
+        a = rnd.uniform(0, 6.28); r_ = rnd.uniform(0, 0.045) * s
+        ball(rnd.uniform(0.012, 0.02) * s, cols[k % len(cols)], (x + math.cos(a) * r_, y + math.sin(a) * r_, z + 0.008), (1, 1, 0.8), seg=6)
+
+def blade(at, h, az, tilt, col, w=0.007):
+    x, y, z = at
+    o = ball(1.0, col, (0, 0, 0), (w, w * 0.55, h / 2), seg=6)
+    d = (math.sin(tilt) * math.cos(az), math.sin(tilt) * math.sin(az), math.cos(tilt))
+    o.rotation_euler = (0, tilt, az); o.location = (x + d[0] * h * 0.45, y + d[1] * h * 0.45, z + d[2] * h * 0.45)
+    bpy.context.view_layer.objects.active = o; bpy.ops.object.transform_apply(location=True, rotation=True, scale=False)
+    return o
+
+def grass_clump(rnd, at, s, cols, seed=False):
+    x, y, z = at
+    n = rnd.randint(6, 8); hh = rnd.uniform(0.75, 1.3) * s
+    for k in range(n):
+        a = k * 6.28 / n + rnd.uniform(-0.3, 0.3)
+        blade((x, y, z), rnd.uniform(0.05, 0.085) * hh, a, rnd.uniform(0.2, 0.55), cols[(k + int(hh * 10)) % len(cols)])
+    if seed:
+        for k in range(2):
+            a = rnd.uniform(0, 6.28)
+            ball(1.0, straw(), (x + math.cos(a) * 0.008, y + math.sin(a) * 0.008, z + 0.075 * hh), (0.007, 0.007, 0.018), seg=6)
+
+def buckthorn(rnd, at, s=1.0):
+    """a sea-buckthorn shrub: a few woody stems from the ground, narrow silvery leaves at their ends, clusters of orange berries"""
+    x, y, z = at
+    leaf = mat('buckleaf', '#a8c29a', 0.75); leaf2 = mat('buckleaf2', '#8fae7f', 0.75); bark = mat('bark', '#6e5440', 0.85)
+    leaf = mat('buckleaf', '#adc39e', 0.65); leaf2 = mat('buckleaf2', '#8fac7e', 0.7)
+    for k in range(5):
+        a = k * 1.047 + rnd.uniform(-0.3, 0.3); tilt = rnd.uniform(0.2, 0.5); h = rnd.uniform(0.17, 0.24) * s
+        tip = (x + math.cos(a) * math.sin(tilt) * h, y + math.sin(a) * math.sin(tilt) * h, z + math.cos(tilt) * h)
+        tube([(x, y, z), tip], 0.0035 * s, bark)
+        for j in range(13):                                                       # the narrow leaves along the upper half
+            t_ = rnd.uniform(0.35, 1.0); b = rnd.uniform(0, 6.28); r_ = rnd.uniform(0.008, 0.04) * s
+            pt = (x + (tip[0] - x) * t_ + math.cos(b) * r_, y + (tip[1] - y) * t_ + math.sin(b) * r_, z + (tip[2] - z) * t_)
+            blade(pt, 0.05 * s, b, rnd.uniform(0.7, 1.2), leaf if j % 2 else leaf2, w=0.008 * s)
+        for j in range(3):                                                       # the berries close along the stem
+            t_ = 0.4 + j * 0.15
+            pt = (x + (tip[0] - x) * t_, y + (tip[1] - y) * t_, z + (tip[2] - z) * t_)
+            for q in range(3): ball(0.0065 * s, p_orange(), (pt[0] + 0.007 * math.cos(q * 2.1), pt[1] + 0.007 * math.sin(q * 2.1), pt[2] + 0.003 * q), seg=6)
+
+def p_orange():
+    return mat('orange', '#ef7433', 0.55)
+
 def b_patch(p, stage):
     import random
-    rnd = random.Random(7)
+    rnd = random.Random(11)
+    rockA = mat('rockflat', '#c8764a', 0.9); rockB = mat('rockout', '#d88d5e', 0.85); damp = mat('rockdamp', '#b86a42', 0.9)
+    crack = mat('crack', '#5c3424', 0.9); pebble = mat('pebble', '#a9694a', 0.85)
     lich = [mat('lichen1', '#a3b27f', 0.9), mat('lichen2', '#d9a441', 0.9), mat('lichen3', '#cfcfa6', 0.9)]
-    moss = mat('moss', '#6f9240', 0.95)
-    rockf = mat('rockflat', '#c8764a', 0.9)
-    # the rock: a soft irregular slab with a few stones on it
-    for (dx, dy, r) in ((0, 0, 0.62), (0.32, 0.18, 0.42), (-0.3, -0.2, 0.44), (0.25, -0.28, 0.36), (-0.28, 0.26, 0.38)):
-        o = cyl(r, 0.05, rockf, (dx, dy, 0.0), bev=0.02, verts=40)
-    for k in range(9):
-        a = rnd.uniform(0, 6.28); r_ = rnd.uniform(0.5, 0.78)
-        ball(rnd.uniform(0.03, 0.06), p['rock2'], (math.cos(a) * r_, math.sin(a) * r_, 0.04), (1.2, 1, 0.6), seg=8)
-    Z = 0.052
-    if stage == 1:
-        for k in range(26):
-            a = rnd.uniform(0, 6.28); r_ = rnd.uniform(0.0, 0.7)
-            cyl(rnd.uniform(0.03, 0.08), 0.006, lich[k % 3], (math.cos(a) * r_, math.sin(a) * r_, Z), bev=0.002, verts=16)
-        return
+    rims = [mat('lichrim1', '#c9d3ad', 0.9), mat('lichrim2', '#f0c867', 0.9), mat('lichrim3', '#ecebcf', 0.9)]
+    mossc = [mat('mossd', '#566f31', 0.95), mat('mosse', '#67823a', 0.95), mat('mossf', '#7a9244', 0.95)]
+    grassc = [p['leaf'], p['leaf2'], mat('drygrass', '#b9c46a', 0.85)]
+    soilm = mat('thinsoil', '#8f6444', 0.95)
+    edge = lambda a: 1 + 0.1 * math.sin(3 * a + 0.4) + 0.06 * math.sin(5 * a + 1.3) + 0.04 * math.sin(9 * a)
+    # ---- the rock: an irregular slab, darker damp hollows, low outcrops, cracks, pebbles
+    _wobble(cyl(0.7, 0.05, rockA, (0, 0, 0), bev=0.02, verts=72), 0, 0, edge)
+    Z = 0.05
+    outcrops = []
+    for (dx, dy, r, sz) in ((0.32, 0.3, 0.12, 0.35), (-0.42, 0.05, 0.1, 0.4), (0.1, -0.42, 0.09, 0.45), (-0.1, 0.0, 0.08, 0.3), (0.48, -0.2, 0.07, 0.5)):
+        o = ball(r, rockB, (dx, dy, Z - 0.01), (1.0, 0.85, sz + 0.2), seg=16)
+        ball(r * 0.35, rockB, (dx + r * 0.6, dy - r * 0.3, Z), (1.2, 1.0, 0.7), seg=10)
+        outcrops.append((dx, dy, r, Z - 0.01 + r * (sz + 0.2)))
+    cracks = [[(-0.55, -0.05), (-0.35, -0.1), (-0.2, -0.05), (0.0, -0.15), (0.15, -0.12)], [(0.1, 0.55), (0.12, 0.35), (0.25, 0.2), (0.22, 0.05)], [(-0.3, 0.5), (-0.25, 0.35), (-0.35, 0.25)]]
+    for c in cracks: tube([(x_, y_, Z + 0.001) for (x_, y_) in c], 0.006, crack)
+    for k in range(26):
+        a = rnd.uniform(0, 6.28); r_ = rnd.uniform(0.1, 0.66) * edge(a)
+        ball(rnd.uniform(0.012, 0.03), pebble if k % 3 else rockB, (math.cos(a) * r_, math.sin(a) * r_, Z + 0.004), (1.3, 1.0, 0.6), seg=6)
+    # ---- the lichens: on the outcrops and round the cracks (fewer once the soil covers the ground)
+    nl = {1: 40, 2: 22, 3: 8, 4: 8}[stage]
+    spots = []
+    for (dx, dy, r, top) in outcrops: spots += [(dx + rnd.uniform(-0.4, 0.4) * r, dy + rnd.uniform(-0.4, 0.4) * r, top - 0.004) for _ in range(3)]
+    for c in cracks: spots += [(x_ + rnd.uniform(-0.04, 0.04), y_ + rnd.uniform(-0.04, 0.04), Z + 0.001) for (x_, y_) in c]
+    rnd.shuffle(spots)
+    for k, (x_, y_, z_) in enumerate(spots[:nl]):
+        if stage >= 3 and z_ <= Z + 0.002: continue
+        if k % 6 == 5: leafy_lichen(rnd, (x_, y_, z_), 1.0, lich[0])
+        else: lichen(rnd, (x_, y_, z_), rnd.uniform(0.028, 0.06), lich[k % 3], rims[k % 3])
+    # ---- the moss: cushions that start in the cracks and the hollows
     if stage == 2:
-        for (dx, dy, r) in ((0, 0, 0.5), (0.28, 0.16, 0.34), (-0.26, -0.18, 0.36), (0.2, -0.24, 0.28), (-0.24, 0.22, 0.3)):
-            cyl(r, 0.014, moss, (dx, dy, Z), bev=0.006, verts=36)
-        moss2 = mat('moss2', '#7fa34a', 0.95)
-        for k in range(40):                                                   # cushions of moss
-            a = rnd.uniform(0, 6.28); r_ = rnd.uniform(0.0, 0.55)
-            dome(rnd.uniform(0.03, 0.07), moss if k % 2 else moss2, (math.cos(a) * r_, math.sin(a) * r_, Z + 0.01), seg=12, sz=0.4)
-        for k in range(10):
-            a = rnd.uniform(0, 6.28); r_ = rnd.uniform(0.55, 0.75)
-            cyl(rnd.uniform(0.03, 0.06), 0.006, lich[k % 3], (math.cos(a) * r_, math.sin(a) * r_, Z), bev=0.002, verts=16)
+        for c in cracks:
+            for (x_, y_) in c: moss_cushion(rnd, (x_, y_, Z), 1.1, mossc)
+        for (dx, dy) in ((-0.2, 0.15), (0.25, -0.1), (0.05, 0.42), (-0.35, -0.3)):
+            for k in range(3): moss_cushion(rnd, (dx + rnd.uniform(-0.08, 0.08), dy + rnd.uniform(-0.08, 0.08), Z), 1.3, mossc)
+        for k in range(12):
+            a = rnd.uniform(0, 6.28); r_ = rnd.uniform(0.1, 0.55)
+            moss_cushion(rnd, (math.cos(a) * r_, math.sin(a) * r_, Z), 0.9, mossc)
+    # ---- the thin soil and the grass in clumps, the rocks still showing
     if stage >= 3:
-        for (dx, dy, r) in ((0, 0, 0.56), (0.3, 0.17, 0.38), (-0.28, -0.19, 0.4), (0.22, -0.26, 0.32), (-0.26, 0.24, 0.34)):
-            cyl(r, 0.02, p['soil'], (dx, dy, Z), bev=0.008, verts=36)
-            cyl(r - 0.03, 0.006, mat('lawn', '#7cc865', 0.8), (dx, dy, Z + 0.018), bev=0.003, verts=36)
+        _wobble(cyl(0.6, 0.012, soilm, (0, 0, Z), bev=0.005, verts=64), 0, 0, lambda a: edge(a) * (1 + 0.05 * math.sin(7 * a)))
         n = 0
-        for i in range(-6, 7):
-            for j in range(-6, 7):
-                x_, y_ = i * 0.09 + (0.04 if j % 2 else 0) + rnd.uniform(-0.03, 0.03), j * 0.09 + rnd.uniform(-0.03, 0.03)
-                if math.hypot(x_, y_) < 0.66 and (stage == 3 or abs(y_ - round(y_ / 0.36) * 0.36) > 0.08):
-                    tuft(p, (x_, y_, Z + 0.02), 0.9, seed=(n % 5 == 0)); n += 1
+        for i in range(-10, 11):
+            for j in range(-10, 11):
+                x_, y_ = i * 0.058 + rnd.uniform(-0.025, 0.025), j * 0.058 + rnd.uniform(-0.025, 0.025)
+                a = math.atan2(y_, x_)
+                if math.hypot(x_, y_) > 0.56 * edge(a): continue
+                if any(math.hypot(x_ - dx, y_ - dy) < r for (dx, dy, r, top) in outcrops): continue
+                if stage == 4 and min(abs(y_ - row) for row in (-0.36, 0.0, 0.36)) < 0.07: continue
+                if rnd.random() < 0.1: continue
+                if stage == 4 and rnd.random() < 0.35: continue
+                grass_clump(rnd, (x_, y_, Z + 0.012), 1.0, grassc, seed=(n % 6 == 0)); n += 1
+    # ---- the sea buckthorn: strips across the slope, each shrub in its watering hollow
     if stage == 4:
-        for row in (-0.36, 0.0, 0.36):                                            # strips across the slope
-            for k in range(-2, 3):
-                x_ = k * 0.22 + (0.11 if row == 0.0 else 0)
-                if math.hypot(x_, row) < 0.62: shrub(p, (x_, row, Z + 0.02), 1.0)
-    # the drip hose from the purification station comes in at the back and runs along the patch
-    pts = [(0.85, 0.7, 0.012), (0.55, 0.45, 0.03)] + [(math.cos(D2R(a)) * 0.5, math.sin(D2R(a)) * 0.5, Z + 0.03) for a in range(40, 330, 20)]
-    tube(pts, 0.008, hose())
+        for row in (-0.36, 0.0, 0.36):
+            for k in range(-3, 4):
+                x_ = k * 0.16 + (0.08 if row == 0.0 else 0)
+                if math.hypot(x_, row) > 0.5 * edge(math.atan2(row, x_)): continue
+                t = torus(0.045, 0.01, soilm, (x_, row, Z + 0.014)); t.scale = (1, 1, 0.5); bpy.ops.object.transform_apply(scale=True)
+                buckthorn(rnd, (x_, row, Z + 0.012), 1.0)
+    # ---- the drip hose from the purification station, with its emitters; along every strip at stage 4
+    if stage >= 2:
+        main = [(0.85, 0.75, 0.012), (0.6, 0.55, Z + 0.016), (0.52, 0.42, Z + 0.016)]
+        if stage == 4:
+            tube(main + [(0.52, -0.36, Z + 0.016)], 0.007, hose())
+            for row in (-0.36, 0.0, 0.36):
+                tube([(0.52, row, Z + 0.016), (-0.5, row, Z + 0.016)], 0.005, hose())
+                for k in range(-3, 4):
+                    ball(0.008, p['char'], (k * 0.16 + (0.08 if row == 0.0 else 0) + 0.03, row, Z + 0.02), seg=6)
+        else:
+            ring = [(math.cos(D2R(a)) * 0.42 * edge(D2R(a)), math.sin(D2R(a)) * 0.42 * edge(D2R(a)), Z + 0.016) for a in range(40, 330, 15)]
+            tube(main + ring, 0.006, hose())
+            for (x_, y_, z_) in ring[::2]: ball(0.008, p['char'], (x_, y_, z_ + 0.004), seg=6)
 
 
 BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open'),
