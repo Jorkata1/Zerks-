@@ -1979,7 +1979,7 @@ def b_drill(p, lvl=10):
 #    Stage 0 is the empty dock. Set on the Ark's plot with its centre at (2.32, -1.82) from the Ark, unturned:
 #    the pad is then 0.87 from the crane's foot (the jib reaches 0.9) and the dock 0.1 clear of the Ark's leg. About 5.4 x 12.5 m.
 # ======================================================================================
-def b_dock(p, stage, hull=0):
+def b_dock(p, stage, hull=0, reactor=0):
     PW, PL, PZ = 1.26, 3.0, 0.07
     rbox(PW + 0.04, PL + 0.04, 0.03, 0.12, p['char'], (0, 0, 0.0))
     rbox(PW, PL, 0.05, 0.12, p['cream2'], (0, 0, 0.02))
@@ -2054,9 +2054,13 @@ def b_dock(p, stage, hull=0):
             for y in [1.2] + RIBS:                                                     # the welds over the ribs
                 if min(y0, y1) + 1e-3 < y < max(y0, y1) - 1e-3:
                     tube([P(y, t0 + (t1 - t0) * k / 8, o_ + 0.004) for k in range(9)], 0.006, seam)
-        def deck(y0, y1):
+        def deck(y0, y1, xa=None, xb=None):
             nu = max(3, int(abs(y1 - y0) / 0.05) + 1)
-            surf(lambda i, j: ((2 * j - 1) * (w(y0 + (y1 - y0) * i / (nu - 1)) + o_), y0 + (y1 - y0) * i / (nu - 1), ZT + 0.025), nu, 2, plate)
+            def f(i, j):
+                y = y0 + (y1 - y0) * i / (nu - 1); W_ = w(y) + o_
+                lo = -W_ if xa is None else max(-W_, xa); hi = W_ if xb is None else min(W_, xb)
+                return (lo if j == 0 else hi, y, ZT + 0.025)
+            surf(f, nu, 2, plate)
         TS = 0.55                                                                   # where the sides meet the bottom
         YB, YS = -0.93, 1.05                                                        # the bow and the stern pieces start here
         if hull == 1:
@@ -2065,7 +2069,10 @@ def b_dock(p, stage, hull=0):
             for sg in (-1, 1): side(YB, YS, sg * TS, sg * math.pi / 2)
         if hull >= 3:
             side(YB, YS, -TS, TS)
-            deck(YB, YS)
+            if 1 <= reactor <= 3:                                                # the removable panel is off: a hole in the back
+                deck(YB, -0.115); deck(0.335, YS); deck(-0.115, 0.335, None, -0.25); deck(-0.115, 0.335, 0.25, None)
+            else:
+                deck(YB, YS)
             for (y0_, y1_) in ((-0.12, -0.11), (0.33, 0.34)):                          # the removable panel in the middle
                 rbox(0.5, 0.025, 0.012, 0.006, p['orange'], (0, (y0_ + y1_) / 2, ZT + 0.025), seg=1)
             for sx in (-0.25, 0.25): rbox(0.025, 0.47, 0.012, 0.006, p['orange'], (sx, 0.11, ZT + 0.025), seg=1)
@@ -2087,9 +2094,44 @@ def b_dock(p, stage, hull=0):
             torus(0.072, 0.012, p['orange'], (0, -1.05, ZT + 0.04))
             for sg in (-1, 1):
                 tube([P(y, sg * 1.25, o_ + 0.006) for y in [1.2 - k * 0.1 for k in range(24)]], 0.012, p['orange'])
+    # ---- the ship's reactor (the draft, docs/drafts/levels-31-40.md): in the compartment in the middle of the hull, under
+    #      the removable panel. Stage 1 (level 32) the compartment and its shield of steel and water, stage 2 (34) the thick
+    #      steel vessel, stage 3 (37) the steam generator, the pumps, the turbine and the copper cables, stage 4 (39) the
+    #      fuel is in and the test is done: the panel is back on, a light shows the reactor is there and asleep.
+    if reactor:
+        RY0, RY1, RX_ = -0.105, 0.325, 0.24
+        FZ = ZT - 0.36
+        CY_ = (RY0 + RY1) / 2
+        if reactor <= 3:
+            rbox(2 * RX_, RY1 - RY0, 0.03, 0.01, p['char'], (0, CY_, FZ - 0.03), seg=1)            # the floor
+            for (w_, d_, x_, y_) in ((2 * RX_, 0.05, 0, RY0 + 0.025), (2 * RX_, 0.05, 0, RY1 - 0.025), (0.05, RY1 - RY0, -RX_ + 0.025, CY_), (0.05, RY1 - RY0, RX_ - 0.025, CY_)):
+                rbox(w_, d_, ZT - FZ, 0.01, p['steel'], (x_, y_, FZ), seg=1)                       # the steel shield
+            for (w_, d_, x_, y_) in ((2 * RX_ - 0.1, 0.03, 0, RY0 + 0.06), (2 * RX_ - 0.1, 0.03, 0, RY1 - 0.06), (0.03, RY1 - RY0 - 0.1, -RX_ + 0.06, CY_), (0.03, RY1 - RY0 - 0.1, RX_ - 0.06, CY_)):
+                rbox(w_, d_, ZT - FZ - 0.02, 0.008, p['water'], (x_, y_, FZ), seg=1)              # the water in the shield
+                rbox(w_ + 0.005, d_ + 0.005, 0.012, 0.004, p['orange'], (x_, y_, ZT - 0.03), seg=1)
+        if 2 <= reactor <= 3:                                                   # the pressure vessel
+            cyl(0.09, 0.2, p['steel'], (0, CY_, FZ), bev=0.02)
+            dome(0.09, p['steel'], (0, CY_, FZ + 0.2), seg=24, sz=0.6)
+            torus(0.093, 0.012, p['orange'], (0, CY_, FZ + 0.2))
+            for k in range(8): ball(0.01, p['char'], (math.cos(k * 0.785) * 0.093, CY_ + math.sin(k * 0.785) * 0.093, FZ + 0.21), seg=6)
+        if reactor == 3:                                                        # the steam generator, the pumps, the turbine, the cables
+            cyl(0.045, 0.24, p['cream'], (-0.15, CY_ + 0.1, FZ), bev=0.015)
+            torus(0.046, 0.007, p['orange'], (-0.15, CY_ + 0.1, FZ + 0.18))
+            for (px_, py_) in ((0.15, CY_ + 0.12), (0.15, CY_ - 0.1)): rbox(0.07, 0.06, 0.07, 0.015, p['char'], (px_, py_, FZ), seg=2)
+            hcyl(0.045, 0.16, p['orange'], (-0.15, CY_ - 0.09, FZ + 0.06), 'y', bev=0.015)
+            for v in (-0.04, 0.04): torus(0.046, 0.006, p['char'], (-0.15, CY_ - 0.09 + v, FZ + 0.06), (math.pi / 2, 0, 0))
+            tube([(0.0, CY_ + 0.07, FZ + 0.15), (-0.1, CY_ + 0.1, FZ + 0.18)], 0.012, p['steel'])
+            tube([(-0.15, CY_ + 0.05, FZ + 0.05), (-0.15, CY_ - 0.01, FZ + 0.06)], 0.012, p['steel'])
+            tube([(0.07, CY_, FZ + 0.08), (0.12, CY_ + 0.12, FZ + 0.04)], 0.01, p['steel'])
+            for k in range(3): tube([(-0.15, CY_ - 0.17, FZ + 0.05 + k * 0.02), (-RX_ + 0.06, CY_ - 0.17, FZ + 0.05 + k * 0.02), (-RX_ + 0.06, RY0 + 0.07, ZT - 0.05)], 0.006, p['copper'])
+        if reactor == 4:                                                        # the panel back on, the reactor asleep under it
+            rbox(0.1, 0.06, 0.012, 0.006, p['char'], (0.17, 0.11, ZT + 0.037), seg=1)
+            light(p, (0.17, 0.11, ZT + 0.055), 0.016)
     # the gantry: legs on the rails, the orange beam, the trolley and the hook with the next part
     GZ = 0.98
-    if hull:
+    if reactor:
+        gy, tx, load = {1: (0.11, 0.0, 'rvessel'), 2: (0.11, 0.0, 'rturbine'), 3: (0.11, 0.0, 'rfuel'), 4: (PDY, 0.0, None)}[reactor]   # the next stage's part on the hook
+    elif hull:
         gy, tx, load = {1: (0.17, 0.0, 'plate'), 2: (-0.71, 0.0, 'plate'), 3: (PDY, 0.0, 'panels'), 4: (PDY, 0.0, None)}[hull]
     else:
         gy, tx, load = {0: (PDY, PDX, 'pad'), 1: (RIBS[3], 0.0, 'rib'), 2: (RIBS[7], 0.0, 'rib'), 3: (PDY, 0.0, 'beams'), 4: (PDY, 0.0, None)}[stage]
@@ -2101,7 +2143,7 @@ def b_dock(p, stage, hull=0):
     rbox(2 * RX + 0.14, 0.1, 0.08, 0.03, p['orange'], (0, gy, GZ), seg=3)
     rbox(0.14, 0.14, 0.06, 0.02, p['char'], (tx, gy, GZ - 0.06), seg=2)
     ball(0.02, p['lampw'], (tx + 0.1, gy, GZ - 0.01), seg=10)
-    hz = {'pad': PZ + 0.2, 'rib': ZT + 0.2, 'beams': GZ - 0.14, 'plate': ZT + 0.2, 'panels': GZ - 0.14, None: GZ - 0.14}[load]
+    hz = {'pad': PZ + 0.2, 'rib': ZT + 0.2, 'beams': GZ - 0.14, 'plate': ZT + 0.2, 'panels': GZ - 0.14, 'rwall': ZT + 0.22, 'rvessel': ZT + 0.3, 'rturbine': ZT + 0.2, 'rfuel': ZT + 0.32, None: GZ - 0.14}[load]
     tube([(tx, gy, GZ - 0.06), (tx, gy, hz + 0.03)], 0.007, p['char'])
     torus(0.022, 0.007, p['char'], (tx, gy, hz), (math.pi / 2, 0, 0))
     if load == 'rib':
@@ -2116,6 +2158,17 @@ def b_dock(p, stage, hull=0):
         me = bpy.data.meshes.new('hung'); bm.to_mesh(me); bm.free()
         ob = bpy.data.objects.new('hung', me); bpy.context.collection.objects.link(ob); _done(ob, plate)
         for e in (pl[0], pl[3]): tube([(tx, gy, hz - 0.02), (e[0], e[1], e[2] + 0.14)], 0.005, p['char'])
+    elif load == 'rfuel':                                 # the heavy cask with the fuel rods from the Ark
+        cyl(0.075, 0.24, p['char'], (tx, gy, hz - 0.3), bev=0.02)
+        for zz in (0.06, 0.12, 0.18): torus(0.077, 0.01, p['orange'], (tx, gy, hz - 0.3 + zz))
+        cyl(0.06, 0.03, p['steel'], (tx, gy, hz - 0.07), bev=0.01)
+        light(p, (tx + 0.078, gy, hz - 0.12), 0.012)
+    elif load == 'rvessel':                               # the thick steel vessel on the hook
+        cyl(0.09, 0.2, p['steel'], (tx, gy, hz - 0.26), bev=0.02); dome(0.09, p['steel'], (tx, gy, hz - 0.06), seg=24, sz=0.6)
+        torus(0.093, 0.012, p['orange'], (tx, gy, hz - 0.06))
+    elif load == 'rturbine':                              # the turbine on the hook
+        hcyl(0.045, 0.16, p['orange'], (tx, gy, hz - 0.08), 'y', bev=0.015)
+        for e in (-0.06, 0.06): tube([(tx, gy, hz - 0.02), (tx, gy + e, hz - 0.04)], 0.005, p['char'])
     elif load == 'panels':                                # the sandwich panels for stage 4 wait on the pad: steel, wool, steel
         for k in range(3):
             rbox(0.34, 0.06, 0.012, 0.005, plate, (PDX, PDY - 0.07 + k * 0.07, PZ + 0.009), seg=1)
@@ -3817,6 +3870,7 @@ BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open
          **{f'brickhome-{l}': (lambda l: lambda p: b_brickhome(p, l))(l) for l in (1, 10, 20)},
          **{f'canteen-{l}': (lambda l: lambda p: b_canteen(p, l))(l) for l in (1, 10, 20)},
          **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}, 'pstation': b_pstation, 'fieldstation': b_fieldstation, 'nursery': b_nursery, 'woolworks': b_woolworks, 'slagmill': b_slagmill, 'glassworks': b_glassworks, **{f'hull-{h}': (lambda h: lambda p: b_dock(p, 4, h))(h) for h in range(1, 5)},
+         **{f'reactor-{r}': (lambda r: lambda p: b_dock(p, 4, 4, r))(r) for r in range(1, 5)},
          **{f'brickhome-{l}i': (lambda l: lambda p: b_brickhome(p, l, True))(l) for l in (1, 10, 20)},
          **{f'canteen-{l}i': (lambda l: lambda p: b_canteen(p, l, True))(l) for l in (1, 10, 20)},
          **{f'greenhouse-{l}i': (lambda l: lambda p: b_greenhouse(p, l, True))(l) for l in (1, 10, 20)}, 'university': b_university, 'university-b': b_university_b, 'park': b_park, 'dispatch': b_dispatch, 'medpost': b_medpost, **{f'patch-{k}': (lambda k: lambda p: b_patch(p, k))(k) for k in range(1, 5)}, 'roaddepot': b_roaddepot, 'street-paved': b_street, 'street-dust': lambda p: b_street(p, False), 'weather': b_weather, 'seedvault': b_seedvault}
