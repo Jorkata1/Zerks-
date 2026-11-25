@@ -2833,6 +2833,87 @@ def b_slagmill(p):
     tube([(LX, LY, 0.16), (LX, LY + 0.3, 0.1), (LX + 0.35, LY + 0.3, 0.05)], 0.016, p['char'])          # to the glass furnace
 
 
+# ======================================================================================
+# the glass furnace (level 30, docs/levels.md): next to the silicon furnace, two engineers. Quartz from the mine (the
+#    hopper) and lime from the slag mill (its pipe comes into the lime bin) are mixed in a drum and go up a belt into the
+#    hall; there the electric melting tank glows at about 1 500 C without soda, no smoke (first engineer); the melt
+#    runs out between two rollers into a glowing ribbon (second engineer), which goes slowly through the warm tunnel
+#    (the lehr) so it does not crack; at the end the clear sheets are cut and stand on a rack, ready for the store.
+# ======================================================================================
+def b_glassworks(p):
+    quartz = mat('quartz', '#efe4ff', 0.25)
+    lime = mat('lime', '#f4f1ea', 0.9)
+    # ---- the hall on the left: the melting tank and the rollers behind the front window
+    HX, HY, HW, HD, HH = -0.28, 0.02, 0.95, 0.72, 0.55
+    rbox(HW + 0.08, HD + 0.08, 0.06, 0.18, p['char'], (HX, HY, 0.0))
+    hall = rbox(HW, HD, HH, 0.15, p['cream'], (HX, HY, 0.05), seg=5)
+    def melt(cx, cy, fz):
+        L = frame(cx, cy, 0.0)
+        rbox(0.26, 0.16, 0.1, 0.02, p['char'], (*L(-0.12, 0.06), fz), seg=2)                 # the melting tank
+        rbox(0.22, 0.12, 0.012, 0.01, p['fire'], (*L(-0.12, 0.06), fz + 0.095), seg=1)        # the glowing melt
+        for u in (-0.2, -0.04): cyl(0.01, 0.1, p['steel'], (*L(u, 0.06), fz + 0.1), bev=0.003)   # the electrodes
+        for v in (0.02, 0.1): hcyl(0.022, 0.14, p['steel'], (*L(0.07, v), fz + 0.07), 'x', bev=0.006)   # the rollers
+        rbox(0.2, 0.08, 0.008, 0.004, p['fire'], (*L(0.12, 0.06), fz + 0.06), seg=1)          # the ribbon, still glowing
+        screen(p, L(0.18, 0.11), 0.0, fz + 0.1)
+    lit_room(p, hall, 0.58, 0.28, 0.42, HX - 0.05, HY - HD / 2 + 0.01, 0.17, 0.0, melt)
+    rbox(HW + 0.02, HD + 0.02, 0.035, 0.15, p['orange'], (HX, HY, 0.14))
+    door(p, HX + 0.36, HY - HD / 2 - 0.02, 0.0, 0.2, 0.44, 0.05)
+    RZ = 0.05 + HH
+    for x in (HX - 0.28, HX + 0.05): vent(p, (x, HY + 0.15, RZ - 0.01), 0.09)
+    light(p, (HX + 0.4, HY - 0.18, RZ + 0.01), 0.02)
+    porthole(p, (HX - HW / 2, HY - 0.1, 0.36), (-1, 0), r=0.06, mat_key='fire')
+    # the transformer at the back of the hall, its cables into the roof
+    TX, TY = HX + 0.22, HY + HD / 2 + 0.2
+    rbox(0.3, 0.2, 0.05, 0.05, p['char'], (TX, TY, 0.0))
+    rbox(0.26, 0.16, 0.28, 0.05, p['cream'], (TX, TY, 0.04))
+    rbox(0.265, 0.165, 0.025, 0.05, p['orange'], (TX, TY, 0.22))
+    for k in range(4): rbox(0.04, 0.012, 0.16, 0.005, p['char'], (TX + 0.145, TY - 0.06 + k * 0.04, 0.07), seg=1)
+    light(p, (TX - 0.07, TY - 0.082, 0.3), 0.014)
+    for k in range(2): tube([(TX - 0.05 + k * 0.1, TY - 0.03, 0.33), (TX - 0.05 + k * 0.1, TY - 0.12, RZ - 0.04)], 0.014, p['char'])
+    # ---- the batch: the quartz hopper and the lime bin at the back left, the mixing drum, the belt into the hall
+    QX, QY = HX - 0.3, HY + HD / 2 + 0.3
+    for sx in (-1, 1):
+        for sy in (-1, 1): cyl(0.014, 0.26, p['char'], (QX + sx * 0.1, QY + sy * 0.08, 0.0), bev=0.005)
+    hop = rbox(0.28, 0.22, 0.16, 0.04, p['orange'], (QX, QY, 0.24))
+    cut(hop, cutter(0.24, 0.18, 0.16, (QX, QY, 0.28), r=0.03))
+    ball(1.0, quartz, (QX, QY, 0.36), (0.11, 0.085, 0.045), seg=14)
+    for (dx, dy) in ((-0.05, 0.03), (0.05, -0.02)): ball(0.022, quartz, (QX + dx, QY + dy, 0.4), (1.1, 1, 0.8), seg=8)
+    LBX = QX + 0.32
+    cyl(0.1, 0.04, p['char'], (LBX, QY + 0.02, 0.0), bev=0.012)
+    cyl(0.08, 0.3, p['cream'], (LBX, QY + 0.02, 0.03), bev=0.02)
+    torus(0.081, 0.008, p['orange'], (LBX, QY + 0.02, 0.2))
+    dome(0.08, lime, (LBX, QY + 0.02, 0.33), seg=16, sz=0.35)
+    tube([(LBX, QY + 0.5, 0.05), (LBX, QY + 0.12, 0.05), (LBX, QY + 0.1, 0.2)], 0.016, p['char'])        # the lime from the slag mill
+    MXX, MXY = QX + 0.14, QY - 0.2
+    for sx in (-1, 1): rbox(0.03, 0.12, 0.1, 0.01, p['char'], (MXX + sx * 0.08, MXY, 0.0), seg=1)
+    hcyl(0.07, 0.2, p['orange'], (MXX, MXY, 0.15), 'x', bev=0.02)                                         # the mixing drum
+    for u in (-0.06, 0.06): torus(0.072, 0.007, p['char'], (MXX + u, MXY, 0.15), (0, math.pi / 2, 0))
+    tube([(QX, QY - 0.08, 0.24), (MXX - 0.05, MXY + 0.05, 0.2)], 0.014, p['char'])
+    tube([(LBX - 0.05, QY - 0.04, 0.1), (MXX + 0.06, MXY + 0.05, 0.2)], 0.014, p['char'])
+    belt(p, Vector((MXX + 0.12, MXY, 0.18)), Vector((HX + 0.0, HY + HD / 2 - 0.02, RZ - 0.06)), 0.1)
+    # ---- the lehr: the warm tunnel out of the right wall; small windows glow, warmer near the furnace
+    LX0, LX1, LY = HX + HW / 2, 0.95, HY - 0.06
+    LW = LX1 - LX0
+    rbox(LW + 0.04, 0.32, 0.04, 0.04, p['char'], (LX0 + LW / 2, LY, 0.0))
+    rbox(LW, 0.28, 0.22, 0.08, p['cream'], (LX0 + LW / 2, LY, 0.035), seg=4)
+    rbox(LW + 0.01, 0.285, 0.025, 0.08, p['orange'], (LX0 + LW / 2, LY, 0.12))
+    for k, m in enumerate(('fire', 'fire', 'win')):
+        porthole(p, (LX0 + 0.15 + k * 0.22, LY - 0.14, 0.18), (0, -1), r=0.04, mat_key=m)
+    vent(p, (LX0 + 0.2, LY + 0.04, 0.25), 0.06)
+    light(p, (LX1 - 0.04, LY - 0.13, 0.26), 0.014)
+    # ---- at the end: the clear sheet on the rollers, the cutting table, the rack of sheets
+    for k in range(3): hcyl(0.016, 0.24, p['grey'], (LX1 + 0.05 + k * 0.08, LY, 0.13), 'y', bev=0.004)
+    rbox(0.3, 0.26, 0.008, 0.004, p['glass'], (LX1 + 0.13, LY, 0.15), seg=1)
+    for x_ in (LX1 + 0.03, LX1 + 0.27): cyl(0.014, 0.13, p['char'], (x_, LY, 0.0), bev=0.005)
+    RX, RY = 0.98, 0.3
+    rbox(0.36, 0.16, 0.03, 0.01, p['char'], (RX, RY, 0.0), seg=1)
+    for sgn in (-1, 1):
+        for x_ in (RX - 0.15, RX + 0.15): rbox(0.02, 0.012, 0.36, 0.005, p['char'], (x_, RY + sgn * 0.04, 0.02), (D2R(-12 * sgn), 0, 0), seg=1)
+        for k in range(3):
+            rbox(0.3, 0.008, 0.3, 0.004, p['glass'], (RX, RY + sgn * (0.06 + k * 0.02), 0.03), (D2R(-12 * sgn), 0, 0), seg=1)
+    rbox(0.34, 0.03, 0.02, 0.008, p['orange'], (RX, RY, 0.37), seg=1)
+
+
 BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open'),
          'arkdish-folded': lambda p: b_arkdish(p, 'folded'), 'arkdish-open': lambda p: b_arkdish(p, 'open'), 'dome': b_dome, 'kitchen': lambda p: b_kitchen(p, 10), **{f'kitchen-{l}': (lambda l: lambda p: b_kitchen(p, l))(l) for l in (1, 10, 20)}, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': lambda p: b_greenhouse(p, 10), **{f'greenhouse-{l}': (lambda l: lambda p: b_greenhouse(p, l))(l) for l in (1, 10, 20)},
          'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': lambda p: b_warehouse(p, 10), **{f'warehouse-{l}': (lambda l: lambda p: b_warehouse(p, l))(l) for l in (1, 10, 20)}, 'furnace': b_furnace, 'mine': b_mine,
@@ -2840,7 +2921,7 @@ BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open
          'home-1': lambda p: b_home(p, 1), 'home-10': lambda p: b_home(p, 10), 'home-20': lambda p: b_home(p, 20), 'rover': b_rover, 'drill': lambda p: b_drill(p, 10), **{f'drill-{l}': (lambda l: lambda p: b_drill(p, l))(l) for l in (1, 10, 20)}, 'smelter': b_smelter, 'claypit': b_claypit, 'brickkiln': b_brickkiln, 'copperworks': b_copperworks,
          **{f'brickhome-{l}': (lambda l: lambda p: b_brickhome(p, l))(l) for l in (1, 10, 20)},
          **{f'canteen-{l}': (lambda l: lambda p: b_canteen(p, l))(l) for l in (1, 10, 20)},
-         **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}, 'pstation': b_pstation, 'fieldstation': b_fieldstation, 'nursery': b_nursery, 'woolworks': b_woolworks, 'slagmill': b_slagmill}
+         **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}, 'pstation': b_pstation, 'fieldstation': b_fieldstation, 'nursery': b_nursery, 'woolworks': b_woolworks, 'slagmill': b_slagmill, 'glassworks': b_glassworks}
 for name, fn in BUILD.items():
     if ONLY and name not in ONLY: continue
     reset(); p = pal(); fn(p)
