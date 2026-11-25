@@ -3508,6 +3508,134 @@ def b_patch(p, stage):
             for (x_, y_, z_) in ring[::2]: ball(0.008, p['char'], (x_, y_, z_ + 0.004), seg=6)
 
 
+# ======================================================================================
+# the roads (level 36, the draft docs/drafts/levels-31-40.md; Joro picked: light grey concrete pavers with a warm tone in
+#    herringbone, a dark stone kerb). The pavers are pressed at the road depot from crushed stone and crushed slag bound
+#    with lime from the slag mill. herringbone() lays them in a 90-degree herringbone over a joint-coloured bed.
+# ======================================================================================
+def paver_mats():
+    return mat('paver', '#cfc8bc', 0.8), mat('joint', '#9d968a', 0.9), mat('kerb', '#5a4f49', 0.8)
+
+def herringbone(x0, x1, y0, y1, z, wd=0.045, gap=0.005):
+    pav, jnt, _ = paver_mats()
+    rbox(x1 - x0, y1 - y0, 0.012, 0.004, jnt, ((x0 + x1) / 2, (y0 + y1) / 2, z), seg=1)
+    ox, oy = (x0 + x1) / 2, (y0 + y1) / 2
+    n = int(max(x1 - x0, y1 - y0) / wd) + 4
+    for i in range(-n, n + 1):
+        for j in range(-n // 2 - 2, n // 2 + 3):
+            bx, by = ox + (i + 2 * j) * wd, oy + (i - 2 * j) * wd
+            for (cx, cy, w, d) in ((bx + wd, by + wd / 2, 2 * wd, wd), (bx + wd / 2, by + 2 * wd, wd, 2 * wd)):
+                if x0 + w / 2 - 1e-6 <= cx <= x1 - w / 2 + 1e-6 and y0 + d / 2 - 1e-6 <= cy <= y1 - d / 2 + 1e-6:
+                    rbox(w - gap, d - gap, 0.016, 0.004, pav, (cx, cy, z), seg=1)
+
+def b_street(p, paved=True):
+    """a piece of street as on the map: 4 m wide, one block long (16 m), with the kerbs and the covers of the service
+    channel; unpaved it is the trodden dust we have now"""
+    L, W, Z = 3.86, 0.96, 0.0
+    _, _, kerb = paver_mats()
+    if not paved:
+        rbox(L, W, 0.012, 0.01, mat('dust', '#f0c08c', 0.95), (0, 0, Z), seg=1)
+        for y_ in (-0.18, 0.18): rbox(L - 0.1, 0.06, 0.003, 0.002, mat('track', '#dca777', 0.95), (0, y_, Z + 0.012), seg=1)
+        return
+    herringbone(-L / 2 + 0.06, L / 2 - 0.06, -W / 2 + 0.07, W / 2 - 0.2, Z)
+    for y_ in (-W / 2 + 0.035, W / 2 - 0.035): rbox(L, 0.06, 0.034, 0.012, kerb, (0, y_, Z), seg=2)
+    for x_ in (-L / 2 + 0.03, L / 2 - 0.03): rbox(0.06, W - 0.1, 0.02, 0.01, kerb, (x_, 0, Z), seg=1)
+    # the covers of the service channel along the far side, flush with the pavers, each with an orange lifting slot
+    k = 0; x_ = -L / 2 + 0.25
+    while x_ < L / 2 - 0.2:
+        rbox(0.34, 0.11, 0.016, 0.006, p['cream2'], (x_, W / 2 - 0.13, Z), seg=1)
+        rbox(0.05, 0.012, 0.004, 0.002, p['orange'], (x_, W / 2 - 0.13, Z + 0.016), seg=1)
+        x_ += 0.36; k += 1
+
+# ======================================================================================
+# the road depot (level 36, the draft): next to the mine, where the stone comes from. A cream garage with the orange
+#    stripe and two bays: the paving machine (it lays a whole layer of pavers with its clamp) and the small electric
+#    sweeper of the maintenance technician. In the yard: the piles of crushed stone and crushed slag, the bin of lime from
+#    the slag mill, the vibrating press under a canopy, pallets of pavers. In front a paved apron, the first piece of road.
+#    Two places: a builder and a maintenance technician.
+# ======================================================================================
+def paving_machine(p, at, rz=0.0):
+    x, y, z = at; c, s_ = math.cos(rz), math.sin(rz)
+    for sy in (-1, 1): rbox(0.34, 0.06, 0.06, 0.025, p['char'], (x - s_ * sy * 0.09, y + c * sy * 0.09, z), (0, 0, rz), seg=2)   # the tracks
+    rbox(0.26, 0.2, 0.1, 0.03, p['orange'], (x, y, z + 0.05), (0, 0, rz), seg=3)
+    rbox(0.1, 0.16, 0.1, 0.03, p['glass'], (x - c * 0.06, y - s_ * 0.06, z + 0.15), (0, 0, rz), seg=2)                       # the cab
+    rbox(0.11, 0.17, 0.02, 0.01, p['cream'], (x - c * 0.06, y - s_ * 0.06, z + 0.25), (0, 0, rz), seg=1)
+    tube([(x + c * 0.06, y + s_ * 0.06, z + 0.15), (x + c * 0.2, y + s_ * 0.2, z + 0.26), (x + c * 0.3, y + s_ * 0.3, z + 0.2)], 0.014, p['char'])
+    hx, hy = x + c * 0.3, y + s_ * 0.3
+    rbox(0.14, 0.14, 0.03, 0.01, p['char'], (hx, hy, z + 0.14), (0, 0, rz), seg=1)                                        # the clamp
+    pav, _, _ = paver_mats()
+    for i in range(3):
+        for j in range(3): rbox(0.04, 0.04, 0.025, 0.004, pav, (hx + (i - 1) * 0.044, hy + (j - 1) * 0.044, z + 0.11), (0, 0, rz), seg=1)
+    light(p, (x - c * 0.06, y - s_ * 0.06, z + 0.28), 0.012)
+
+def sweeper(p, at, rz=0.0):
+    x, y, z = at; c, s_ = math.cos(rz), math.sin(rz)
+    for (u, v) in ((-0.07, -0.07), (-0.07, 0.07), (0.07, -0.07), (0.07, 0.07)):
+        bpy.ops.mesh.primitive_cylinder_add(vertices=16, radius=0.03, depth=0.025, location=(x + c * u - s_ * v, y + s_ * u + c * v, z + 0.03), rotation=(math.pi / 2, 0, rz))
+        _done(bpy.context.object, p['char'])
+    rbox(0.22, 0.15, 0.08, 0.035, p['cream'], (x, y, z + 0.03), (0, 0, rz), seg=3)
+    rbox(0.09, 0.13, 0.09, 0.03, p['glass'], (x - c * 0.05, y - s_ * 0.05, z + 0.11), (0, 0, rz), seg=2)
+    rbox(0.1, 0.14, 0.015, 0.01, p['orange'], (x - c * 0.05, y - s_ * 0.05, z + 0.2), (0, 0, rz), seg=1)
+    for sv in (-1, 1):                                                       # the two round brushes at the front
+        bx, by = x + c * 0.14 - s_ * sv * 0.06, y + s_ * 0.14 + c * sv * 0.06
+        cyl(0.04, 0.015, p['orange'], (bx, by, z), bev=0.005, verts=20)
+        for k in range(8):
+            a = k * 0.785; tube([(bx, by, z + 0.008), (bx + math.cos(a) * 0.05, by + math.sin(a) * 0.05, z + 0.002)], 0.003, p['char'])
+    light(p, (x - c * 0.05, y - s_ * 0.05, z + 0.22), 0.012)
+
+def b_roaddepot(p):
+    # ---- the garage with two bays, the stripe, a small office window
+    GX, GY, GW, GD, GH = -0.25, 0.25, 1.2, 0.62, 0.5
+    rbox(GW + 0.08, GD + 0.08, 0.06, 0.14, p['char'], (GX, GY, 0.0))
+    gar = rbox(GW, GD, GH, 0.14, p['cream'], (GX, GY, 0.05), seg=5)
+    rbox(GW + 0.02, GD + 0.02, 0.035, 0.14, p['orange'], (GX, GY, 0.14))
+    for k, bx in enumerate((GX - 0.33, GX + 0.12)):
+        cut(gar, cutter(0.34, 0.3, 0.32, (bx, GY - GD / 2, 0.05), r=0.04))
+        rbox(0.4, 0.06, 0.37, 0.04, p['orange'], (bx, GY - GD / 2 - 0.005, 0.05), seg=2)
+        cut(bpy.context.object, cutter(0.34, 0.2, 0.32, (bx, GY - GD / 2, 0.05), r=0.04))
+        rbox(0.32, 0.3, 0.012, 0.004, p['floor'], (bx, GY - GD / 2 + 0.15, 0.05), seg=1)
+        ball(0.025, p['lampw'], (bx, GY - GD / 2 + 0.15, 0.33), seg=10)
+        rbox(0.34, 0.03, 0.05, 0.01, p['char'], (bx, GY - GD / 2 + 0.01, 0.33), seg=1)            # the rolled-up door
+        light(p, (bx + 0.22, GY - GD / 2 - 0.02, 0.44), 0.016)
+    paving_machine(p, (GX - 0.33, GY - GD / 2 - 0.12, 0.0), -math.pi / 2)
+    sweeper(p, (GX + 0.12, GY - GD / 2 + 0.05, 0.05), -math.pi / 2)
+    def office(cx, cy, fz):
+        L = frame(cx, cy, 0.0); desk(p, L, 0.0, fz, u=0.0, v=0.05, w=0.14)
+    lit_room(p, gar, 0.18, 0.18, 0.2, GX + 0.45, GY - GD / 2 + 0.01, 0.22, 0.0, office)
+    door(p, GX + GW / 2 + 0.01, GY + 0.05, -math.pi / 2, 0.18, 0.34, 0.05)
+    RZ = 0.05 + GH
+    for x_ in (GX - 0.3, GX + 0.2): vent(p, (x_, GY + 0.12, RZ - 0.01), 0.08)
+    light(p, (GX - GW / 2 + 0.08, GY - 0.15, RZ + 0.01), 0.018)
+    # ---- the paved apron in front of the bays, with the kerb
+    _, _, kerb = paver_mats()
+    herringbone(GX - GW / 2, GX + GW / 2 + 0.05, GY - GD / 2 - 0.55, GY - GD / 2 - 0.06, 0.0)
+    rbox(GW + 0.11, 0.05, 0.034, 0.012, kerb, (GX + 0.025, GY - GD / 2 - 0.58, 0.0), seg=2)
+    # ---- the yard on the right: the piles of crushed stone and slag, the lime bin, the press under its canopy, pallets
+    YX = 0.75
+    for (dx, dy, m) in ((0.0, 0.6, p['rock2']), (0.32, 0.62, mat('slag', '#5d5652', 0.8))):
+        dome(0.17, m, (YX + dx, dy, 0.0), seg=16, sz=0.55)
+        for k in range(4): ball(0.025, m, (YX + dx + 0.14 * math.cos(k * 1.6), dy - 0.12 + 0.03 * k, 0.02), (1.2, 1, 0.7), seg=8)
+    cyl(0.08, 0.04, p['char'], (YX + 0.55, 0.3, 0.0), bev=0.012)
+    cyl(0.065, 0.24, p['cream'], (YX + 0.55, 0.3, 0.03), bev=0.02)
+    torus(0.066, 0.008, p['orange'], (YX + 0.55, 0.3, 0.16))
+    dome(0.065, mat('lime', '#f4f1ea', 0.9), (YX + 0.55, 0.3, 0.27), seg=16, sz=0.35)
+    PX, PY = YX + 0.1, 0.12
+    for sx in (-1, 1):
+        for sy in (-1, 1): cyl(0.014, 0.42, p['char'], (PX + sx * 0.2, PY + sy * 0.16, 0.0), bev=0.005)
+    rbox(0.48, 0.4, 0.025, 0.02, p['orange'], (PX, PY, 0.42), (D2R(6), 0, 0), seg=2)
+    rbox(0.22, 0.18, 0.2, 0.04, p['cream2'], (PX, PY, 0.0), seg=3)                       # the vibrating press
+    rbox(0.225, 0.185, 0.025, 0.04, p['orange'], (PX, PY, 0.13))
+    rbox(0.16, 0.12, 0.08, 0.02, p['orange'], (PX, PY + 0.02, 0.2), seg=2)                 # its hopper
+    light(p, (PX + 0.09, PY - 0.092, 0.19), 0.012)
+    tube([(YX + 0.05, 0.45, 0.06), (PX - 0.05, PY + 0.1, 0.27)], 0.012, p['char'])
+    pav, _, _ = paver_mats()
+    for (qx, qy) in ((PX - 0.05, PY - 0.35), (PX + 0.25, PY - 0.35)):
+        rbox(0.22, 0.18, 0.03, 0.008, p['wood'], (qx, qy, 0.0), seg=1)
+        for lay in range(3):
+            for i in range(4):
+                for j in range(3): rbox(0.05, 0.05, 0.035, 0.005, pav, (qx - 0.075 + i * 0.05, qy - 0.05 + j * 0.05, 0.03 + lay * 0.036), seg=1)
+
+
 BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open'),
          'arkdish-folded': lambda p: b_arkdish(p, 'folded'), 'arkdish-open': lambda p: b_arkdish(p, 'open'), 'dome': b_dome, 'kitchen': lambda p: b_kitchen(p, 10), **{f'kitchen-{l}': (lambda l: lambda p: b_kitchen(p, l))(l) for l in (1, 10, 20)}, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': lambda p: b_greenhouse(p, 10), **{f'greenhouse-{l}': (lambda l: lambda p: b_greenhouse(p, l))(l) for l in (1, 10, 20)},
          'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': lambda p: b_warehouse(p, 10), **{f'warehouse-{l}': (lambda l: lambda p: b_warehouse(p, l))(l) for l in (1, 10, 20)}, 'furnace': b_furnace, 'mine': b_mine,
@@ -3518,7 +3646,7 @@ BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open
          **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}, 'pstation': b_pstation, 'fieldstation': b_fieldstation, 'nursery': b_nursery, 'woolworks': b_woolworks, 'slagmill': b_slagmill, 'glassworks': b_glassworks, **{f'hull-{h}': (lambda h: lambda p: b_dock(p, 4, h))(h) for h in range(1, 5)},
          **{f'brickhome-{l}i': (lambda l: lambda p: b_brickhome(p, l, True))(l) for l in (1, 10, 20)},
          **{f'canteen-{l}i': (lambda l: lambda p: b_canteen(p, l, True))(l) for l in (1, 10, 20)},
-         **{f'greenhouse-{l}i': (lambda l: lambda p: b_greenhouse(p, l, True))(l) for l in (1, 10, 20)}, 'university': b_university, 'university-b': b_university_b, 'park': b_park, 'dispatch': b_dispatch, 'medpost': b_medpost, **{f'patch-{k}': (lambda k: lambda p: b_patch(p, k))(k) for k in range(1, 5)}}
+         **{f'greenhouse-{l}i': (lambda l: lambda p: b_greenhouse(p, l, True))(l) for l in (1, 10, 20)}, 'university': b_university, 'university-b': b_university_b, 'park': b_park, 'dispatch': b_dispatch, 'medpost': b_medpost, **{f'patch-{k}': (lambda k: lambda p: b_patch(p, k))(k) for k in range(1, 5)}, 'roaddepot': b_roaddepot, 'street-paved': b_street, 'street-dust': lambda p: b_street(p, False)}
 for name, fn in BUILD.items():
     if ONLY and name not in ONLY: continue
     reset(); p = pal(); fn(p)
