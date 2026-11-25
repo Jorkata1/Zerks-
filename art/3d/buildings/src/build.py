@@ -3651,6 +3651,71 @@ def b_roaddepot(p):
                 for j in range(3): rbox(0.05, 0.05, 0.035, 0.005, (p1 if (i + j + lay) % 2 else p2) if k == 0 else dark, (qx - 0.075 + i * 0.05, qy - 0.05 + j * 0.05, 0.03 + lay * 0.036), seg=1)
 
 
+# ======================================================================================
+# the weather station (level 37, the draft docs/drafts/levels-31-40.md): on the highest terrace, a low cream cabin with
+#    the orange stripe and a lattice mast that rises over the canyon's rim, held by guy wires. On the mast: the cups for
+#    the wind and the vane at the top, the screen with the pressure and temperature sensors, the dust counter on an arm.
+#    On the cabin the lidar: it shines a thin green beam up and measures the dust in the air, as Phoenix did on Mars; the
+#    beam is seen at night. A dust gauge on a post. One scientist at the screens behind the window.
+# ======================================================================================
+def b_weather(p):
+    beam = mat('lidarbeam', '#9dff7a', 0.3, emit='#7dff5a', strength=2.5, alpha=0.4)
+    # ---- the cabin
+    CW, CD, CH = 0.62, 0.48, 0.36
+    rbox(CW + 0.08, CD + 0.08, 0.06, 0.12, p['char'], (0, 0, 0))
+    cab = rbox(CW, CD, CH, 0.12, p['cream'], (0, 0, 0.05), seg=5)
+    def desk_(cx, cy, fz):
+        L = frame(cx, cy, 0.0)
+        desk(p, L, 0.0, fz, u=-0.02, v=0.05, w=0.16)
+        screen(p, L(0.09, 0.08), 0.0, fz + 0.1, w=0.07, h=0.05)
+    lit_room(p, cab, 0.24, 0.18, 0.24, -0.1, -CD / 2 + 0.01, 0.17, 0.0, desk_)
+    rbox(CW + 0.02, CD + 0.02, 0.03, 0.12, p['orange'], (0, 0, 0.13))
+    door(p, 0.18, -CD / 2 - 0.02, 0.0, 0.16, 0.28, 0.05)
+    RZ = 0.05 + CH
+    # ---- the lidar on the roof: a housing with a dark window looking up, the thin green beam
+    cyl(0.07, 0.08, p['cream2'], (-0.12, 0.06, RZ - 0.01), bev=0.02)
+    torus(0.071, 0.008, p['orange'], (-0.12, 0.06, RZ + 0.03))
+    cyl(0.04, 0.012, p['char'], (-0.12, 0.06, RZ + 0.07), bev=0.004)
+    cyl(0.006, 1.6, beam, (-0.12, 0.06, RZ + 0.08), bev=0.0, verts=10)
+    light(p, (0.12, 0.08, RZ + 0.01), 0.016)
+    vent(p, (0.12, -0.08, RZ - 0.01), 0.06)
+    # ---- the lattice mast behind the cabin: three legs, zigzag bracing, orange bands, guy wires to anchors
+    MX, MY, MH, MR = 0.45, 0.42, 1.55, 0.06
+    legs = [(MX + math.cos(D2R(90 + k * 120)) * MR, MY + math.sin(D2R(90 + k * 120)) * MR) for k in range(3)]
+    cyl(0.12, 0.04, p['char'], (MX, MY, 0.0), bev=0.012)
+    for (x_, y_) in legs: tube([(x_, y_, 0.03), (x_, y_, MH)], 0.008, p['grey'])
+    nz = 12
+    for k in range(nz):
+        za, zb = 0.05 + k * (MH - 0.1) / nz, 0.05 + (k + 1) * (MH - 0.1) / nz
+        for e in range(3):
+            a, b = legs[e], legs[(e + 1) % 3]
+            if k % 2 == 0: tube([(a[0], a[1], za), (b[0], b[1], zb)], 0.003, p['grey'])
+            else: tube([(b[0], b[1], za), (a[0], a[1], zb)], 0.003, p['grey'])
+    for zz in (0.5, 1.0): torus(MR + 0.006, 0.01, p['orange'], (MX, MY, zz))
+    for k in range(3):                                                            # the guy wires and their anchors
+        a = D2R(60 + k * 120); ax, ay = MX + math.cos(a) * 0.55, MY + math.sin(a) * 0.55   # clear of the arms and the cabin
+        tube([(MX + math.cos(a) * MR, MY + math.sin(a) * MR, MH * 0.7), (ax, ay, 0.03)], 0.002, p['char'])
+        rbox(0.05, 0.05, 0.03, 0.01, p['char'], (ax, ay, 0.0), seg=1)
+    # the screen with the pressure and temperature sensors: stacked white plates on an arm
+    tube([(MX, MY - MR, 0.72), (MX, MY - 0.2, 0.72)], 0.006, p['char'])
+    for k in range(5): cyl(0.045 - k * 0.002, 0.008, mat('pillow', '#ffffff', 0.9), (MX, MY - 0.22, 0.66 + k * 0.022), bev=0.003, verts=20)
+    # the dust counter: a small box with its inlet, on the other arm
+    tube([(MX + MR, MY, 1.05), (MX + 0.2, MY, 1.05)], 0.006, p['char'])
+    rbox(0.06, 0.05, 0.07, 0.015, p['cream'], (MX + 0.22, MY, 1.0), seg=2)
+    tube([(MX + 0.22, MY, 1.07), (MX + 0.22, MY, 1.11), (MX + 0.25, MY, 1.11)], 0.006, p['orange'])
+    light(p, (MX + 0.22, MY - 0.028, 1.04), 0.008)
+    # at the top: the cups for the wind and the vane, a light
+    anemometer(p, (MX, MY, MH - 0.04), 0.12)
+    # the cable from the mast into the cabin
+    tube([(MX, MY - 0.08, 0.04), (CW / 2 - 0.05, CD / 2 + 0.01, 0.12)], 0.01, p['char'])
+    # ---- the dust gauge on a post at the front left: a jar that catches what settles
+    GX, GY = -0.45, -0.35
+    cyl(0.008, 0.2, p['char'], (GX, GY, 0.0), bev=0.003)
+    cyl(0.03, 0.05, p['glass'], (GX, GY, 0.2), bev=0.006)
+    cyl(0.027, 0.012, mat('dust', '#f0c08c', 0.95), (GX, GY, 0.2), bev=0.003)
+    torus(0.031, 0.005, p['orange'], (GX, GY, 0.25))
+
+
 BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open'),
          'arkdish-folded': lambda p: b_arkdish(p, 'folded'), 'arkdish-open': lambda p: b_arkdish(p, 'open'), 'dome': b_dome, 'kitchen': lambda p: b_kitchen(p, 10), **{f'kitchen-{l}': (lambda l: lambda p: b_kitchen(p, l))(l) for l in (1, 10, 20)}, 'processor': b_processor, 'veglab': b_veglab, 'greenhouse': lambda p: b_greenhouse(p, 10), **{f'greenhouse-{l}': (lambda l: lambda p: b_greenhouse(p, l))(l) for l in (1, 10, 20)},
          'research-old': b_research_old, 'drone': b_drone, 'research-1': lambda p: b_research(p, 1), 'research-10': lambda p: b_research(p, 10), 'warehouse': lambda p: b_warehouse(p, 10), **{f'warehouse-{l}': (lambda l: lambda p: b_warehouse(p, l))(l) for l in (1, 10, 20)}, 'furnace': b_furnace, 'mine': b_mine,
@@ -3661,7 +3726,7 @@ BUILD = {'ark': lambda p: b_ark(p, 'folded'), 'ark-18': lambda p: b_ark(p, 'open
          **{f'dock-{s}': (lambda s: lambda p: b_dock(p, s))(s) for s in range(5)}, 'pstation': b_pstation, 'fieldstation': b_fieldstation, 'nursery': b_nursery, 'woolworks': b_woolworks, 'slagmill': b_slagmill, 'glassworks': b_glassworks, **{f'hull-{h}': (lambda h: lambda p: b_dock(p, 4, h))(h) for h in range(1, 5)},
          **{f'brickhome-{l}i': (lambda l: lambda p: b_brickhome(p, l, True))(l) for l in (1, 10, 20)},
          **{f'canteen-{l}i': (lambda l: lambda p: b_canteen(p, l, True))(l) for l in (1, 10, 20)},
-         **{f'greenhouse-{l}i': (lambda l: lambda p: b_greenhouse(p, l, True))(l) for l in (1, 10, 20)}, 'university': b_university, 'university-b': b_university_b, 'park': b_park, 'dispatch': b_dispatch, 'medpost': b_medpost, **{f'patch-{k}': (lambda k: lambda p: b_patch(p, k))(k) for k in range(1, 5)}, 'roaddepot': b_roaddepot, 'street-paved': b_street, 'street-dust': lambda p: b_street(p, False)}
+         **{f'greenhouse-{l}i': (lambda l: lambda p: b_greenhouse(p, l, True))(l) for l in (1, 10, 20)}, 'university': b_university, 'university-b': b_university_b, 'park': b_park, 'dispatch': b_dispatch, 'medpost': b_medpost, **{f'patch-{k}': (lambda k: lambda p: b_patch(p, k))(k) for k in range(1, 5)}, 'roaddepot': b_roaddepot, 'street-paved': b_street, 'street-dust': lambda p: b_street(p, False), 'weather': b_weather}
 for name, fn in BUILD.items():
     if ONLY and name not in ONLY: continue
     reset(); p = pal(); fn(p)
