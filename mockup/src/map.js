@@ -172,7 +172,7 @@ for (let i = -7; i <= 7; i++) for (let j = -7; j <= 7; j++) {
 // the Ark stands on a plot of 2x2 in the middle (Joro, 06.11.2026): the four blocks with i, j in {-1, 0}, without the
 // streets between them, so it is 28 m across; its centre is (-8, -8), straight up the screen from the old one
 const ARK_PLOTS = new Set(['0,-2', '-1,-1', '1,-1', '0,0']), ARK_AT = [-8, -8], ARK_HALF = 13.8;
-// #lvl10-paved: the streets paved as level 36 of the draft would have them (docs/drafts/levels-31-40.md; Joro picked light
+// #lvl10-paved: the streets paved as level 36 has them (docs/levels.md, approved 27.11.2026; Joro picked light
 // grey concrete pavers with a warm tone in herringbone and a dark stone kerb). The pattern is drawn once on a canvas
 // with its own little random generator, so the rocks of the map stay where they are.
 const PAVED = (location.hash || '').includes('-paved');
