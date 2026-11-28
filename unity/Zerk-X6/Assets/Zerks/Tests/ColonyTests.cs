@@ -115,6 +115,17 @@ namespace Zerks.Tests
         }
 
         [Test]
+        public void Level6AsksForNoSecondMiner()
+        {
+            // levels.md 2.16 (Joro, 27.11.2026: A): two miners could lock the game, when levels 4 and 5 woke engineers.
+            var c = new Colony(Bal, Jump.To(Bal, 5, new Settings { Tempo = 1 }), new Settings { Tempo = 1 });
+            Assert.That(c.NextReq.Level, Is.EqualTo(6));
+            var req = c.Requirements().Select(r => r.Text).ToList();
+            Assert.That(req, Has.None.Contains("miner"));
+            Assert.That(req, Has.Some.StartsWith("Mine level"));
+        }
+
+        [Test]
         public void FromLevel12OnlyTheKeyBuildingsAreAskedFor()
         {
             var c = new Colony(Bal, Jump.To(Bal, 12, new Settings { Tempo = 1 }), new Settings { Tempo = 1 });

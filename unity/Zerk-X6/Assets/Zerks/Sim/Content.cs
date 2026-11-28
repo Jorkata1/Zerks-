@@ -81,7 +81,6 @@ namespace Zerks.Sim
         /// <summary>Required building levels; to level 11 every other building must be on level L as well (without the research station).</summary>
         public Dictionary<string, int> Overrides = new Dictionary<string, int>();
         public string[] Research = Array.Empty<string>();
-        public int MineWorkers;
         public bool MineIron;
         public double EnergyRatio; // production / demand by day
         public bool NightWithoutShortage;
@@ -405,7 +404,7 @@ namespace Zerks.Sim
             [3] = new LevelReq { Level = 3, Res = Bag(350, 220, 60), Atmo = 13, Overrides = { ["mine"] = 2 } },
             [4] = new LevelReq { Level = 4, Res = Bag(700, 450, 150, food: 100), Atmo = 16, Colonists = 4 },
             [5] = new LevelReq { Level = 5, Res = Bag(1400, 900, 400, food: 250), Atmo = 18, Colonists = 5, LabPotatoes = true },
-            [6] = new LevelReq { Level = 6, Res = Bag(2800, 1800, 800, food: 500, silicon: 200), Atmo = 20, Colonists = 6, MineWorkers = 2, EnergyRatio = 1.0 },
+            [6] = new LevelReq { Level = 6, Res = Bag(2800, 1800, 800, food: 500, silicon: 200), Atmo = 20, Colonists = 6, EnergyRatio = 1.0 },
             [7] = new LevelReq { Level = 7, Res = Bag(5600, 3600, 1600, food: 1000, silicon: 500), Atmo = 22, Colonists = 7,
                 Research = new[] { "furnace_filter" }, EnergyRatio = 1.5 },
             [8] = new LevelReq { Level = 8, Res = Bag(7800, 5000, 2200, food: 1400, silicon: 700), Atmo = 24, Colonists = 8, NightWithoutShortage = true },

@@ -533,11 +533,6 @@ namespace Zerks.Sim
             if (req.Frame > 0) list.Add(new ReqItem(req.Frame >= 4 ? "The frame complete" : $"The frame: stage {req.Frame}", S.Frame >= req.Frame, $"{S.Frame}/4"));
             if (req.Antenna) list.Add(new ReqItem("The antenna repaired", S.AntennaFixed));
             if (req.LabPotatoes) list.Add(new ReqItem("Vegetable lab with potatoes", S.Level("veglab") >= 5));
-            if (req.MineWorkers > 0)
-            {
-                var mw = S.Get("mine")?.Workers.Count(w => w != 0) ?? 0;
-                list.Add(new ReqItem($"Mine with {req.MineWorkers} miners", mw >= req.MineWorkers, $"{mw}"));
-            }
             if (req.MineIron) list.Add(new ReqItem("Mine digs iron ore (mine level 10)", S.Level("mine") >= 10));
             if (req.EnergyRatio > 0)
             {
