@@ -16,7 +16,7 @@ namespace Zerks.Game
         GameRunner G;
         Colony C => G.Colony;
         UIDocument doc;
-        VisualElement root, tagLayer, top, sheetLayer, modalLayer, echoBox, bottom;
+        VisualElement root, tagLayer, top, sheetLayer, modalLayer, echoBox, bottom, haze;
         Label airValue, arkBadge, echoText, toast;
         VisualElement airFill, airBlock, chipsRow;
         readonly Dictionary<Res, (VisualElement chip, Label text, Label cap)> chips = new Dictionary<Res, (VisualElement, Label, Label)>();
@@ -79,6 +79,9 @@ namespace Zerks.Game
                 root.style.unityFontDefinition = new StyleFontDefinition(FontDefinition.FromSDFFont(fa));
             }
 
+            // a thin veil of dust over the map in a storm (levels.md, rule 13), under the tags and the panels
+            haze = Layer("haze");
+            haze.style.backgroundColor = new Color(0.77f, 0.6f, 0.42f, 0);
             tagLayer = Layer("tags");
             BuildTop();
             BuildBottom();
@@ -398,6 +401,7 @@ namespace Zerks.Game
             ApplySafeArea();
             RefreshTop();
             RefreshBottom();
+            if (haze != null) haze.style.backgroundColor = new Color(0.77f, 0.6f, 0.42f, 0.3f * G.World.StormK);
             RefreshEcho(dt);
             RefreshTags();
             if (toastLeft > 0) { toastLeft -= dt; if (toastLeft <= 0) toast.style.display = DisplayStyle.None; }
@@ -571,7 +575,9 @@ namespace Zerks.Game
                 {
                     var sow = s.Patches.FirstOrDefault(p => p.WorkLeft > 0);
                     if (sow != null) Tag("patch-t", $"{(sow.WorkTo == 5 ? "Planting" : "Sowing")} · {RealTime(sow.WorkLeft)}", "timer", G.World.WorldOf(sow.Id), null, 1 - (float)(sow.WorkLeft / Math.Max(0.001, sow.WorkTotal)));
-                    var free = s.Patches.FirstOrDefault(p => C.WhyNotPatch(p.Id) == "");
+                    // the tag only while the Ark asks for patches; the two extra ones are for whoever wants them (proposal)
+                    var wants = C.NextReq != null && C.NextReq.Patches > 0 && C.PatchesAt(C.NextReq.PatchStage) < C.NextReq.Patches;
+                    var free = wants ? s.Patches.FirstOrDefault(p => C.WhyNotPatch(p.Id) == "") : null;
                     if (free != null && (sow == null || sow.Id != free.Id))
                     {
                         var pid = free.Id;

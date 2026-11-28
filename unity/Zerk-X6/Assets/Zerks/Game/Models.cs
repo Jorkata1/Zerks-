@@ -15,6 +15,8 @@ namespace Zerks.Game
             ["drill"] = 9.6f, ["pump"] = 8.2f, ["processor"] = 7.6f, ["veglab"] = 9.6f, ["kitchen"] = 10.2f,
             ["mine"] = 10f, ["furnace"] = 8.8f, ["warehouse"] = 10f, ["greenhouse"] = 10.4f, ["geolocator"] = 9.4f,
             ["solar"] = 11f, ["batteries"] = 6f, ["rover"] = 2.8f,
+            // a patch of the Green Belt is a slab of rock as big as the plot (proposal, 28.11.2026)
+            ["patch"] = 12.4f,
         };
 
         /// <summary>Fixed scales (the mockup's "atScale") for the buildings that grow with their level.</summary>
@@ -27,7 +29,7 @@ namespace Zerks.Game
             // chapters 3 and 4: made in the same Blender units as the dock and the Ark (art/3d/buildings, 25.11.2026), map scale 4.15
             ["treatment"] = 4.15f, ["fieldstation"] = 4.15f, ["nursery"] = 4.15f, ["woolworks"] = 4.15f, ["slagmill"] = 4.15f,
             ["glassworks"] = 4.15f, ["university"] = 4.15f, ["park"] = 4.15f, ["dispatch"] = 4.15f, ["medpost"] = 4.15f,
-            ["roaddepot"] = 4.15f, ["weather"] = 4.15f, ["seedvault"] = 4.15f, ["patch"] = 4.15f, ["street"] = 4.15f,
+            ["roaddepot"] = 4.15f, ["weather"] = 4.15f, ["seedvault"] = 4.15f, ["street"] = 4.15f,
             // the people and ECHO (art/3d/characters): real metres times 1.4 and 2.4, as on the mockup (a proposal)
             ["colonist"] = People.PersonScale, ["echo"] = People.EchoScale,
         };
@@ -35,7 +37,7 @@ namespace Zerks.Game
         /// <summary>The model whose size sets the scale of a family (drill-1, drill-10, drill-20 share drill's).</summary>
         static readonly Dictionary<string, string> Reference = new Dictionary<string, string>
         {
-            ["mine"] = "mine", ["home"] = "home-10", ["research"] = "research-1",
+            ["mine"] = "mine", ["home"] = "home-10", ["research"] = "research-1", ["patch"] = "patch-1",
         };
 
         static readonly Dictionary<string, float> scaleCache = new Dictionary<string, float>();

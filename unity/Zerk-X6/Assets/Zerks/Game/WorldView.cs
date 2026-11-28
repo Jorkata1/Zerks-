@@ -124,9 +124,12 @@ namespace Zerks.Game
             foreach (var (d, s, z) in EmptyBlocks) Block(d, s, z, true);
             foreach (var (d, s) in ArkBlocks) Block(d, s, 0, false);
             // The Green Belt (levels.md, level 21): its patches are not buildings, only the street round them and the rock.
+            var rockPad = Look.Lit(Look.Rock, 0.05f);
             foreach (var (id, d, s) in Content.PatchPlots)
             {
-                Block(d, s, 3, false);
+                // the street round it and bare rock inside, where the patch grows
+                var pg = Block(d, s, 3, false);
+                Look.Prim(PrimitiveType.Cube, pg.transform, new Vector3(0, 0.06f, 0), new Vector3(12.6f, 0.08f, 12.6f), rockPad);
                 var pdef = new BuildingDef { Id = id, Kind = "patch", Name = "Green Belt patch", D = d, S = s, Zone = 3,
                     Models = { [1] = "patch-1", [2] = "patch-2", [3] = "patch-3", [4] = "patch-4" } };
                 var pv = BuildingView.Make(pdef, transform);
@@ -512,15 +515,11 @@ namespace Zerks.Game
             RenderSettings.ambientSkyColor = Color.Lerp(Color.Lerp(Look.DaySky * 0.9f, Look.NightSky * 0.32f, n), dusty * 0.7f * (1 - 0.6f * n), stormK * 0.7f);
             RenderSettings.ambientEquatorColor = Color.Lerp(Look.DayBounce * 0.8f, Look.NightBounce * 0.7f, n);
             RenderSettings.ambientGroundColor = Color.Lerp(Look.DayBounce * 0.5f, Look.NightBounce * 0.4f, n);
-            RenderSettings.fog = stormK > 0.01f;
-            if (stormK > 0.01f)
-            {
-                RenderSettings.fogMode = FogMode.Linear;
-                RenderSettings.fogColor = dusty * (1 - 0.6f * n);
-                RenderSettings.fogStartDistance = Mathf.Lerp(400, 40, stormK);
-                RenderSettings.fogEndDistance = Mathf.Lerp(900, 260, stormK);
-            }
+            // no fog: the canyon's own shaders do not take it; the screen lays a thin veil of dust instead (Hud)
         }
+
+        /// <summary>How deep in a dust storm the picture is now (0..1), for the veil of dust on the screen.</summary>
+        public float StormK => stormK;
 
         // ---------------------------------------------------------------- chapters 3 and 4
 
@@ -550,7 +549,8 @@ namespace Zerks.Game
                 else if (model != null) v.ShowStanding(model, NightK);
                 else v.Hide();
                 // a patch glows when it can take its next step (levels.md: "the patches light up")
-                var can = open && p != null && c.WhyNotPatch(p.Id) == "";
+                var wants = c.NextReq != null && c.NextReq.Patches > 0 && c.PatchesAt(c.NextReq.PatchStage) < c.NextReq.Patches;
+                var can = open && p != null && wants && c.WhyNotPatch(p.Id) == "";
                 patchGlow[kv.Key].SetFloat("_Alpha", can ? 0.35f + 0.2f * Mathf.Sin(time * 4) : 0);
             }
         }
