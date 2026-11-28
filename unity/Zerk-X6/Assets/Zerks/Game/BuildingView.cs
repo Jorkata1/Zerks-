@@ -132,7 +132,7 @@ namespace Zerks.Game
                 ShowPrint(Def.ModelFor(1), 1 - (float)(st.BuildLeft / System.Math.Max(0.001, st.BuildTotal)));
                 return;
             }
-            ShowStanding(Def.ModelFor(st.ShownLevel), night);
+            ShowStanding(Def.ModelFor(st.ShownLevel, st.Insulated), night);
             // The furnace and the smelter smoke until their filters (levels.md, levels 6 and 11).
             var smoke = (Id == "furnace" && !c.IsDone("furnace_filter")) || (Id == "smelter" && !c.IsDone("smelter_filter"));
             foreach (var r in steam) if (r != null) r.enabled = smoke;

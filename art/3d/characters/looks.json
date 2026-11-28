@@ -1,5 +1,5 @@
 {
-  "note": "A proposal (14.11.2026): the colours of the professions and how each named person looks. The model is colonist.glb: materials accent, skin, hair; show one of hair_short, hair_bun, hair_full, beard if true, stripe and aerial for the Commander only. The builder (chapter 2, level 13) is red, a proposal of 20.11.2026. Since 21.11.2026 (the more detailed people, Joro) the model also has tool_hammer, tool_wrench, tool_trowel, tool_ladle and tool_tablet: show only the one in tool for the profession (the Commander and the builder carry none; a proposal).",
+  "note": "A proposal (14.11.2026): the colours of the professions and how each named person looks. The model is colonist.glb: materials accent, skin, hair; show one of hair_short, hair_bun, hair_full, beard if true, stripe and aerial for the Commander only. The builder (chapter 2, level 13) is red, a proposal of 20.11.2026. Since 21.11.2026 (the more detailed people, Joro) the model also has tool_hammer, tool_wrench, tool_trowel, tool_ladle and tool_tablet: show only the one in tool for the profession (the Commander and the builder carry none; a proposal). The dispatcher (level 33), the doctor (35) and the technician (36) are a proposal of 28.11.2026: pink-violet, white and yellow; the tablet, the tablet and the wrench.",
   "accent": {
     "commander": "#ef7433",
     "cook": "#ffc65c",
@@ -7,14 +7,20 @@
     "geologist": "#9a7cff",
     "engineer": "#5aa9ff",
     "scientist": "#33c5a2",
-    "builder": "#e0574f"
+    "builder": "#e0574f",
+    "dispatcher": "#d36bd1",
+    "doctor": "#eef3f7",
+    "technician": "#e0b52b"
   },
   "tool": {
     "cook": "tool_ladle",
     "agronomist": "tool_trowel",
     "geologist": "tool_hammer",
     "engineer": "tool_wrench",
-    "scientist": "tool_tablet"
+    "scientist": "tool_tablet",
+    "dispatcher": "tool_tablet",
+    "doctor": "tool_tablet",
+    "technician": "tool_wrench"
   },
   "people": {
     "Commander": {

@@ -15,14 +15,16 @@ namespace Zerks.Tests
         static Colony NewColony(double tempo = 1) => new Colony(Bal, new GameState(), new Settings { Tempo = tempo });
 
         [Test]
-        public void BalanceHasEveryBuildingOfChapters1And2()
+        public void BalanceHasEveryBuildingToLevel40()
         {
             foreach (var def in Content.Buildings)
             {
                 var b = Bal.B(def.Kind);
-                Assert.That(b.Rows.Count, Is.GreaterThanOrEqualTo(21), def.Id);
+                Assert.That(b.Rows.Count, Is.GreaterThanOrEqualTo(40), def.Id);
             }
             Assert.That(Bal.AirFor(33), Is.GreaterThan(0));
+            Assert.That(Bal.AirFor(39), Is.GreaterThan(0));
+            Assert.That(Content.Requirements.Keys.Max(), Is.EqualTo(40));
         }
 
         [Test]
@@ -219,6 +221,182 @@ namespace Zerks.Tests
             var c = new Colony(Bal, Jump.To(Bal, 4, new Settings { Tempo = 1 }), new Settings { Tempo = 1 });
             var made = c.CatchUp(3600);
             Assert.That(made[Res.Carbon] + made[Res.Water] + made[Res.Food], Is.GreaterThan(0));
+        }
+
+        // ---------------------------------------------------------------- chapters 3 and 4
+
+        static Colony At(int level) => new Colony(Bal, Jump.To(Bal, level, new Settings { Tempo = 1 }), new Settings { Tempo = 1 });
+
+        [Test]
+        public void ZoneIIIOpensTheGreenBeltAndThePatchesGrowStepByStep()
+        {
+            var c = At(21);
+            c.S.StormNext = 0; // no storm in the middle of the check: a storm stops the growth
+            Assert.That(c.WhyNotPatch("patch1"), Does.StartWith("Closed"));
+            c.S.Done.Add("zone3"); c.S.Zone = 3; c.S.Done.Add("lichens");
+            Assert.That(c.WhyNotPatch("patch1"), Is.EqualTo(""));
+            Assert.That(c.WorkPatch("patch1"), Is.True);
+            Assert.That(c.WhyNotPatch("patch2"), Does.Contain("another"), "the drone sows one patch at a time");
+            c.Tick(11 * 60);
+            Assert.That(c.S.Patch("patch1").Stage, Is.EqualTo(1), "lichen");
+            c.Tick(c.PatchGrowMinutes(1) * 60 + 60);
+            Assert.That(c.S.Patch("patch1").Stage, Is.EqualTo(2), "moss");
+            Assert.That(c.AirBySource.ContainsKey("Green Belt"), Is.True);
+        }
+
+        [Test]
+        public void TheHullAndTheReactorAreBuiltInTheDockAfterTheFrame()
+        {
+            var c = At(22);
+            Assert.That(c.S.Frame, Is.EqualTo(4));
+            Assert.That(c.NextDock.Part, Is.EqualTo("hull"));
+            c.S.Stock[Res.Steel] = 5000; c.S.Stock[Res.Cables] = 500;
+            if (!c.IsDone("steel_sheets")) Assert.That(c.WhyNotDock(), Does.Contain("Steel sheets"));
+            c.S.Done.Add("steel_sheets");
+            Assert.That(c.BuildDock(), Is.True);
+            c.FinishTimers();
+            Assert.That(c.S.Hull, Is.EqualTo(1));
+            var r = At(39);
+            Assert.That(r.NextDock.Part, Is.EqualTo("reactor"));
+            Assert.That(r.NextDock.Stage, Is.EqualTo(4));
+            Assert.That(r.BuildDock(), Is.True, "the fuel is in the Ark's hold");
+            r.FinishTimers();
+            Assert.That(r.S.TrialReady, Is.True);
+            Assert.That(r.TrialRun(), Is.True);
+            Assert.That(r.S.ReactorTested, Is.True);
+        }
+
+        [Test]
+        public void InsulationIsASpecialUpgradeWithReady()
+        {
+            var c = At(29);
+            c.S.Done.Add("insulation");
+            c.S.Stock[Res.Wool] = 1000;
+            Assert.That(c.Insulate("brickhome"), Is.True);
+            Assert.That(c.WhyNotInsulate("home"), Is.Not.EqualTo(""), "the first home stays without (Joro, 27.11.2026: A)");
+            var lv = c.S.Level("brickhome");
+            c.FinishTimers();
+            Assert.That(c.S.Get("brickhome").Ready, Is.True);
+            c.Reprint("brickhome");
+            Assert.That(c.S.Get("brickhome").Insulated, Is.True);
+            Assert.That(c.S.Level("brickhome"), Is.EqualTo(lv), "it does not raise the level");
+        }
+
+        [Test]
+        public void TheUniversitySwapsTwoAndKeepsTheirOldStars()
+        {
+            var c = At(32);
+            Assert.That(c.Teacher, Is.Not.Null);
+            var (a, b) = c.SuggestPair();
+            var ca = c.S.Colonist(a); var cb = c.S.Colonist(b);
+            var (wa, wb, pa, pb) = (ca.Work, cb.Work, ca.Profession, cb.Profession);
+            ca.WorkMinutes = 2000;
+            Assert.That(c.Study(a, b), Is.True);
+            c.FinishTimers();
+            Assert.That(c.S.Study.Ready, Is.True);
+            Assert.That(c.Swap(), Is.True);
+            Assert.That(ca.Work, Is.EqualTo(wb)); Assert.That(cb.Work, Is.EqualTo(wa));
+            Assert.That(ca.Profession, Is.EqualTo(pb));
+            Assert.That(c.Stars(ca), Is.EqualTo(2), "two stars on the new work");
+            Assert.That(c.Jobs().taken, Is.EqualTo(c.Jobs().all), "no place stays empty");
+            c.S.Study = new StudyState { A = a, B = b, Ready = true };
+            c.Swap();
+            Assert.That(ca.Work, Is.EqualTo(wa));
+            Assert.That(c.Stars(ca), Is.EqualTo(5), "back to the old work with the old stars (Joro, 23.11.2026)");
+        }
+
+        [Test]
+        public void TheDispatchManagesTwoOnLevel1AndSevenOnLevel5()
+        {
+            Assert.That(Colony.DispatchSlots(1), Is.EqualTo(2));
+            Assert.That(Colony.DispatchSlots(5), Is.EqualTo(7));
+            Assert.That(Colony.DispatchSlots(10), Is.EqualTo(13));
+            Assert.That(Colony.DispatchSlots(20), Is.EqualTo(25));
+            var c = At(34);
+            Assert.That(c.DispatchBonus("smelter"), Is.GreaterThanOrEqualTo(0.10));
+            Assert.That(c.SetManaged("home", true), Is.False, "the homes have no worker");
+        }
+
+        [Test]
+        public void AStormDimsThePanelsAndLeavesStonesAndSigns()
+        {
+            var c = At(36);
+            c.TakeEvents();
+            var day = c.SolarDayKw();
+            c.S.StormNext = 30;
+            c.Tick(60);
+            Assert.That(c.StormNow, Is.True);
+            Assert.That(c.SolarDayKw(), Is.LessThan(day * 0.5));
+            c.Tick(c.S.StormLeft + 30);
+            Assert.That(c.StormNow, Is.False);
+            Assert.That(c.S.Rocks, Is.GreaterThan(0));
+            Assert.That(c.S.Care, Does.Contain("park").And.Contain("medpost"));
+            Assert.That(c.Tend("park"), Is.True);
+            Assert.That(c.CollectRocks(), Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void TheRoadBuilderPavesTheStreetsRoundTheArk()
+        {
+            var c = At(37);
+            c.S.Paved.Clear(); // the jump paves the square of level 36; pave it again here
+            var b = c.S.Get("roaddepot");
+            Assert.That(b != null && b.Workers.Count > 1 && b.Workers[0] != 0, Is.True, "the road builder and the technician after the jump");
+            c.S.Stock[Res.Stone] = 20000;
+            foreach (var k in Content.ArkStreets) Assert.That(c.Pave(k), Is.True);
+            for (int i = 0; i < 4; i++) c.FinishTimers();
+            Assert.That(Content.ArkStreets.All(k => c.S.Paved.Contains(k)), Is.True);
+        }
+
+        [Test]
+        public void TheNewThingsSurviveTheSave()
+        {
+            var c = At(37);
+            c.S.Hull = 4; c.S.Reactor = 3; c.S.Care.Add("park"); c.S.Paved.Add("0,0"); c.S.Stock[Res.Glass] = 123;
+            var back = Save.FromJson(Save.ToJson(c.S));
+            Assert.That(back, Is.Not.Null);
+            Assert.That(back.Reactor, Is.EqualTo(3));
+            Assert.That(back.Stock[Res.Glass], Is.EqualTo(123));
+            Assert.That(back.Patches.Count, Is.EqualTo(Content.PatchPlots.Length));
+            Assert.That(back.Paved, Does.Contain("0,0"));
+        }
+
+        /// <summary>Chapter 3 played by the auto-player from the start of level 21: it must reach level 31.</summary>
+        [Test]
+        public void Chapter3CanBePlayedToTheEnd() => PlayChapter(21, 31, 31, 90);
+
+        /// <summary>Chapter 4 played by the auto-player from the start of level 31: it must reach level 40.</summary>
+        [Test]
+        public void Chapter4CanBePlayedToTheEnd() => PlayChapter(31, 40, 40, 90);
+
+        static void PlayChapter(int from, int to, int people, double maxHours)
+        {
+            var c = At(from);
+            var log = new StringBuilder();
+            var levelStart = c.S.GameTime;
+            var lastArk = c.S.Ark;
+            for (int minute = 0; minute < 150 * 60 && c.S.Ark < to; minute++)
+            {
+                AutoPlayer.Act(c);
+                c.Tick(60);
+                if (c.S.Ark != lastArk)
+                {
+                    log.AppendLine($"level {lastArk} -> {c.S.Ark}: {(c.S.GameTime - levelStart) / 60:0} min, people {c.Awake}, air {c.S.Atmo}%");
+                    levelStart = c.S.GameTime;
+                    lastArk = c.S.Ark;
+                }
+                c.TakeEvents();
+            }
+            var hours = c.S.GameTime / 3600;
+            log.AppendLine($"total {hours:0.0} h, colonists {c.Awake}, air {c.S.Atmo}%, hull {c.S.Hull}/4, reactor {c.S.Reactor}/4");
+            TestContext.WriteLine(log.ToString());
+            if (c.S.Ark < to)
+            {
+                var missing = string.Join("; ", c.Requirements().Where(x => !x.Done).Select(x => $"{x.Text} (have {x.Have})"));
+                Assert.Fail($"Stuck on level {c.S.Ark} after {hours:0.0} h. Missing: {missing}\n{log}");
+            }
+            Assert.That(c.Awake, Is.EqualTo(people), "each chapter wakes 10 colonists (levels.md)");
+            Assert.That(hours, Is.LessThan(maxHours));
         }
 
         /// <summary>The whole of chapter 1 played by the auto-player: it must reach level 11 and not get stuck.</summary>

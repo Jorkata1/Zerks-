@@ -11,6 +11,9 @@ namespace Zerks.Sim
         ResearchStarted, ResearchDone, Woken, RobotOut, RobotBack, Collected, NightFalls, DayBreaks, PowerShort,
         ZoneOpened, Sketch, Chapter1Done, TutorialStep, Debris, Impulse, AtmoUp,
         DockOpened, FrameStarted, FrameDone, AntennaReady, AntennaFixed, Chapter2Done, GreenhouseSwitched,
+        // chapters 3 and 4
+        DockStarted, DockDone, TrialReady, TrialRun, PatchWork, PatchGrew, StormWarn, StormStart, StormEnd, CareSign, CareDone,
+        Swapped, Paved, Insulated, Chapter3Done, Chapter4Done, Prepared, Rocks,
     }
 
     public readonly struct GameEvent
@@ -58,7 +61,7 @@ namespace Zerks.Sim
     }
 
     /// <summary>
-    /// The colony of chapters 1 and 2: the rules of docs/levels.md and the numbers of docs/balance/balance.json.
+    /// The colony of chapters 1 to 4: the rules of docs/levels.md and the numbers of docs/balance/balance.json.
     /// No Unity here, so the whole game can be played in a test.
     /// </summary>
     public sealed class Colony
@@ -85,6 +88,14 @@ namespace Zerks.Sim
             Cfg = cfg ?? new Settings();
             rng = new Random(S.NextColonistId * 7919 + (int)S.GameTime);
             EnsureResearchBuilding();
+            EnsurePatches();
+        }
+
+        /// <summary>The patches of the Green Belt are on the map from the start, under the dust until Zone III.</summary>
+        void EnsurePatches()
+        {
+            foreach (var (id, _, _) in Content.PatchPlots)
+                if (S.Patch(id) == null) S.Patches.Add(new PatchState { Id = id });
         }
 
         void EnsureResearchBuilding()
@@ -122,7 +133,7 @@ namespace Zerks.Sim
         public double NightMinutes => Bal.NightMin * Cfg.CycleScale;
         public bool IsDone(string research) => S.Done.Contains(research);
         public int ResearchSlots => S.ResearchUpgraded ? 2 : 1;
-        public int Chapter => S.Ark <= 10 ? 1 : S.Ark <= 20 ? 2 : 3;
+        public int Chapter => S.Ark <= 10 ? 1 : S.Ark <= 20 ? 2 : S.Ark <= 30 ? 3 : 4;
 
         public bool Staffed(BuildingState b) => b.Workers.Any(w => w != 0);
 
@@ -158,7 +169,7 @@ namespace Zerks.Sim
             }
             if (IsGreenhouse(id) && S.Ark < 16) cap = Math.Min(cap, 15); // food from the greenhouse's level 16 wants the Ark on 16
             if (id == "kitchen" || id == "canteen") cap = Math.Min(cap, 20); // the last level of a building for food
-            return Math.Min(cap, 25);
+            return Math.Min(cap, 40); // balance 0.2 has the rows to level 40
         }
 
         public BuildingRow Row(string id, int level) => Bal.B(Kind(id)).Row(level);
@@ -240,7 +251,7 @@ namespace Zerks.Sim
                 return "Needs its blueprint (Research)";
             }
             if (def.MinAtmo > 0 && S.Atmo < def.MinAtmo) return $"Needs {def.MinAtmo}% air";
-            if (def.Zone > S.Zone) return def.Zone == 1 ? "Under the dust: research Zone I expansion" : "Under the dust: research Zone II expansion";
+            if (def.Zone > S.Zone) return def.Zone == 1 ? "Under the dust: research Zone I expansion" : def.Zone == 2 ? "Under the dust: research Zone II expansion" : "Closed: research Zone III expansion";
             if (Printing != null) return "The drone is busy";
             if (!CanAfford(BuildCost(id))) return "Not enough resources";
             return "";
@@ -314,6 +325,14 @@ namespace Zerks.Sim
             if (b == null || !b.Ready) return;
             b.Ready = false;
             b.ShownLevel = b.Level;
+            if (b.InsulateReady)
+            {
+                // levels.md, level 29: the drone measures it with the laser line and lays the new layer.
+                b.InsulateReady = false;
+                b.Insulated = true;
+                Emit(Ev.Insulated, id);
+                if (Content.Buildings.Count(d => d.Insulates && S.Get(d.Id)?.Insulated == true) >= 5) Echo(Texts.InsulationDone, "insulated5");
+            }
             Emit(Ev.Reprinted, id);
         }
 
@@ -346,6 +365,8 @@ namespace Zerks.Sim
             var b = S.Get(id);
             if (b == null || !b.Built || !IsGreenhouse(b.Id) || !IsDone("hardy_seedlings")) return false;
             b.Seedbed = on;
+            // levels.md, level 17: the first storm comes while the seedlings grow (proposal: half an hour after the first bed).
+            if (on && S.Storms == 0 && S.StormLeft <= 0 && (S.StormNext <= 0 || S.StormNext > 1800)) S.StormNext = 1800;
             return true;
         }
 
@@ -424,6 +445,19 @@ namespace Zerks.Sim
                     Emit(Ev.AntennaReady, "ark");
                     Echo("The antenna is ready. Tap \"Ready\" over the Ark: the drone unfolds the dish.", "antready");
                     break;
+                case "zone3":
+                    S.Zone = Math.Max(S.Zone, 3);
+                    Emit(Ev.ZoneOpened, "3");
+                    Echo(Texts.Zone3, "zone3");
+                    break;
+                case "lichens": Echo(Texts.Lichens, "lichens"); break;
+                case "steel_sheets": Echo(Texts.SteelSheets, "sheets"); break;
+                case "hydroseeding": Echo(Texts.Hydroseeding, "hydro"); break;
+                case "buckthorn": Echo(Texts.Buckthorn, "buckthorn"); break;
+                case "insulation": Echo(Texts.Insulation, "insulation"); break;
+                case "clean_glass": Echo(Texts.CleanGlass, "cleanglass"); break;
+                case "reactor_vessel": Echo(Texts.ReactorVessel, "vessel"); break;
+                case "bp_weather": Echo(Texts.WeatherBlueprint, "bpweather"); break;
             }
         }
 
@@ -457,26 +491,69 @@ namespace Zerks.Sim
         public bool DockOpen => S.Ark >= 12;
         public FrameStage NextFrame => Content.Frame.FirstOrDefault(f => f.Stage == S.Frame + 1);
 
-        public string WhyNotFrame()
+        public string WhyNotFrame() => S.Frame >= 4 ? "The frame is complete" : WhyNotDock();
+
+        /// <summary>The Ark's fabricator makes the parts from steel; its crane and the gantry crane set them. No drone, no builder's bonus.</summary>
+        public bool BuildFrame() => S.Frame < 4 && BuildDock();
+
+        /// <summary>The next stage in the dock: the frame (12-19), the hull (22-29), then the ship's reactor (32-39).</summary>
+        public ShipStage NextDock
+        {
+            get
+            {
+                if (S.Frame < 4)
+                {
+                    var f = NextFrame;
+                    var cost = new Bag(); cost[Res.Steel] = f.Steel;
+                    return new ShipStage { Part = "frame", Stage = f.Stage, ArkLevel = f.ArkLevel, Cost = cost, Minutes = f.Minutes, Name = $"stage {f.Stage}" };
+                }
+                if (S.Hull < 4) return Content.Hull[S.Hull];
+                if (S.Reactor < 4) return Content.ReactorStages[S.Reactor];
+                return null;
+            }
+        }
+
+        public static string PartName(string part) => part == "hull" ? "The hull" : part == "reactor" ? "The reactor" : "The frame";
+
+        public string WhyNotDock()
         {
             if (!DockOpen) return "The dock opens on level 12";
             if (S.FrameLeft > 0) return "Building";
-            var f = NextFrame;
-            if (f == null) return "The frame is complete";
-            if (S.Ark < f.ArkLevel) return $"Stage {f.Stage} on level {f.ArkLevel}";
-            if (S.Stock[Res.Steel] + 1e-6 < f.Steel) return $"Needs {Fmt.Num(f.Steel)} steel";
+            if (S.TrialReady) return "The trial run is waiting";
+            var f = NextDock;
+            if (f == null) return S.ReactorTested ? "The reactor is whole" : "The trial run is waiting";
+            if (S.Ark < f.ArkLevel) return f.Part == "frame" ? $"Stage {f.Stage} on level {f.ArkLevel}" : $"{PartName(f.Part)}: stage {f.Stage} on level {f.ArkLevel}";
+            if (f.Research != null && !IsDone(f.Research)) return $"Needs \"{Content.R(f.Research).Name}\"";
+            foreach (var (r, a) in f.Cost.NonZero()) if (S.Stock[r] + 1e-6 < a) return $"Needs {Fmt.Num(a)} {ResInfo.Name(r).ToLowerInvariant()}";
             return "";
         }
 
-        /// <summary>The Ark's fabricator makes the parts from steel; its crane and the gantry crane set them. No drone, no builder's bonus.</summary>
-        public bool BuildFrame()
+        /// <summary>The fabricator makes the next stage (frame, hull or reactor); the cranes set it. The fuel of stage 4 comes from the Ark's hold.</summary>
+        public bool BuildDock()
         {
-            if (WhyNotFrame() != "") return false;
-            var f = NextFrame;
-            S.Stock[Res.Steel] -= f.Steel;
+            if (WhyNotDock() != "") return false;
+            var f = NextDock;
+            Pay(f.Cost);
+            S.DockPart = f.Part;
             S.FrameTotal = S.FrameLeft = Math.Max(f.Minutes * 60, Cfg.MinBuildReal * Cfg.Tempo);
-            Emit(Ev.FrameStarted, f.Stage.ToString());
-            if (f.Stage == 1) Echo(Texts.FrameFirst, "frame1");
+            if (f.Part == "frame") { Emit(Ev.FrameStarted, f.Stage.ToString()); if (f.Stage == 1) Echo(Texts.FrameFirst, "frame1"); }
+            else
+            {
+                Emit(Ev.DockStarted, f.Part, f.Stage.ToString());
+                if (f.Part == "hull" && f.Stage == 1) Echo(Texts.HullFirst, "hull1");
+                if (f.Part == "reactor" && f.Stage == 4) Echo(Texts.Fuel, "fuel");
+            }
+            return true;
+        }
+
+        /// <summary>The trial run (levels.md, level 39): a few minutes on low power, the blue glow in the water; then it sleeps.</summary>
+        public bool TrialRun()
+        {
+            if (!S.TrialReady) return false;
+            S.TrialReady = false;
+            S.ReactorTested = true;
+            Emit(Ev.TrialRun, "dock");
+            Echo(Texts.TrialRun, "trial");
             return true;
         }
 
@@ -531,6 +608,25 @@ namespace Zerks.Sim
             if (req.GreenhouseFood) list.Add(new ReqItem("The first greenhouse gives food too", S.Get("greenhouse")?.Food == true));
             if (req.Builder) list.Add(new ReqItem("A builder in the Ark", S.Builder != 0));
             if (req.Frame > 0) list.Add(new ReqItem(req.Frame >= 4 ? "The frame complete" : $"The frame: stage {req.Frame}", S.Frame >= req.Frame, $"{S.Frame}/4"));
+            if (req.Hull > 0) list.Add(new ReqItem(req.Hull >= 4 ? "The hull whole" : $"The hull: stage {req.Hull}", S.Hull >= req.Hull, $"{S.Hull}/4"));
+            if (req.Reactor > 0) list.Add(new ReqItem(req.Reactor >= 4 ? "The reactor fuelled" : $"The reactor: stage {req.Reactor}", S.Reactor >= req.Reactor, $"{S.Reactor}/4"));
+            if (req.ReactorTested) list.Add(new ReqItem("The trial run", S.ReactorTested));
+            if (req.Patches > 0)
+            {
+                var n = PatchesAt(req.PatchStage);
+                var what = req.PatchStage switch { 1 => "planted", 2 => "with moss", 4 => "with grass", 5 => "with sea buckthorn", _ => Content.PatchStages[req.PatchStage].ToLowerInvariant() };
+                list.Add(new ReqItem($"Green Belt patches {what} {req.Patches}", n >= req.Patches, $"{n}"));
+            }
+            if (req.Insulated > 0)
+            {
+                var n = Content.Buildings.Count(d => d.Insulates && S.Get(d.Id)?.Insulated == true);
+                list.Add(new ReqItem($"Insulated: brick home, canteen, 3 greenhouses", n >= req.Insulated, $"{n}/{req.Insulated}"));
+            }
+            if (req.PavedArk)
+            {
+                var n = Content.ArkStreets.Count(k => S.Paved.Contains(k));
+                list.Add(new ReqItem("The streets round the Ark paved", n >= Content.ArkStreets.Length, $"{n}/{Content.ArkStreets.Length}"));
+            }
             if (req.Antenna) list.Add(new ReqItem("The antenna repaired", S.AntennaFixed));
             if (req.LabPotatoes) list.Add(new ReqItem("Vegetable lab with potatoes", S.Level("veglab") >= 5));
             if (req.MineIron) list.Add(new ReqItem("Mine digs iron ore (mine level 10)", S.Level("mine") >= 10));
@@ -558,7 +654,7 @@ namespace Zerks.Sim
         public string WhyNotArk()
         {
             if (S.ArkLeft > 0) return "Upgrading";
-            if (NextReq == null) return "Chapter 2 is complete";
+            if (NextReq == null) return "Chapter 4 is complete";
             if (InTutorial && S.Tutorial < TStep.UpgradeArk) return "Later";
             return Requirements().All(x => x.Done) ? "" : "Not everything is ready";
         }
@@ -580,7 +676,7 @@ namespace Zerks.Sim
             if (S.Ark == 5) S.ReactorCapKw = DemandKw();
             if (S.Ark >= 7) S.ReactorCapKw = 0;
             Emit(Ev.ArkLevel, S.Ark.ToString());
-            if (Texts.ArkLevelUp.TryGetValue(S.Ark, out var line) && S.Ark != 10 && S.Ark != 20) Echo(line, $"ark{S.Ark}");
+            if (Texts.ArkLevelUp.TryGetValue(S.Ark, out var line) && S.Ark != 10 && S.Ark != 20 && S.Ark != 30) Echo(line, $"ark{S.Ark}");
             if (S.Ark == 2) { S.Tutorial = TStep.Done; S.Robot.Unlocked = true; LaunchRobot(); Emit(Ev.TutorialStep, "done"); }
             if (S.Ark == 10 && !S.Sketches.Contains("frame"))
             {
@@ -602,12 +698,33 @@ namespace Zerks.Sim
                 Emit(Ev.Chapter1Done);
                 Echo(Texts.Chapter2, "ch2");
             }
-            if (S.Ark >= Content.LastLevel && !S.Chapter2Done)
+            if (S.Ark >= 21 && !S.Chapter2Done)
             {
                 S.Chapter2Done = true;
                 Emit(Ev.Chapter2Done);
                 Echo(Texts.Chapter3, "ch3");
             }
+            if (S.Ark == 30 && !S.Sketches.Contains("reactor"))
+            {
+                S.Sketches.Add("reactor");
+                Emit(Ev.Sketch, "reactor");
+                Echo(Texts.ReactorSketch, "sketch3");
+            }
+            if (S.Ark >= 31 && !S.Chapter3Done)
+            {
+                S.Chapter3Done = true;
+                Emit(Ev.Chapter3Done);
+                Echo(Texts.Chapter4, "ch4");
+            }
+            if (S.Ark >= Content.LastLevel && !S.Chapter4Done)
+            {
+                S.Chapter4Done = true;
+                Emit(Ev.Chapter4Done);
+                Echo(Texts.Chapter4Done, "ch4done");
+            }
+            // levels.md, level 17: the first dust storm comes unexpectedly during the level (proposal: three hours in,
+            // or half an hour after the first seedling bed).
+            if (S.Ark >= 17 && S.Storms == 0 && S.StormNext <= 0 && S.StormLeft <= 0) S.StormNext = 3 * 3600;
             if (Texts.LevelHint.TryGetValue(S.Ark, out var hint)) Echo(hint, $"hint{S.Ark}");
         }
 
@@ -645,8 +762,8 @@ namespace Zerks.Sim
                 var n = Content.Slots(b.Id, b.Level, S.ResearchUpgraded);
                 SyncSlots(b, n);
                 for (int i = 0; i < n; i++)
-                    if (b.Workers[i] == 0 && (only == Profession.None || def.Worker == only))
-                        list.Add(new SlotRef { Building = b.Id, Slot = i, Profession = def.Worker });
+                    if (b.Workers[i] == 0 && (only == Profession.None || def.WorkerAt(i) == only))
+                        list.Add(new SlotRef { Building = b.Id, Slot = i, Profession = def.WorkerAt(i) });
             }
             // The builder's console in the Ark (levels.md, level 13): only a builder works there.
             if (IsDone("builder_console") && S.Builder == 0 && (only == Profession.None || only == Profession.Builder))
@@ -660,6 +777,8 @@ namespace Zerks.Sim
         {
             "kitchen", "canteen", "drill", "pump", "veglab", "mine", "furnace", "greenhouse", "research", "processor", "solar",
             "greenhouse2", "smelter", "ark", "claypit", "kiln", "greenhouse3", "copperworks",
+            "smelter2", "treatment", "fieldstation", "nursery", "woolworks", "slagmill", "glassworks", "university", "park", "dispatch",
+            "greenhouse4", "medpost", "roaddepot", "weather", "seedvault",
         };
 
         static int Priority(string id) => Array.IndexOf(PriorityOrder, id) is int i && i >= 0 ? i : 99;
@@ -706,11 +825,11 @@ namespace Zerks.Sim
         }
 
         /// <summary>Who the Ark would wake for a place (the first four are fixed; then the place decides the profession).</summary>
-        public Texts.Person WhoFor(string building)
+        public Texts.Person WhoFor(string building, int slot = 0)
         {
             var fixedP = NextFixedPerson;
             if (fixedP != null) return fixedP;
-            var prof = building == "ark" ? Profession.Builder : Content.B(building).Worker;
+            var prof = building == "ark" ? Profession.Builder : Content.B(building).WorkerAt(slot);
             return Texts.Pool.TryGetValue(prof, out var pool) ? pool.FirstOrDefault(p => !S.UsedNames.Contains(p.Name)) ?? Texts.Anyone(prof, S.NextColonistId)
                 : Texts.Anyone(prof, S.NextColonistId);
         }
@@ -719,7 +838,7 @@ namespace Zerks.Sim
         public ColonistState Wake(string building, int slot)
         {
             if (WhyNotWake() != "") return null;
-            var who = WhoFor(building);
+            var who = WhoFor(building, slot);
             if (NextFixedPerson != null && who.Profession == Profession.Cook) { building = "kitchen"; slot = 0; }
             ColonistState c;
             if (building == "ark")
@@ -732,7 +851,7 @@ namespace Zerks.Sim
             {
                 var b = S.Get(building);
                 if (b == null || !b.Built) return null;
-                if (Content.B(building).Worker != who.Profession) return null;
+                if (Content.B(building).WorkerAt(slot) != who.Profession) return null;
                 SyncSlots(b, Content.Slots(building, b.Level, S.ResearchUpgraded));
                 if (slot < 0 || slot >= b.Workers.Count || b.Workers[slot] != 0) return null;
                 c = NewColonist(who, building, slot);
@@ -787,6 +906,542 @@ namespace Zerks.Sim
         }
 
         // =====================================================================
+        // Chapter 3: the Green Belt (levels.md, levels 21-27)
+        // =====================================================================
+
+        /// <summary>Patches on at least this stage (1 lichen, 2 moss, 3 thin soil, 4 grass, 5 sea buckthorn).</summary>
+        public int PatchesAt(int stage) => S.Patches.Count(p => p.Stage >= stage);
+
+        /// <summary>What a patch costs for its next step (proposal): lichens with seedlings, grass with seeds, buckthorn with saplings.</summary>
+        public static Bag PatchCost(int stage)
+        {
+            var b = new Bag();
+            if (stage == 0) { b[Res.Seedlings] = 50; b[Res.Water] = 200; b[Res.Stone] = 100; }   // levels.md: 50 seedlings, water and a little stone
+            else if (stage == 3) { b[Res.Seedlings] = 20; b[Res.Water] = 100; }                     // hydroseeding: seeds, water and mulch
+            else if (stage == 4) { b[Res.Saplings] = 20; b[Res.Water] = 100; }                      // levels.md: 20 saplings and water a patch
+            return b;
+        }
+
+        /// <summary>The next step of a patch, as the button says it ("" when there is none now).</summary>
+        public string PatchAction(PatchState p) => p.Stage switch
+        {
+            0 => "Plant lichens",
+            3 => "Sow grass",
+            4 => "Plant sea buckthorn",
+            _ => "",
+        };
+
+        public string WhyNotPatch(string id)
+        {
+            var p = S.Patch(id);
+            if (p == null) return "No such patch";
+            if (S.Zone < 3) return "Closed: research Zone III expansion";
+            if (p.WorkLeft > 0) return p.WorkTo == 5 ? "The agronomist is planting it" : "The drone is sowing it";
+            switch (p.Stage)
+            {
+                case 0: if (!IsDone("lichens")) return "Research \"Lichens\""; break;
+                case 1: return "Lichens grow on the rock";
+                case 2: return "The moss is making soil";
+                case 3: if (!IsDone("hydroseeding")) return S.Ark < 25 ? "Thin soil: grass at 35% (level 25)" : "Research \"Hydroseeding\""; break;
+                case 4:
+                    if (!IsDone("buckthorn")) return S.Ark < 26 ? "Grass. Shrubs on level 26" : "Research \"Sea buckthorn\"";
+                    if (!S.Has("nursery")) return "Build the nursery";
+                    if (!Staffed(S.Get("nursery"))) return "The nursery needs its agronomist";
+                    break;
+                default: return "Sea buckthorn";
+            }
+            // one patch at a time for the drone, and one for the agronomist (proposal)
+            var byDrone = p.Stage != 4;
+            if (S.Patches.Any(x => x.WorkLeft > 0 && (x.WorkTo == 5) != byDrone)) return byDrone ? "The drone is sowing another patch" : "The agronomist is planting another patch";
+            if (!CanAfford(PatchCost(p.Stage))) return "Not enough resources";
+            return "";
+        }
+
+        /// <summary>
+        /// Tap on a patch: the drone sprays the seedlings and the lichens with water and fine stone dust, or sows the grass; the
+        /// nursery's agronomist plants the buckthorn by hand, in strips across the slope (levels.md 21, 25, 26).
+        /// </summary>
+        public bool WorkPatch(string id)
+        {
+            if (WhyNotPatch(id) != "") return false;
+            var p = S.Patch(id);
+            Pay(PatchCost(p.Stage));
+            p.WorkTo = p.Stage == 0 ? 1 : p.Stage == 3 ? 4 : 5;
+            // proposal: 10 min of sowing; half an hour of planting a patch (levels.md says "about an hour, for example": at an
+            // hour the six patches alone would take six hours, longer than the whole level 26)
+            var sec = Math.Max((p.WorkTo == 5 ? 30 : 10) * 60, Cfg.MinUpgradeReal * Cfg.Tempo);
+            p.WorkLeft = p.WorkTotal = sec;
+            Emit(Ev.PatchWork, id, p.WorkTo.ToString());
+            return true;
+        }
+
+        /// <summary>Game minutes a patch needs to grow out of its stage: lichen → moss, moss → soil, grass, buckthorn (balance 0.2).</summary>
+        public double PatchGrowMinutes(int stage) => stage switch
+        {
+            1 => Bal.PatchStageMin[0],
+            2 => Bal.PatchStageMin[1],
+            4 => Bal.PatchStageMin[2],
+            5 => Bal.PatchStageMin[3],
+            _ => 0,
+        };
+
+        /// <summary>Grass that has grown gives seeds; buckthorn that has grown gives berries.</summary>
+        public bool Grown(PatchState p) => (p.Stage == 4 || p.Stage == 5) && p.Grow >= PatchGrowMinutes(p.Stage);
+
+        /// <summary>How fast the patches grow now: the treatment plant's water twice as fast, the slag mill's fertiliser half as fast again, a storm stops them.</summary>
+        public double PatchSpeed
+        {
+            get
+            {
+                if (S.StormLeft > 0) return 0;
+                double k = 1;
+                var t = S.Get("treatment");
+                if (t != null && t.Working && Staffed(t)) k *= 2;
+                var m = S.Get("slagmill");
+                if (m != null && m.Working && m.Workers.Count > 1 && m.Workers[1] != 0) k *= 1.5;
+                return k;
+            }
+        }
+
+        void Patches(double dt)
+        {
+            if (S.Zone < 3) return;
+            var min = dt / 60;
+            foreach (var p in S.Patches)
+            {
+                if (p.WorkLeft > 0)
+                {
+                    // the buckthorn waits while the nursery has no agronomist; the drone sows between its prints
+                    if (p.WorkTo == 5 && !(S.Get("nursery") is BuildingState n && n.Working && Staffed(n))) continue;
+                    p.WorkLeft -= dt;
+                    if (p.WorkLeft <= 0)
+                    {
+                        p.WorkLeft = 0; p.WorkTotal = 0;
+                        p.Stage = p.WorkTo; p.Grow = 0;
+                        Emit(Ev.PatchGrew, p.Id, p.Stage.ToString());
+                        if (p.Stage == 1) Echo(Texts.FirstLichen, "lichen1");
+                        if (p.Stage == 4) Echo(Texts.FirstGrass, "grass1");
+                        if (p.Stage == 5) Echo(Texts.FirstBuckthorn, "buck1");
+                    }
+                    continue;
+                }
+                if (p.Stage == 0 || p.Stage == 3) continue;
+                var need = PatchGrowMinutes(p.Stage);
+                p.Grow += min * PatchSpeed;
+                if ((p.Stage == 1 || p.Stage == 2) && p.Grow >= need)
+                {
+                    p.Stage++; p.Grow = 0;
+                    Emit(Ev.PatchGrew, p.Id, p.Stage.ToString());
+                    if (p.Stage == 2) Echo(Texts.FirstMoss, "moss1");
+                    if (p.Stage == 3) Echo(Texts.ThinSoil, "soil1");
+                }
+            }
+        }
+
+        // =====================================================================
+        // The insulation (levels.md, level 29)
+        // =====================================================================
+
+        public static Bag InsulationCost() { var b = new Bag(); b[Res.Wool] = 100; return b; }
+
+        public string WhyNotInsulate(string id)
+        {
+            var def = Content.Find(id);
+            var b = S.Get(id);
+            if (def == null || !def.Insulates) return "No insulation for it";
+            if (b == null || !b.Built) return "Not built";
+            if (!IsDone("insulation")) return S.Ark < 29 ? "Level 29" : "Research \"Insulation\"";
+            if (b.Insulated) return "Insulated";
+            if (b.InsulateLeft > 0 || b.InsulateReady) return "Insulating";
+            if (!CanAfford(InsulationCost())) return "Needs 100 rock wool";
+            return "";
+        }
+
+        /// <summary>The special upgrade: once, apart from the levels; the timer runs, then "Ready" and the drone lays the layer.</summary>
+        public bool Insulate(string id)
+        {
+            if (WhyNotInsulate(id) != "") return false;
+            var b = S.Get(id);
+            Pay(InsulationCost());
+            b.InsulateLeft = b.InsulateTotal = Math.Max(60 * 60 * (1 - BuilderCut), Cfg.MinUpgradeReal * Cfg.Tempo);
+            Emit(Ev.UpgradeStarted, id, "insulation");
+            return true;
+        }
+
+        // =====================================================================
+        // Dust storms (levels.md, general rule 13; the weather station of level 37)
+        // =====================================================================
+
+        public bool StormNow => S.StormLeft > 0;
+
+        /// <summary>How long before a storm ECHO knows of it: from the antenna an hour; the weather station 1 to 3 hours by its level (proposal).</summary>
+        public double WarnSeconds
+        {
+            get
+            {
+                var w = S.Get("weather");
+                if (w != null && w.Working && Staffed(w)) return 3600 * (1 + 2 * Math.Min(1, (w.Level - 1) / 9.0));
+                return S.AntennaFixed ? 3600 : 0;
+            }
+        }
+
+        public bool WeatherStaffed => S.Get("weather") is BuildingState w && w.Working && Staffed(w);
+
+        public string WhyNotPrepare()
+        {
+            if (!S.Has("weather")) return "Build the weather station";
+            if (!WeatherStaffed) return "The weather station needs its scientist";
+            if (S.StormLeft > 0) return "The storm is here";
+            if (!S.StormWarned) return "No storm in sight";
+            if (S.Prepared) return "The colony is ready";
+            return "";
+        }
+
+        /// <summary>
+        /// "Prepare the colony" (levels.md, level 37): the panels turn their edge to the wind, the greenhouses lower their
+        /// covers, the robot comes home and the batteries fill to the top.
+        /// </summary>
+        public bool Prepare()
+        {
+            if (WhyNotPrepare() != "") return false;
+            S.Prepared = true;
+            S.Battery = BatteryCapacity;
+            if (S.Robot.Unlocked && !S.Robot.Back) S.Robot.Left = Math.Min(S.Robot.Left, 60);
+            Emit(Ev.Prepared);
+            Echo(Texts.Prepared, $"prepared{S.Storms}");
+            return true;
+        }
+
+        void Storms(double dt, bool playing)
+        {
+            if (S.Ark < 17) return;
+            if (S.StormLeft > 0)
+            {
+                S.StormLeft -= dt;
+                if (S.StormLeft <= 0) StormEnds();
+                return;
+            }
+            if (S.StormNext <= 0) return;
+            S.StormNext -= dt;
+            var warn = WarnSeconds;
+            if (!S.StormWarned && warn > 0 && S.StormNext <= warn)
+            {
+                S.StormWarned = true;
+                Emit(Ev.StormWarn);
+                Echo(WeatherStaffed ? Texts.StormForecast(S.StormNext / 60, Strength) : Texts.StormWarning, $"warn{S.Storms}");
+            }
+            if (S.StormNext <= 0) StormStarts(playing);
+        }
+
+        /// <summary>The next storm's strength, for the forecast (proposal: storms grow stronger in chapter 4).</summary>
+        string Strength => S.Ark >= 31 ? "strong" : "moderate";
+
+        void StormStarts(bool playing)
+        {
+            S.StormNext = 0;
+            S.StormTotal = S.StormLeft = (2 + rng.NextDouble() * 2) * 3600; // two to four hours (proposal)
+            S.Storms++;
+            // while you are away the weather station's scientist fills only the batteries (Joro, 25.11.2026: A)
+            if (!playing && !S.Prepared && WeatherStaffed) S.Battery = BatteryCapacity;
+            Emit(Ev.StormStart);
+            Echo(S.Storms == 1 ? Texts.FirstStorm : Texts.Storm, $"storm{S.Storms}");
+        }
+
+        void StormEnds()
+        {
+            S.StormLeft = 0; S.StormTotal = 0;
+            S.PanelsDust = S.Prepared ? 0.15 : 0.6;
+            S.Rocks += 4;
+            if (S.Has("park")) Care("park");
+            if (S.Has("medpost")) { Care("medpost"); S.Coughing = Math.Max(S.Coughing, Math.Max(2, Awake / 8)); S.CoughLeft = 6 * 3600; }
+            if (S.Paved.Count > 0) { S.StreetsDust = 1; if (S.Has("roaddepot")) Care("roaddepot"); }
+            S.Prepared = false;
+            S.StormWarned = false;
+            S.StormNext = (10 + rng.NextDouble() * 6) * 3600; // the next in 10 to 16 hours (proposal)
+            Emit(Ev.StormEnd);
+            Echo(S.Storms == 1 ? Texts.FirstStormEnd : Texts.StormEnd, $"stormend{S.Storms}");
+        }
+
+        void Care(string id)
+        {
+            if (S.Care.Contains(id)) return;
+            S.Care.Add(id);
+            Emit(Ev.CareSign, id);
+        }
+
+        /// <summary>The sign over a building for happiness: the text ECHO says over it.</summary>
+        public string CareText(string id) => id switch
+        {
+            "park" => "The dome is dusty",
+            "medpost" => $"{Math.Max(1, S.Coughing)} cough after the storm",
+            "roaddepot" => "The streets are dusty",
+            _ => "Needs care",
+        };
+
+        public string WhyNotTend(string id)
+        {
+            if (!S.Care.Contains(id)) return "Nothing to do";
+            var b = S.Get(id);
+            if (b == null || !b.Working) return "Not built";
+            if (id == "roaddepot" ? b.Workers.Count < 2 || b.Workers[1] == 0 : !Staffed(b)) return "Nobody works there";
+            return "";
+        }
+
+        /// <summary>Tap on the sign: the gardener, the doctor or the technician sees to it at once.</summary>
+        public bool Tend(string id)
+        {
+            if (WhyNotTend(id) != "") return false;
+            S.Care.Remove(id);
+            if (id == "medpost") { S.Coughing = 0; S.CoughLeft = 0; }
+            if (id == "roaddepot") S.StreetsDust = 0;
+            Emit(Ev.CareDone, id);
+            return true;
+        }
+
+        /// <summary>Tap on the stones the storm threw up: stone into the store (proposal: a quarter of an hour of the mine each).</summary>
+        public double CollectRocks()
+        {
+            if (S.Rocks <= 0) return 0;
+            var amount = Math.Round(Math.Max(20, RatePerMin[Res.Stone] * 15));
+            S.Rocks--;
+            Gain(Res.Stone, amount);
+            Emit(Ev.Rocks, null, Fmt.Num(amount));
+            return amount;
+        }
+
+        void AfterStorms(double dt)
+        {
+            // the worker of the panels cleans them in about an hour; without one the wind does it slowly
+            if (S.PanelsDust > 0)
+            {
+                var solar = S.Get("solar");
+                var rate = solar != null && Staffed(solar) ? 1.0 / 3600 : 1.0 / (6 * 3600);
+                S.PanelsDust = Math.Max(0, S.PanelsDust - rate * dt);
+            }
+            // the coughing get better on their own, slowly; the technician sweeps the streets on his round
+            if (S.CoughLeft > 0)
+            {
+                S.CoughLeft -= dt;
+                if (S.CoughLeft <= 0) { S.Coughing = 0; S.CoughLeft = 0; S.Care.Remove("medpost"); }
+            }
+            if (S.StreetsDust > 0)
+            {
+                var depot = S.Get("roaddepot");
+                var tech = depot != null && depot.Working && depot.Workers.Count > 1 && depot.Workers[1] != 0;
+                S.StreetsDust = Math.Max(0, S.StreetsDust - dt / ((tech ? 4 : 12) * 3600));
+                if (S.StreetsDust <= 0) S.Care.Remove("roaddepot");
+            }
+        }
+
+        // =====================================================================
+        // The university (levels.md, level 31)
+        // =====================================================================
+
+        public ColonistState Teacher => S.Get("university") is BuildingState u && u.Working && u.Workers.Count > 0 && u.Workers[0] != 0 ? S.Colonist(u.Workers[0]) : null;
+
+        /// <summary>Game seconds a pair learns: about six hours, the teacher's stars cut it by 10% to 20% (proposal).</summary>
+        public double StudySeconds
+        {
+            get
+            {
+                var t = Teacher;
+                var cut = t == null ? 0 : Stars(t) <= 1 ? 0.10 : 0.10 + 0.025 * (Stars(t) - 1);
+                return Math.Max(6 * 3600 * (1 - cut), Cfg.MinUpgradeReal * Cfg.Tempo);
+            }
+        }
+
+        public string WhyNotStudy(int a, int b)
+        {
+            if (!S.Has("university")) return "Build the university";
+            if (Teacher == null) return "The university needs its teacher";
+            if (S.Study != null) return "A pair is learning";
+            var ca = S.Colonist(a); var cb = S.Colonist(b);
+            if (ca == null || cb == null || a == b) return "Choose two";
+            if (ca.Profession == cb.Profession) return "They have the same work";
+            if (Teacher.Id == a || Teacher.Id == b) return "Not the teacher";
+            if (string.IsNullOrEmpty(ca.Work) || string.IsNullOrEmpty(cb.Work)) return "Both must work";
+            return "";
+        }
+
+        /// <summary>Two colonists learn each other's work in the evenings, without stopping work.</summary>
+        public bool Study(int a, int b)
+        {
+            if (WhyNotStudy(a, b) != "") return false;
+            var sec = StudySeconds;
+            S.Study = new StudyState { A = a, B = b, Left = sec, Total = sec };
+            Echo(Texts.StudyStarts, $"study{S.Swaps}");
+            return true;
+        }
+
+        /// <summary>The colonists ECHO suggests for a pair: the most bored ones of two different professions (levels.md, level 31).</summary>
+        public (int a, int b) SuggestPair()
+        {
+            var t = Teacher;
+            var list = S.Colonists.Where(c => !string.IsNullOrEmpty(c.Work) && (t == null || c.Id != t.Id)).OrderByDescending(c => c.JobMinutes).ToList();
+            foreach (var x in list)
+                foreach (var y in list)
+                    if (x.Id != y.Id && x.Profession != y.Profession) return (x.Id, y.Id);
+            return (0, 0);
+        }
+
+        void SaveSkill(ColonistState c)
+        {
+            var i = c.SkillProf.IndexOf((int)c.Profession);
+            if (i < 0) { c.SkillProf.Add((int)c.Profession); c.SkillMinutes.Add(c.WorkMinutes); }
+            else c.SkillMinutes[i] = c.WorkMinutes;
+        }
+
+        double SkillOf(ColonistState c, Profession p)
+        {
+            var i = c.SkillProf.IndexOf((int)p);
+            return i >= 0 ? c.SkillMinutes[i] : 360; // two stars on the new work (proposal)
+        }
+
+        /// <summary>"Swap": the two take each other's places; each starts the new work with two stars, or the old ones back.</summary>
+        public bool Swap()
+        {
+            var st = S.Study;
+            if (st == null || !st.Ready) return false;
+            var a = S.Colonist(st.A); var b = S.Colonist(st.B);
+            if (a == null || b == null || string.IsNullOrEmpty(a.Work) || string.IsNullOrEmpty(b.Work)) { S.Study = null; return false; }
+            SaveSkill(a); SaveSkill(b);
+            (a.Work, b.Work) = (b.Work, a.Work);
+            (a.Slot, b.Slot) = (b.Slot, a.Slot);
+            (a.Profession, b.Profession) = (b.Profession, a.Profession);
+            void Place(ColonistState c)
+            {
+                if (c.Work == "ark") S.Builder = c.Id;
+                else if (S.Get(c.Work) is BuildingState w && c.Slot < w.Workers.Count) w.Workers[c.Slot] = c.Id;
+            }
+            Place(a); Place(b);
+            a.WorkMinutes = SkillOf(a, a.Profession); b.WorkMinutes = SkillOf(b, b.Profession);
+            a.JobMinutes = 0; b.JobMinutes = 0;
+            S.Study = null;
+            S.Swaps++;
+            Emit(Ev.Swapped, $"{a.Id},{b.Id}");
+            Echo(S.Swaps == 1 ? string.Format(Texts.FirstSwap, a.Name, Content.PlaceName(a.Work), b.Name, Content.PlaceName(b.Work)) : Texts.Swap, $"swap{S.Swaps}");
+            return true;
+        }
+
+        /// <summary>After five stars, a long time on the same job gets boring: happiness falls slowly (levels.md, proposal: 50 game hours).</summary>
+        public bool Bored(ColonistState c) => Stars(c) >= 5 && c.JobMinutes > 50 * 60;
+
+        // =====================================================================
+        // The dispatch (levels.md, level 33)
+        // =====================================================================
+
+        /// <summary>Buildings the dispatch manages at its level: 2 on 1, one more a level and one more on every fifth (7 on 5, 25 on 20).</summary>
+        public static int DispatchSlots(int level) => level <= 0 ? 0 : level + 1 + level / 5;
+
+        public ColonistState Dispatcher => S.Get("dispatch") is BuildingState d && d.Working && d.Workers.Count > 0 && d.Workers[0] != 0 ? S.Colonist(d.Workers[0]) : null;
+
+        /// <summary>A managed building gives +10%; the dispatcher's stars raise it to +15% at five (proposal).</summary>
+        public double DispatchBonus(string id)
+        {
+            if (!S.Managed.Contains(id)) return 0;
+            var d = Dispatcher;
+            return d == null ? 0 : 0.10 + 0.01 * Stars(d);
+        }
+
+        public string WhyNotManage(string id)
+        {
+            var def = Content.Find(id);
+            if (!S.Has("dispatch")) return "Build the dispatch";
+            if (def == null || !def.HasWorkplace || !S.Has(id)) return "Only buildings with a worker";
+            if (S.Managed.Contains(id)) return "";
+            if (S.Managed.Count >= DispatchSlots(S.Level("dispatch"))) return "All places taken";
+            return "";
+        }
+
+        /// <summary>Choose a building for the dispatch, or take it off; the bonus moves at any time.</summary>
+        public bool SetManaged(string id, bool on)
+        {
+            if (!on) return S.Managed.Remove(id);
+            if (S.Managed.Contains(id)) return true;
+            if (WhyNotManage(id) != "") return false;
+            S.Managed.Add(id);
+            return true;
+        }
+
+        // =====================================================================
+        // The roads (levels.md, level 36)
+        // =====================================================================
+
+        /// <summary>The street blocks that can be paved: round the Ark first, then the block of every building that stands.</summary>
+        public List<string> StreetBlocks()
+        {
+            var list = new List<string>(Content.ArkStreets);
+            foreach (var def in Content.Buildings)
+                if (S.Has(def.Id) && def.Zone <= S.Zone) list.Add($"{def.D},{def.S}");
+            return list;
+        }
+
+        public static Bag PaveCost() { var b = new Bag(); b[Res.Stone] = 3000; return b; }
+
+        public string StreetName(string key)
+        {
+            if (Content.ArkStreets.Contains(key)) return "Round the Ark";
+            var def = Content.Buildings.FirstOrDefault(d => $"{d.D},{d.S}" == key);
+            return def != null ? $"By the {def.Name}" : key;
+        }
+
+        public bool RoadBuilder => S.Get("roaddepot") is BuildingState r && r.Working && r.Workers.Count > 0 && r.Workers[0] != 0;
+
+        public string WhyNotPave(string key)
+        {
+            if (!S.Has("roaddepot")) return "Build the road depot";
+            if (S.Paved.Contains(key)) return "Paved";
+            if (S.PaveQueue.Contains(key)) return "In the list";
+            if (!CanAfford(PaveCost())) return "Needs 3,000 stone";
+            return "";
+        }
+
+        /// <summary>"Pave": the street goes on the list; the road builder paves them one by one, also while you are away.</summary>
+        public bool Pave(string key)
+        {
+            if (WhyNotPave(key) != "") return false;
+            Pay(PaveCost());
+            S.PaveQueue.Add(key);
+            return true;
+        }
+
+        double PaveSeconds()
+        {
+            var b = S.Get("roaddepot");
+            var c = b != null && b.Workers.Count > 0 && b.Workers[0] != 0 ? S.Colonist(b.Workers[0]) : null;
+            var cut = c == null ? 0 : Stars(c) <= 1 ? 0.10 : 0.10 + 0.025 * (Stars(c) - 1);
+            return Math.Max(45 * 60 * (1 - cut), Cfg.MinBuildReal * Cfg.Tempo); // proposal: three quarters of an hour a street
+        }
+
+        void Roads(double dt)
+        {
+            if (S.PaveQueue.Count == 0 || !RoadBuilder) return;
+            if (S.PaveTotal <= 0) S.PaveLeft = S.PaveTotal = PaveSeconds();
+            S.PaveLeft -= dt;
+            if (S.PaveLeft > 0) return;
+            var key = S.PaveQueue[0];
+            S.PaveQueue.RemoveAt(0);
+            if (!S.Paved.Contains(key)) S.Paved.Add(key);
+            S.PaveLeft = S.PaveTotal = 0;
+            Emit(Ev.Paved, key);
+            if (S.Paved.Count == 1) Echo(Texts.FirstPaved, "paved1");
+            if (Content.ArkStreets.All(k => S.Paved.Contains(k))) Echo(Texts.PlazaPaved, "plaza");
+        }
+
+        // =====================================================================
+        // The seed vault (levels.md, level 38)
+        // =====================================================================
+
+        /// <summary>What the vault's agronomist grows now: grain for the fields or seeds for the forests (proposal).</summary>
+        public bool SetVaultMode(string mode)
+        {
+            var b = S.Get("seedvault");
+            if (b == null || !b.Built || (mode != "grain" && mode != "trees")) return false;
+            b.Mode = mode;
+            return true;
+        }
+
+        // =====================================================================
         // Bubbles, debris, robot, impulse
         // =====================================================================
 
@@ -834,7 +1489,7 @@ namespace Zerks.Sim
         /// <summary>With the antenna and a target on the map the robot goes farther: longer trips, more cargo (proposal).</summary>
         bool RobotFar => S.AntennaFixed && S.RobotTarget != "";
 
-        double RobotTripSeconds => 30 * 60 * (IsDone("fast_robot") ? 0.7 : 1) * (RobotFar ? 1.3 : 1);
+        double RobotTripSeconds => 30 * 60 * (IsDone("fast_robot") ? 0.7 : 1) * (RobotFar ? 1.3 : 1) * (Content.ArkStreets.All(k => S.Paved.Contains(k)) ? 0.95 : 1);
 
         void LaunchRobot()
         {
@@ -988,7 +1643,7 @@ namespace Zerks.Sim
             var goals = new List<string>();
             if (InTutorial) { if (TutorialLine != null) goals.Add(TutorialLine); return goals; }
             var req = NextReq;
-            if (req == null) { goals.Add("Chapter 2 is complete."); return goals; }
+            if (req == null) { goals.Add("Chapter 4 is complete. Level 40 is coming."); return goals; }
             // 1. A new building or its blueprint.
             foreach (var def in Content.Buildings)
             {
@@ -1002,6 +1657,17 @@ namespace Zerks.Sim
             if (!req.ForEveryone && req.Colonists > Awake) goals.Add($"Wake colonist {req.Colonists}");
             if (req.ForEveryone && WhyNotWake() == "") goals.Add("A pod is glowing: wake the next colonist");
             if (req.Frame > S.Frame && WhyNotFrame() == "") goals.Add($"Build stage {S.Frame + 1} of the frame in the dock");
+            if ((req.Hull > S.Hull || req.Reactor > S.Reactor) && WhyNotDock() == "" && NextDock != null) goals.Add($"{PartName(NextDock.Part)}: build stage {NextDock.Stage} in the dock");
+            if (S.TrialReady) goals.Add("Tap the dock: the reactor's trial run");
+            if (req.Patches > 0 && PatchesAt(req.PatchStage) < req.Patches)
+            {
+                var p = S.Patches.FirstOrDefault(x => WhyNotPatch(x.Id) == "");
+                if (p != null) goals.Add($"Green Belt: {PatchAction(p).ToLowerInvariant()}");
+            }
+            if (req.Insulated > 0) { var d = Content.Buildings.FirstOrDefault(x => WhyNotInsulate(x.Id) == ""); if (d != null) goals.Add($"Insulate the {d.Name}"); }
+            if (req.PavedArk && Content.ArkStreets.Any(k => !S.Paved.Contains(k) && !S.PaveQueue.Contains(k))) goals.Add("Road depot: pave the streets round the Ark");
+            if (S.Study != null && S.Study.Ready) goals.Add("University: swap the pair");
+            foreach (var id in S.Care) if (WhyNotTend(id) == "") { goals.Add($"{Content.B(id).Name}: {CareText(id).ToLowerInvariant()}"); break; }
             if (S.AntennaReady) goals.Add("Tap \"Ready\" over the Ark: the antenna");
             var low = Content.Buildings.Where(d => S.Has(d.Id) && Content.RequiredLevel(req, d.Id) > S.Level(d.Id)).ToList();
             if (low.Count > 0)
@@ -1069,7 +1735,11 @@ namespace Zerks.Sim
             S.GameTime += dt;
             if (S.ImpulseCooldown > 0) S.ImpulseCooldown = Math.Max(0, S.ImpulseCooldown - dt);
             DayNight(dt);
-            Timers(dt);
+            Storms(dt, playing);
+            Timers(dt, workersOn);
+            Patches(dt);
+            if (workersOn) Roads(dt);
+            AfterStorms(dt);
             Produce(dt, playing, workersOn);
             People(dt, workersOn);
             if (playing) TutorialCheck();
@@ -1096,7 +1766,7 @@ namespace Zerks.Sim
             }
         }
 
-        void Timers(double dt)
+        void Timers(double dt, bool workersOn = true)
         {
             foreach (var b in S.Buildings.ToList())
             {
@@ -1113,6 +1783,11 @@ namespace Zerks.Sim
                     }
                 }
                 if (b.ImpulseLeft > 0) b.ImpulseLeft = Math.Max(0, b.ImpulseLeft - dt);
+                if (b.InsulateLeft > 0)
+                {
+                    b.InsulateLeft -= dt;
+                    if (b.InsulateLeft <= 0) { b.InsulateLeft = 0; b.InsulateTotal = 0; b.InsulateReady = true; b.Ready = true; Emit(Ev.Ready, b.Id); }
+                }
                 if (b.SwitchLeft > 0)
                 {
                     b.SwitchLeft -= dt;
@@ -1151,10 +1826,33 @@ namespace Zerks.Sim
                 if (S.FrameLeft <= 0)
                 {
                     S.FrameLeft = 0; S.FrameTotal = 0;
-                    S.Frame++;
-                    Emit(Ev.FrameDone, S.Frame.ToString());
-                    Echo(S.Frame >= 4 ? Texts.FrameDone : $"Stage {S.Frame} of the frame stands in the dock.", $"framedone{S.Frame}");
+                    var part = string.IsNullOrEmpty(S.DockPart) ? "frame" : S.DockPart;
+                    S.DockPart = "";
+                    if (part == "hull")
+                    {
+                        S.Hull++;
+                        Emit(Ev.DockDone, "hull", S.Hull.ToString());
+                        Echo(S.Hull >= 4 ? Texts.HullDone : $"Stage {S.Hull} of the hull is welded on.", $"hulldone{S.Hull}");
+                    }
+                    else if (part == "reactor")
+                    {
+                        S.Reactor++;
+                        Emit(Ev.DockDone, "reactor", S.Reactor.ToString());
+                        if (S.Reactor >= 4) { S.TrialReady = true; Emit(Ev.TrialReady, "dock"); Echo(Texts.FuelIn, "fuelin"); }
+                        else Echo(Texts.ReactorStage(S.Reactor), $"reactordone{S.Reactor}");
+                    }
+                    else
+                    {
+                        S.Frame++;
+                        Emit(Ev.FrameDone, S.Frame.ToString());
+                        Echo(S.Frame >= 4 ? Texts.FrameDone : $"Stage {S.Frame} of the frame stands in the dock.", $"framedone{S.Frame}");
+                    }
                 }
+            }
+            if (S.Study != null && !S.Study.Ready && workersOn && Teacher != null)
+            {
+                S.Study.Left -= dt;
+                if (S.Study.Left <= 0) { S.Study.Left = 0; S.Study.Ready = true; Emit(Ev.Ready, "university"); Echo(Texts.StudyDone, $"studydone{S.Swaps}"); }
             }
             if (S.Robot.Unlocked && !S.Robot.Back)
             {
@@ -1182,6 +1880,24 @@ namespace Zerks.Sim
                 case "copperworks": Echo("Our own cables, from our own copper.", "copperworks"); break;
                 case "brickhome": Echo("Red walls, warm walls. The first home of our own bricks.", "brickhome"); break;
                 case "canteen": Echo("A second place to eat. The colonists from the twenty-first on eat here.", "canteen"); break;
+                case "smelter2": Echo(Texts.Smelter2, "smelter2"); break;
+                case "treatment": Echo(Texts.Treatment, "treatment"); break;
+                case "fieldstation": Echo(Texts.FieldStation, "fieldstation"); break;
+                case "nursery": Echo(Texts.Nursery, "nursery"); break;
+                case "woolworks": Echo(Texts.WoolWorks, "woolworks"); break;
+                case "slagmill": Echo(Texts.SlagMill, "slagmill"); break;
+                case "glassworks": Echo(Texts.Glassworks, "glassworks"); break;
+                case "university": Echo(Texts.University, "university"); break;
+                case "park": Echo(Texts.Park, "park"); break;
+                case "dispatch": Echo(Texts.Dispatch, "dispatch"); break;
+                case "greenhouse4": Echo(Texts.Greenhouse4, "greenhouse4"); break;
+                case "medpost": Echo(Texts.MedPost, "medpost"); break;
+                case "roaddepot": Echo(Texts.RoadDepot, "roaddepot"); break;
+                case "weather": Echo(Texts.Weather, "weather"); break;
+                case "seedvault":
+                    S.Get("seedvault").Mode = "grain";
+                    Echo(Texts.SeedVault, "seedvault");
+                    break;
             }
         }
 
@@ -1204,6 +1920,8 @@ namespace Zerks.Sim
         {
             var kw = Row(b.Id, b.Level).EnergyKw;
             if (S.Night && IsGreenhouse(b.Id) && IsDone("double_glass")) kw *= 0.8;
+            if (S.Night && b.Insulated) kw *= 0.85; // levels.md, level 29: about 15% less at night (proposal)
+            if (S.StormLeft > 0 && S.Managed.Contains(b.Id) && Dispatcher != null) kw *= 0.9; // the dispatcher saves the batteries (proposal)
             return kw;
         }
 
@@ -1222,6 +1940,8 @@ namespace Zerks.Sim
             if (b == null || !b.Working) return 0;
             var kw = Row("solar", b.Level).Get("kW by day");
             if (Staffed(b)) kw *= 1.2; // the worker keeps the dust off (levels.md)
+            if (S.StormLeft > 0) kw *= 0.2; // a dust storm hides the sun for hours (levels.md, rule 13; proposal)
+            kw *= 1 - 0.5 * S.PanelsDust; // dusty panels after a storm, until the worker cleans them
             return kw;
         }
 
@@ -1306,7 +2026,7 @@ namespace Zerks.Sim
                 var staffed = Staffed(b);
                 var on = staffed ? workersOn : playing; // without a worker it works only while you play
                 if (!on) continue;
-                var k = power * night * (b.ImpulseLeft > 0 ? 2 : 1);
+                var k = power * night * (b.ImpulseLeft > 0 ? 2 : 1) * (1 + DispatchBonus(b.Id));
                 switch (Kind(b.Id))
                 {
                     case "drill": Make(b, Res.Carbon, row.Get("carbon/min") * k * Bonus(Res.Carbon) * Crew(b), min, staffed); break;
@@ -1330,6 +2050,8 @@ namespace Zerks.Sim
                         // The seedling bed takes 10% of the rest; "air and food" gives about 70% of the air plus food (levels.md, 16-17).
                         var bed = b.Seedbed && IsDone("hardy_seedlings");
                         var less = bed ? 0.9 : 1;
+                        if (S.StormLeft > 0) less *= S.Prepared ? 0.75 : 0.6; // less light in a storm; the covers keep the warmth (proposal)
+                        if (IsDone("clean_glass")) less *= 1.1;               // levels.md, level 34: clearer glass, more light (proposal)
                         var food = b.Food && b.Level >= 16;
                         var a = row.Get("air/min") * k * Crew(b) * less * (food ? 0.7 : 1);
                         var name = Content.B(b.Id).Name;
@@ -1356,8 +2078,56 @@ namespace Zerks.Sim
                         // copper ore -> copper, with carbon insulation -> cables: 2 copper ore and 1 carbon for each (balance model)
                         Convert(b, Res.Cables, row.Get("cables/min") * k * Crew(b), (Res.Copper, 2), (Res.Carbon, 1), min, staffed);
                         break;
+                    // ---- chapters 3 and 4 (balance 0.2) ----
+                    case "fieldstation":
+                    {
+                        // the agronomist gathers the seeds of the grass that has grown (levels.md, level 25) and picks the berries (26)
+                        var grass = S.Patches.Count(p => p.Stage >= 4 && Grown(p) || p.Stage == 5);
+                        if (grass > 0) Make(b, Res.Seedlings, row.Get("seedlings/min") * k * Crew(b) * Math.Min(1.5, grass / 6.0), min, staffed);
+                        var berries = S.Patches.Count(p => p.Stage == 5 && Grown(p));
+                        if (berries > 0 && staffed) Make(b, Res.Food, berries * 1.0 * k * Crew(b), min, true); // proposal: 1 food/min a patch
+                        break;
+                    }
+                    case "nursery": Make(b, Res.Saplings, row.Get("saplings/min") * k * Crew(b), min, staffed); break;
+                    case "woolworks":
+                    {
+                        // stone melted and spun: 2 stone for each unit of wool (balance model). The works leave the stone the
+                        // Ark is waiting for (proposal, 28.11.2026): otherwise a full store of wool would eat the Ark's stone.
+                        var keep = NextReq?.Res[Res.Stone] ?? 0;
+                        var spare = Math.Max(0, S.Stock[Res.Stone] - keep);
+                        var perMin = Math.Min(row.Get("wool/min") * k * Crew(b), spare / 2 / Math.Max(1e-6, min));
+                        if (perMin > 0) Convert(b, Res.Wool, perMin, (Res.Stone, 2), (Res.Stone, 0), min, staffed);
+                        break;
+                    }
+                    case "slagmill":
+                        // the magnet line gives iron back to the smelters (the geologist); the mill line makes fertiliser and lime
+                        Make(b, Res.Iron, row.Get("iron/min") * k * (b.Workers.Count > 0 && b.Workers[0] != 0 ? WorkerFactor(b, 0) : staffed ? 0 : 1), min, staffed);
+                        break;
+                    case "glassworks":
+                    {
+                        // two engineers, the furnace and the rollers: each place is half the works; lime from the slag mill
+                        var crew = staffed ? (WorkerFactor(b, 0) + (b.Workers.Count > 1 ? WorkerFactor(b, 1) : 0)) / 2 : 1;
+                        var mill = S.Get("slagmill");
+                        var lime = mill != null && mill.Working && mill.Workers.Count > 1 && mill.Workers[1] != 0 ? 1 : 0.5; // proposal
+                        Convert(b, Res.Glass, row.Get("glass/min") * k * crew * lime, (Res.Quartz, 2), (Res.Quartz, 0), min, staffed);
+                        break;
+                    }
+                    case "seedvault":
+                        if (staffed && !S.FirstSprout) { S.FirstSprout = true; Echo(Texts.FirstSprout, "sprout"); }
+                        if (b.Mode == "trees") Make(b, Res.Saplings, row.Get("saplings/min (tree seeds)") * k * Crew(b), min, staffed);
+                        else Make(b, Res.Grain, row.Get("grain/min") * k * Crew(b), min, staffed);
+                        break;
                 }
                 if ((b.Id == "furnace" && !IsDone("furnace_filter")) || (b.Id == "smelter" && !IsDone("smelter_filter"))) smokers++;
+            }
+            // The Green Belt: the patches make a little air, more as they grow (balance 0.2; nothing grows in a storm).
+            if (S.Zone >= 3)
+            {
+                double pa = 0;
+                foreach (var p in S.Patches)
+                    if (p.Stage > 0) pa += Bal.PatchAir[Math.Min(5, p.Stage) - 1];
+                pa *= S.StormLeft > 0 ? 0.5 : 1;
+                if (pa > 0) { AirBySource["Green Belt"] = pa; air += pa; }
             }
             // Smoke from the furnace and the smelter until their filters (levels.md, levels 6 and 11): -15% of the air each (balance model).
             SmokeRate = air * 0.15 * smokers;
@@ -1434,21 +2204,44 @@ namespace Zerks.Sim
             return i >= 20 && S.Has("brickhome") ? "brickhome" : "home";
         }
 
+        /// <summary>What the buildings for happiness give everyone now (levels.md "Щастие"; the numbers are a proposal).</summary>
+        public double SharedHappiness
+        {
+            get
+            {
+                double h = 0;
+                var park = S.Get("park");
+                if (park != null && park.Working && Staffed(park)) h += S.Care.Contains("park") ? 3 : 6;
+                var med = S.Get("medpost");
+                if (med != null && med.Working && Staffed(med)) h += 4;
+                // every paved street raises it for good while it is kept (Joro, 25.11.2026); half while the streets are dusty
+                h += Math.Min(8, 0.5 * S.Paved.Count) * (S.StreetsDust > 0 ? 0.5 : 1);
+                return h;
+            }
+        }
+
         void People(double dt, bool workersOn)
         {
             var min = dt / 60.0;
             var kitchen = S.Get("kitchen");
             var cooked = kitchen != null && kitchen.Working && Staffed(kitchen);
+            var shared = SharedHappiness;
+            var brick = S.Get("brickhome");
             for (int i = 0; i < S.Colonists.Count; i++)
             {
                 var c = S.Colonists[i];
-                var homeLevel = S.Level(i >= 20 && S.Has("brickhome") ? "brickhome" : "home");
+                var inBrick = i >= 20 && S.Has("brickhome");
+                var homeLevel = S.Level(inBrick ? "brickhome" : "home");
                 // Happiness: the home's comfort, food, a cook, varied food (levels.md "Щастие"; numbers are a proposal).
-                var target = 45 + Math.Min(30, 3 * homeLevel) + (cooked ? 10 : -10) + (Hungry ? -30 : 0) + 3 * (S.CropsTried.Count - 1);
+                double target = 45 + Math.Min(30, 3 * homeLevel) + (cooked ? 10 : -10) + (Hungry ? -30 : 0) + 3 * (S.CropsTried.Count - 1);
+                target += shared;
+                if (inBrick && brick.Insulated) target += 2;  // warmer in the insulated brick home (levels.md, level 29)
+                if (i < S.Coughing) target -= 10;            // they cough after the storm until the doctor sees them
+                if (Bored(c)) target -= 12;                  // five stars and the same work for long: bored
                 target = Math.Max(0, Math.Min(100, target));
                 var step = 10 * dt / 3600.0; // 10 points per game hour
                 c.Happiness += Math.Max(-step, Math.Min(step, target - c.Happiness));
-                if (workersOn && !string.IsNullOrEmpty(c.Work)) c.WorkMinutes += min;
+                if (workersOn && !string.IsNullOrEmpty(c.Work)) { c.WorkMinutes += min; c.JobMinutes += min; }
             }
         }
 
@@ -1469,6 +2262,10 @@ namespace Zerks.Sim
             if (S.ArkLeft > 0) S.ArkLeft = 0.001;
             if (S.FrameLeft > 0) S.FrameLeft = 0.001;
             if (S.Robot.Unlocked && !S.Robot.Back) S.Robot.Left = 0.001;
+            foreach (var b in S.Buildings) if (b.InsulateLeft > 0) b.InsulateLeft = 0.001;
+            foreach (var p in S.Patches) if (p.WorkLeft > 0) p.WorkLeft = 0.001;
+            if (S.Study != null && !S.Study.Ready) S.Study.Left = 0.001;
+            if (S.PaveQueue.Count > 0) { if (S.PaveTotal <= 0) S.PaveTotal = 1; S.PaveLeft = 0.001; }
             Step(0.01, true, true);
         }
 

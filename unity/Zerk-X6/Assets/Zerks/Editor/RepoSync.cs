@@ -44,6 +44,8 @@ namespace Zerks.EditorTools
             if (Directory.Exists(people)) files.AddRange(Directory.GetFiles(people, "*.glb"));
             foreach (var f in files)
             {
+                // the university's idea B (the rotunda) stays in the repo only for reference (Joro picked A, 27.11.2026)
+                if (Path.GetFileName(f) == "university-b.glb") continue;
                 var dst = Path.Combine(ModelsDir, Path.GetFileName(f));
                 if (File.Exists(dst) && File.GetLastWriteTimeUtc(dst) >= File.GetLastWriteTimeUtc(f)) continue;
                 File.Copy(f, dst, true);

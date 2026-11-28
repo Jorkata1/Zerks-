@@ -5,7 +5,7 @@ using System.Linq;
 namespace Zerks.Sim
 {
     /// <summary>
-    /// Plays the colony the way ECHO recommends: for the tests (can chapters 1 and 2 be finished, and how long do they
+    /// Plays the colony the way ECHO recommends: for the tests (can chapters 1 to 4 be finished, and how long do they
     /// take) and for the "Auto" switch in the developer panel.
     /// </summary>
     public static class AutoPlayer
@@ -18,8 +18,13 @@ namespace Zerks.Sim
 
             foreach (var b in s.Buildings) if (!b.Buffer.IsEmpty) c.Collect(b.Id);
             if (s.Robot.Back) c.UnloadRobot();
-            foreach (var b in s.Buildings.Where(b => b.Ready).ToList()) c.Reprint(b.Id);
+            foreach (var b in s.Buildings.Where(b => b.Ready && b.Id != "university").ToList()) c.Reprint(b.Id);
             if (s.AntennaReady) c.FixAntenna();
+            // chapters 3 and 4: the signs after a storm, the stones, the forecast, the trial run
+            foreach (var id in s.Care.ToList()) c.Tend(id);
+            while (s.Rocks > 0) c.CollectRocks();
+            if (c.WhyNotPrepare() == "") c.Prepare();
+            if (s.TrialReady) c.TrialRun();
 
             if (c.WhyNotArk() == "") { c.UpgradeArk(); return "ark"; }
 
@@ -37,8 +42,23 @@ namespace Zerks.Sim
             foreach (var def in Content.Buildings)
                 if (c.WhyNotBuild(def.Id, out _) == "") { c.Build(def.Id); break; }
 
-            // The frame in the dock, as soon as a stage can be built.
-            if (c.WhyNotFrame() == "") c.BuildFrame();
+            // The frame, the hull and the reactor in the dock, as soon as a stage can be built.
+            if (c.WhyNotDock() == "") c.BuildDock();
+
+            // The Green Belt: the first six patches, step by step (levels.md 21-26).
+            foreach (var (id, _, _) in Content.PatchPlots.Take(6))
+                if (c.WhyNotPatch(id) == "") c.WorkPatch(id);
+            // Insulation, the dispatch's buildings, the streets round the Ark, the university, the seed vault.
+            foreach (var d in Content.Buildings) if (c.WhyNotInsulate(d.Id) == "") c.Insulate(d.Id);
+            if (s.Has("dispatch"))
+                foreach (var id in new[] { "smelter", "glassworks", "smelter2", "woolworks", "copperworks", "furnace", "greenhouse" })
+                    if (!s.Managed.Contains(id) && c.WhyNotManage(id) == "") c.SetManaged(id, true);
+            var reqStone = c.NextReq?.Res[Res.Stone] ?? 0;
+            foreach (var k in Content.ArkStreets)
+                if (c.WhyNotPave(k) == "" && s.Stock[Res.Stone] >= reqStone * 0.5 + 3000) c.Pave(k);
+            if (s.Study != null && s.Study.Ready) c.Swap();
+            else if (s.Study == null && c.Teacher != null) { var (a, b) = c.SuggestPair(); if (a != 0) c.Study(a, b); }
+            if (s.Get("seedvault") is BuildingState vault && vault.Built && vault.Mode == "") c.SetVaultMode("grain");
 
             // Colonists: the next one comes with the next empty workplace.
             while (c.WhyNotWake() == "")
@@ -133,15 +153,31 @@ namespace Zerks.Sim
             // How far each material is from what the next level and its stages need (0 = enough).
             // A little over the target, so a miner never stops one unit short.
             double Short(Res r, double target) => target <= 0 ? 0 : Math.Max(0, target * 1.05 + 5 - s.Stock[r]) / target;
-            var frame = c.NextFrame;
-            var steelWant = (req?.Res[Res.Steel] ?? 0) + (frame != null && frame.ArkLevel <= s.Ark + 1 ? frame.Steel : 0);
-            var need = new Dictionary<Res, double>
-            {
-                [Res.Stone] = Short(Res.Stone, req?.Res[Res.Stone] ?? 0) + 0.05,
-                [Res.Quartz] = Short(Res.Quartz, 400) + Short(Res.Silicon, req?.Res[Res.Silicon] ?? 0),
-                [Res.Iron] = Short(Res.Iron, 600) + Short(Res.Steel, steelWant) * 1.5,
-                [Res.Copper] = Short(Res.Copper, Math.Max(req?.Res[Res.Copper] ?? 0, 300)) + Short(Res.Cables, req?.Res[Res.Cables] ?? 0),
-            };
+            var dock = c.NextDock;
+            var dockSoon = dock != null && dock.ArkLevel <= s.Ark + 1;
+            var steelWant = (req?.Res[Res.Steel] ?? 0) + (dockSoon ? dock.Cost[Res.Steel] : 0) + (s.Ark <= 20 ? 0 : 500);
+            var glassWant = (req?.Res[Res.Glass] ?? 0) + 300;
+            // An ore that the furnaces eat at once stays short for ever: it counts only while what it makes is short (28.11.2026).
+            var cablesWant = (req?.Res[Res.Cables] ?? 0) + (dockSoon ? dock.Cost[Res.Cables] : 0) + 300;
+            var steelShort = Short(Res.Steel, steelWant);
+            var siliconShort = Short(Res.Silicon, req?.Res[Res.Silicon] ?? 0) + (s.Has("glassworks") ? Short(Res.Glass, glassWant) : 0);
+            var cablesShort = Short(Res.Cables, cablesWant);
+            var need = s.Ark <= 20
+                ? new Dictionary<Res, double>
+                {
+                    // chapters 1 and 2, as they were tested
+                    [Res.Stone] = Short(Res.Stone, req?.Res[Res.Stone] ?? 0) + 0.05,
+                    [Res.Quartz] = Short(Res.Quartz, 400) + Short(Res.Silicon, req?.Res[Res.Silicon] ?? 0),
+                    [Res.Iron] = Short(Res.Iron, 600) + Short(Res.Steel, steelWant) * 1.5,
+                    [Res.Copper] = Short(Res.Copper, Math.Max(req?.Res[Res.Copper] ?? 0, 300)) + Short(Res.Cables, req?.Res[Res.Cables] ?? 0),
+                }
+                : new Dictionary<Res, double>
+                {
+                    [Res.Stone] = Short(Res.Stone, (req?.Res[Res.Stone] ?? 0) + (s.Has("woolworks") ? 2000 : 0)) + 0.05,
+                    [Res.Quartz] = siliconShort + (siliconShort > 0 ? Short(Res.Quartz, 400) : 0),
+                    [Res.Iron] = steelShort * 1.5 + (steelShort > 0 ? Short(Res.Iron, 600) : 0),
+                    [Res.Copper] = cablesShort + (cablesShort > 0 ? Short(Res.Copper, 300) : 0),
+                };
             var count = new Dictionary<Res, int>();
             foreach (var i in miners)
             {
@@ -192,6 +228,7 @@ namespace Zerks.Sim
             foreach (var r in Content.Research.Where(r => r.ArkLevel < level)) s.Done.Add(r.Id);
             if (s.Done.Contains("zone1")) s.Zone = 1;
             if (s.Done.Contains("zone2")) s.Zone = 2;
+            if (s.Done.Contains("zone3")) s.Zone = 3;
             var req = Content.Requirements.TryGetValue(level, out var q) ? q : null;
             foreach (var def in Content.Buildings)
             {
@@ -209,6 +246,17 @@ namespace Zerks.Sim
             // The ship and the antenna, as far as the levels before got them (levels.md).
             s.Frame = Content.Frame.Count(f => f.ArkLevel < level);
             s.AntennaFixed = level >= 19;
+            // chapters 3 and 4: the hull and the reactor, the patches, the insulation, the paved square, the dispatch
+            s.Hull = Content.Hull.Count(h => h.ArkLevel < level);
+            s.Reactor = Content.ReactorStages.Count(r => r.ArkLevel < level);
+            s.ReactorTested = level >= 40;
+            var stage = level >= 27 ? 5 : level == 26 ? 4 : level == 25 ? 3 : level == 24 ? 2 : level >= 22 ? 1 : 0;
+            foreach (var p in s.Patches.Take(6)) { p.Stage = stage; p.Grow = 0; }
+            if (level >= 30) foreach (var d in Content.Buildings.Where(d => d.Insulates)) { var b = s.Get(d.Id); if (b != null) b.Insulated = true; }
+            if (level >= 37) s.Paved.AddRange(Content.ArkStreets);
+            if (level >= 34) s.Managed.AddRange(new[] { "smelter", "glassworks" });
+            if (s.Get("seedvault") != null) s.Get("seedvault").Mode = "grain";
+            if (level > 17) { s.Storms = 1; s.StormNext = 6 * 3600; }
             if (s.Has("greenhouse") && level >= 17) { var g = s.Get("greenhouse"); g.Food = g.FoodWanted = true; }
             // Colonists as ECHO recommends: as many as the levels before woke (levels.md).
             var awake = Content.ColonistsAfter.TryGetValue(level - 1, out var a) ? a : 0;
@@ -227,10 +275,15 @@ namespace Zerks.Sim
             if (s.Has("batteries")) s.Battery = c.BatteryCapacity;
             if (level >= 10) s.Sketches.Add("frame");
             if (level >= 20) s.Sketches.Add("hull");
+            if (level >= 30) s.Sketches.Add("reactor");
             s.Chapter1Done = level >= 11;
             s.Chapter2Done = level >= 21;
+            s.Chapter3Done = level >= 31;
+            s.Chapter4Done = level >= 40;
             for (int l = 2; l <= level; l++) s.Said.Add($"ark{l}");
-            foreach (var (key, from) in new[] { ("sketch", 10), ("framelater", 10), ("ch2", 11), ("dock", 12), ("frame1", 13), ("sketch2", 20) })
+            foreach (var (key, from) in new[] { ("sketch", 10), ("framelater", 10), ("ch2", 11), ("dock", 12), ("frame1", 13), ("sketch2", 20),
+                         ("ch3", 21), ("zone3", 22), ("lichens", 22), ("lichen1", 22), ("hull1", 23), ("moss1", 24), ("soil1", 25), ("grass1", 26),
+                         ("buck1", 27), ("hulldone4", 30), ("insulated5", 30), ("sketch3", 30), ("ch4", 31), ("storm1", 18), ("stormend1", 18), ("trial", 40), ("ch4done", 40) })
                 if (level >= from) s.Said.Add(key);
             c.TakeEvents();
             return s;

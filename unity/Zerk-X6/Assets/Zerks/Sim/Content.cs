@@ -5,9 +5,12 @@ using System.Linq;
 namespace Zerks.Sim
 {
     /// <summary>Who works where (levels.md, "Специалностите"). New ones go at the end: a save keeps them as numbers.</summary>
-    public enum Profession { None, Cook, Agronomist, Geologist, Engineer, Scientist, Builder }
+    public enum Profession { None, Cook, Agronomist, Geologist, Engineer, Scientist, Builder, Dispatcher, Doctor, Technician }
 
-    /// <summary>A building of chapters 1 and 2 and where it stands (docs/levels.md; plots from mockup/map.html#lvl10 and game/src/view/layout.ts, level 20).</summary>
+    /// <summary>
+    /// A building and where it stands (docs/levels.md; plots from mockup/map.html#lvl10 and game/src/view/layout.ts, level 20;
+    /// the plots of chapters 3 and 4 are a proposal of 28.11.2026: the Green Belt behind the South Slope, the sides of the colony).
+    /// </summary>
     public sealed class BuildingDef
     {
         public string Id;
@@ -37,6 +40,12 @@ namespace Zerks.Sim
         public SortedDictionary<int, string> Models = new SortedDictionary<int, string>();
         /// <summary>Outside the "all buildings on level L" rule.</summary>
         public bool OutsideAllRule;
+        /// <summary>A workplace for each profession, when it has more than one (the slag mill, the glassworks, the road depot).</summary>
+        public Profession[] SlotWorkers;
+        /// <summary>Gets the special upgrade "Insulation" on level 29 (the brick home, the canteen, the three greenhouses).</summary>
+        public bool Insulates;
+        /// <summary>A building for happiness: after a storm it wants care (levels.md, "Щастие").</summary>
+        public bool CareSign;
 
         public float X => (S + D) / 2f * Content.Pitch;
         public float Z => (S - D) / 2f * Content.Pitch;
@@ -49,6 +58,12 @@ namespace Zerks.Sim
         }
 
         public bool HasWorkplace => Worker != Profession.None;
+
+        /// <summary>Who works in a slot: the profession of that place.</summary>
+        public Profession WorkerAt(int slot) => SlotWorkers != null && slot >= 0 && slot < SlotWorkers.Length ? SlotWorkers[slot] : Worker;
+
+        /// <summary>The model on the map: its level's variant, insulated ("-1i", "-10i", "-20i") once it has the insulation.</summary>
+        public string ModelFor(int level, bool insulated) => insulated && Insulates ? ModelFor(level) + "i" : ModelFor(level);
     }
 
     public sealed class ResearchDef
@@ -69,6 +84,18 @@ namespace Zerks.Sim
         public string After;
         /// <summary>What it costs to start ("Медни шини": 200 copper ore).</summary>
         public Bag Cost;
+    }
+
+    /// <summary>A stage of the hull or of the ship's reactor in the dock (levels.md, "Строежът и корабът"; the costs are a proposal).</summary>
+    public sealed class ShipStage
+    {
+        public string Part;
+        public int Stage, ArkLevel;
+        public Bag Cost = new Bag();
+        public double Minutes;
+        /// <summary>The research the fabricator needs first ("Стоманени листове" for the hull, "Реакторен съд" for the vessel).</summary>
+        public string Research;
+        public string Name;
     }
 
     /// <summary>What the Ark needs to reach a level (levels.md, "Изисквания за ниво L").</summary>
@@ -102,6 +129,16 @@ namespace Zerks.Sim
         public bool GreenhouseFood;
         public bool Antenna;
         public bool MineCopper;
+
+        // ---- chapters 3 and 4 (levels.md, levels 21-40) ----
+        public int Hull, Reactor;
+        public bool ReactorTested;
+        /// <summary>Patches of the Green Belt on at least this stage (1 lichen, 2 moss, 4 grass, 5 sea buckthorn).</summary>
+        public int Patches, PatchStage;
+        /// <summary>The brick home, the canteen and the three greenhouses with the insulation (level 29).</summary>
+        public int Insulated;
+        /// <summary>The streets round the Ark paved (level 36).</summary>
+        public bool PavedArk;
     }
 
     /// <summary>One stage of the ship's frame in the dock (levels.md, "Строежът и корабът").</summary>
@@ -113,12 +150,12 @@ namespace Zerks.Sim
         public double Minutes;
     }
 
-    /// <summary>Everything chapters 1 and 2 are made of, from docs/levels.md 2.8 (and concept.md for the screen and ECHO).</summary>
+    /// <summary>Everything chapters 1 to 4 are made of, from docs/levels.md 2.16 (and concept.md for the screen and ECHO).</summary>
     public static class Content
     {
         public const float Pitch = 16f;
-        /// <summary>Chapter 2 ends when the Ark reaches level 21 (chapter 3, "Green Belt").</summary>
-        public const int LastLevel = 21;
+        /// <summary>Chapter 4 ends when the Ark reaches level 40; level 40 itself is not written yet (levels.md 2.16).</summary>
+        public const int LastLevel = 40;
 
         // ---------- Buildings ----------
 
@@ -151,7 +188,7 @@ namespace Zerks.Sim
             new BuildingDef { Id = "batteries", Name = "Batteries", D = -1, S = 3, Zone = 1, Worker = Profession.None, Blueprint = "bp_batteries",
                 About = "Store the day's surplus for the night.", Models = { [1] = "batteries-1", [10] = "batteries-10", [20] = "batteries-20" } },
             new BuildingDef { Id = "greenhouse", Name = "Greenhouse", D = 2, S = 2, Zone = 1, Worker = Profession.Agronomist, Blueprint = "bp_greenhouse",
-                MinAtmo = 20, About = "Plants under glass make more air than the machines. Lit at night.", Models = { [1] = "greenhouse-1", [10] = "greenhouse-10", [20] = "greenhouse-20" } },
+                MinAtmo = 20, About = "Plants under glass make more air than the machines. Lit at night.", Models = { [1] = "greenhouse-1", [10] = "greenhouse-10", [20] = "greenhouse-20" }, Insulates = true },
 
             // ---- chapter 2 (levels.md, levels 11-20; the plots are the ones of stage 2, game/src/view/layout.ts, a proposal) ----
             // The South Slope (zone II): the smelter next to the silicon furnace, the copper works next to the smelter, the
@@ -160,7 +197,7 @@ namespace Zerks.Sim
                 About = "Iron ore + carbon + a lot of power = steel. It smokes until it has a filter.", Models = { [1] = "smelter" } },
             new BuildingDef { Id = "greenhouse2", Kind = "greenhouse", Name = "Greenhouse 2", D = 2, S = -4, Zone = 2, Worker = Profession.Agronomist,
                 Blueprint = "bp_greenhouse", MinAtmo = 20, Unlock = 11,
-                About = "The second greenhouse, on the South Slope: sun all day.", Models = { [1] = "greenhouse-1", [10] = "greenhouse-10", [20] = "greenhouse-20" } },
+                About = "The second greenhouse, on the South Slope: sun all day.", Models = { [1] = "greenhouse-1", [10] = "greenhouse-10", [20] = "greenhouse-20" }, Insulates = true },
             // The Ice Hollow: the clay pit on the bank of the ice, the brick kiln next to it.
             new BuildingDef { Id = "claypit", Name = "Clay pit", D = -1, S = 5, Zone = 1, Worker = Profession.Geologist, Blueprint = "bp_claypit", Dug = true,
                 About = "Dug down on the bank of the ice: red regolith on top, layers of clay under it.", Models = { [1] = "claypit" } },
@@ -168,19 +205,76 @@ namespace Zerks.Sim
                 About = "Clay + power = bricks. Electric, so no smoke.", Models = { [1] = "brickkiln" } },
             new BuildingDef { Id = "greenhouse3", Kind = "greenhouse", Name = "Greenhouse 3", D = 1, S = -5, Zone = 2, Worker = Profession.Agronomist,
                 Blueprint = "bp_greenhouse", MinAtmo = 20, Unlock = 16,
-                About = "The third greenhouse, on the South Slope.", Models = { [1] = "greenhouse-1", [10] = "greenhouse-10", [20] = "greenhouse-20" } },
+                About = "The third greenhouse, on the South Slope.", Models = { [1] = "greenhouse-1", [10] = "greenhouse-10", [20] = "greenhouse-20" }, Insulates = true },
             new BuildingDef { Id = "copperworks", Name = "Copper works", D = -1, S = -5, Zone = 2, Worker = Profession.Engineer, Blueprint = "bp_copperworks",
                 About = "Copper ore in acid, pure copper on plates with power, drawn into wire: cables. No smoke, a lot of power.", Models = { [1] = "copperworks" } },
             new BuildingDef { Id = "brickhome", Name = "Brick home", D = 0, S = -4, Zone = 2, Worker = Profession.None, Blueprint = "bp_brickhome",
                 Extra = Bag((Res.Bricks, 800), (Res.Cables, 150)),
                 About = "The second home, printed from paste with our crushed bricks: reddish, stronger and warmer walls.",
-                Models = { [1] = "brickhome-1", [10] = "brickhome-10", [20] = "brickhome-20" } },
+                Models = { [1] = "brickhome-1", [10] = "brickhome-10", [20] = "brickhome-20" }, Insulates = true },
             // The canteen: next to the kitchen there is no free plot, so on the nearest free one in front (stage 2).
             new BuildingDef { Id = "canteen", Name = "Canteen", D = 2, S = 4, Zone = 1, Worker = Profession.Cook, Blueprint = "bp_canteen",
                 Extra = Bag((Res.Cables, 150)),
                 About = "The second place to eat, for the colonists from the 21st on. A cook makes meals here.",
-                Models = { [1] = "canteen-1", [10] = "canteen-10", [20] = "canteen-20" } },
+                Models = { [1] = "canteen-1", [10] = "canteen-10", [20] = "canteen-20" }, Insulates = true },
+
+            // ---- chapter 3 (levels.md, levels 21-30) and chapter 4 (31-39); the plots are a proposal (28.11.2026) ----
+            // Zone III opens with "Zone III expansion" on level 21: the Green Belt, the terrace behind the South Slope at the
+            // back of the canyon, and the strips along both sides of the colony under the walls.
+            new BuildingDef { Id = "smelter2", Kind = "smelter", Name = "Smelter 2", D = -3, S = -5, Zone = 3, Worker = Profession.Engineer,
+                Blueprint = "bp_smelter", Unlock = 22, About = "The second smelter, next to the first: the hull wants a lot of steel.", Models = { [1] = "smelter" } },
+            new BuildingDef { Id = "treatment", Name = "Treatment plant", D = 2, S = 6, Zone = 3, Worker = Profession.Engineer, Blueprint = "bp_treatment",
+                About = "The water of the homes and the kitchens comes down to it on its own; it goes up to the Green Belt for the patches.", Models = { [1] = "pstation" } },
+            new BuildingDef { Id = "fieldstation", Name = "Field station", D = -1, S = -7, Zone = 3, Worker = Profession.Agronomist, Blueprint = "bp_fieldstation",
+                About = "On the edge of the Green Belt: the agronomist gathers the grass seeds and picks the berries.", Models = { [1] = "fieldstation" } },
+            new BuildingDef { Id = "nursery", Name = "Nursery", D = 1, S = -7, Zone = 3, Worker = Profession.Agronomist, Blueprint = "bp_nursery",
+                About = "Seeds sprout under glass; in the yard under the net the saplings get used to the cold.", Models = { [1] = "nursery" } },
+            new BuildingDef { Id = "woolworks", Name = "Rock wool works", D = -3, S = -3, Zone = 3, Worker = Profession.Engineer, Blueprint = "bp_woolworks",
+                About = "Stone melted at 1,500 °C and spun into fibres: rock wool for the hull and the walls. No smoke, a lot of power.", Models = { [1] = "woolworks" } },
+            new BuildingDef { Id = "slagmill", Name = "Slag mill", D = -2, S = -6, Zone = 3, Worker = Profession.Geologist,
+                SlotWorkers = new[] { Profession.Geologist, Profession.Engineer }, Blueprint = "bp_slagmill",
+                About = "The magnet takes the iron out of the slag for the smelters; the mill grinds the rest into fertiliser and lime.", Models = { [1] = "slagmill" } },
+            new BuildingDef { Id = "glassworks", Name = "Glassworks", D = -3, S = -1, Zone = 3, Worker = Profession.Engineer,
+                SlotWorkers = new[] { Profession.Engineer, Profession.Engineer }, Blueprint = "bp_glassworks", Extra = Bag((Res.Steel, 300)),
+                About = "Quartz with lime from the slag mill, melted without soda at 1,500 °C and rolled into sheets.", Models = { [1] = "glassworks" } },
+            new BuildingDef { Id = "university", Name = "University", D = 0, S = -6, Zone = 3, Worker = Profession.Scientist, Blueprint = "bp_university",
+                Extra = Bag((Res.Glass, 200)), About = "Two people learn each other's work in the evenings; then you swap them.", Models = { [1] = "university" } },
+            new BuildingDef { Id = "park", Name = "Park", D = 2, S = -6, Zone = 3, Worker = Profession.Agronomist, Blueprint = "bp_park", CareSign = true,
+                Extra = Bag((Res.Glass, 150), (Res.Saplings, 40)), About = "Grass, sea buckthorn and benches under a dome of our glass. A gardener keeps it.", Models = { [1] = "park" } },
+            new BuildingDef { Id = "dispatch", Name = "Dispatch", D = 3, S = -1, Zone = 3, Worker = Profession.Dispatcher, Blueprint = "bp_dispatch",
+                Extra = Bag((Res.Glass, 100), (Res.Steel, 300), (Res.Cables, 200)),
+                About = "The sensors of every building on one console. The buildings it manages give more.", Models = { [1] = "dispatch" } },
+            new BuildingDef { Id = "greenhouse4", Kind = "greenhouse", Name = "Greenhouse 4", D = 0, S = -8, Zone = 3, Worker = Profession.Agronomist,
+                Blueprint = "bp_greenhouse", MinAtmo = 20, Unlock = 34, Extra = Bag((Res.Glass, 300), (Res.Steel, 200)),
+                About = "The fourth greenhouse, on the Green Belt: the first all of our own glass.", Models = { [1] = "greenhouse-1", [10] = "greenhouse-10", [20] = "greenhouse-20" } },
+            new BuildingDef { Id = "medpost", Name = "Medical post", D = 3, S = -3, Zone = 3, Worker = Profession.Doctor, Blueprint = "bp_medpost", CareSign = true,
+                About = "A surgery and two beds. The doctor sees the people and checks the seals of the suits.", Models = { [1] = "medpost" } },
+            new BuildingDef { Id = "roaddepot", Name = "Road depot", D = -3, S = 1, Zone = 3, Worker = Profession.Builder,
+                SlotWorkers = new[] { Profession.Builder, Profession.Technician }, Blueprint = "bp_roaddepot", CareSign = true,
+                About = "The road builder paves the streets one by one; the technician sweeps them and changes the cracked pavers.", Models = { [1] = "roaddepot" } },
+            new BuildingDef { Id = "weather", Name = "Weather station", D = 0, S = -12, Zone = 3, Worker = Profession.Scientist, Blueprint = "bp_weather",
+                Extra = Bag((Res.Steel, 200), (Res.Cables, 100)),
+                About = "The mast over the rim and the lidar: when the storm comes and how strong.", Models = { [1] = "weather" } },
+            new BuildingDef { Id = "seedvault", Name = "Seed vault", D = -2, S = 8, Zone = 3, Worker = Profession.Agronomist, Blueprint = "bp_seedvault",
+                Extra = Bag((Res.Wool, 300), (Res.Steel, 400)),
+                About = "Earth's seeds, frozen without power. The agronomist tests which sprout and grows the hardiest.", Models = { [1] = "seedvault" } },
         };
+
+        /// <summary>
+        /// The patches of the Green Belt (levels.md, level 21; their plots are a proposal): not buildings, no workplace; they
+        /// grow on their own. Six are asked for; the other two are for whoever wants more.
+        /// </summary>
+        public static readonly (string id, int d, int s)[] PatchPlots =
+        {
+            ("patch1", -2, -8), ("patch2", 2, -8), ("patch3", -1, -9), ("patch4", 1, -9), ("patch5", 0, -10), ("patch6", -2, -10),
+            ("patch7", 2, -10), ("patch8", -1, -11),
+        };
+
+        /// <summary>The names of the stages of a patch.</summary>
+        public static readonly string[] PatchStages = { "Bare rock", "Lichen", "Moss", "Thin soil", "Grass", "Sea buckthorn" };
+
+        /// <summary>The four street blocks round the Ark (levels.md, level 36: "the streets round the Ark").</summary>
+        public static readonly string[] ArkStreets = { "0,-2", "-1,-1", "1,-1", "0,0" };
 
         public static BuildingDef B(string id) => Buildings.First(b => b.Id == id);
         public static BuildingDef Find(string id) => Buildings.FirstOrDefault(b => b.Id == id);
@@ -220,7 +314,7 @@ namespace Zerks.Sim
             {
                 case "mine": return MineSlots(level);
                 case "research": return researchUpgraded ? 1 : 0;
-                default: return B(id).HasWorkplace ? 1 : 0;
+                default: var def = B(id); return def.HasWorkplace ? def.SlotWorkers?.Length ?? 1 : 0;
             }
         }
 
@@ -244,7 +338,7 @@ namespace Zerks.Sim
             new Crop { Id = "wheat", Name = "Wheat", About = "Grows slowly, feeds the most. The kitchen bakes bread from it.", LabLevel = 15, Food = 1.875, Cycle = 30 },
         };
 
-        // ---------- Research (levels.md, "Веригите за нива 1–10" and "11–20") ----------
+        // ---------- Research (levels.md, "Веригите" for levels 1-40) ----------
 
         public static readonly List<ResearchDef> Research = new List<ResearchDef>
         {
@@ -264,6 +358,13 @@ namespace Zerks.Sim
             new ResearchDef { Id = "copper_bars", Branch = "Industry", Order = 14, Name = "Copper bars", Effect = "Thick copper between panels, batteries and furnaces: batteries last 10% longer at night",
                 ArkLevel = 18, Minutes = 240, Cost = Bag((Res.Copper, 200)) },
             new ResearchDef { Id = "bp_copperworks", Branch = "Industry", Order = 15, Name = "Blueprint: Copper works", Effect = "Copper ore = cables", ArkLevel = 19, Minutes = 240 },
+            // chapters 3 and 4
+            new ResearchDef { Id = "steel_sheets", Branch = "Industry", Order = 16, Name = "Steel sheets", Effect = "The fabricator rolls steel into sheets for the hull", ArkLevel = 22, Minutes = 240 },
+            new ResearchDef { Id = "bp_woolworks", Branch = "Industry", Order = 17, Name = "Blueprint: Rock wool works", Effect = "Stone + power = rock wool for the hull", ArkLevel = 27, Minutes = 240 },
+            new ResearchDef { Id = "bp_slagmill", Branch = "Industry", Order = 18, Name = "Blueprint: Slag mill", Effect = "Iron back to the smelters; fertiliser and lime", ArkLevel = 28, Minutes = 240 },
+            new ResearchDef { Id = "bp_glassworks", Branch = "Industry", Order = 19, Name = "Blueprint: Glassworks", Effect = "Quartz + lime + power = glass", ArkLevel = 30, Minutes = 240 },
+            new ResearchDef { Id = "clean_glass", Branch = "Industry", Order = 20, Name = "Clear glass", Effect = "The magnet takes the iron out of the quartz: +10% air and food from the greenhouses", ArkLevel = 34, Minutes = 240 },
+            new ResearchDef { Id = "reactor_vessel", Branch = "Industry", Order = 21, Name = "Reactor vessel", Effect = "The fabricator forges the thick steel vessel of the reactor", ArkLevel = 34, Minutes = 300 },
 
             new ResearchDef { Id = "fast_seeds", Branch = "Life", Order = 1, Name = "Fast seeds", Effect = "+20% food", ArkLevel = 2, Minutes = 5 },
             new ResearchDef { Id = "processor_filter", Branch = "Life", Order = 2, Name = "Processor filter", Effect = "Air grows 15% faster", ArkLevel = 3, Minutes = 15 },
@@ -272,6 +373,10 @@ namespace Zerks.Sim
             new ResearchDef { Id = "tomatoes", Branch = "Life", Order = 5, Name = "Tomatoes", Effect = "+20% food from the greenhouses", ArkLevel = 16, Minutes = 180 },
             new ResearchDef { Id = "hardy_seedlings", Branch = "Life", Order = 6, Name = "Hardy seedlings", Effect = "Moss, grasses and shrubs that stand cold and dust: a seedling bed in each greenhouse",
                 ArkLevel = 17, Minutes = 240 },
+            new ResearchDef { Id = "lichens", Branch = "Life", Order = 7, Name = "Lichens", Effect = "They grow on bare rock and start the soil", ArkLevel = 21, Minutes = 180 },
+            new ResearchDef { Id = "hydroseeding", Branch = "Life", Order = 8, Name = "Hydroseeding", Effect = "The drone sows grass with water and mulch", ArkLevel = 25, Minutes = 180 },
+            new ResearchDef { Id = "buckthorn", Branch = "Life", Order = 9, Name = "Sea buckthorn", Effect = "Shrubs on the patches: nitrogen for the soil, and berries", ArkLevel = 26, Minutes = 240 },
+            new ResearchDef { Id = "bp_seedvault", Branch = "Life", Order = 10, Name = "Blueprint: Seed vault", Effect = "Seeds for the fields and the forests", ArkLevel = 38, Minutes = 240 },
 
             new ResearchDef { Id = "bp_home", Branch = "Colony", Order = 1, Name = "Blueprint: Colonists' Home", Effect = "Beds for the first people", ArkLevel = 3, Minutes = 5 },
             new ResearchDef { Id = "bp_kitchen", Branch = "Colony", Order = 2, Name = "Blueprint: Common Kitchen", Effect = "Meals for everyone", ArkLevel = 3, Minutes = 5 },
@@ -284,11 +389,22 @@ namespace Zerks.Sim
             new ResearchDef { Id = "bp_claypit", Branch = "Colony", Order = 8, Name = "Blueprint: Clay pit", Effect = "Clay from the bank of the ice", ArkLevel = 13, Minutes = 120, After = "zone2" },
             new ResearchDef { Id = "bp_brickhome", Branch = "Colony", Order = 9, Name = "Blueprint: Brick home", Effect = "A second home, from our bricks and with our cables", ArkLevel = 20, Minutes = 300 },
             new ResearchDef { Id = "bp_canteen", Branch = "Colony", Order = 10, Name = "Blueprint: Canteen", Effect = "A second place to eat", ArkLevel = 20, Minutes = 180, After = "bp_claypit" },
+            new ResearchDef { Id = "zone3", Branch = "Colony", Order = 11, Name = "Zone III expansion", Effect = "The Green Belt: a rocky terrace, damp with the morning frost", ArkLevel = 21, Minutes = 300 },
+            new ResearchDef { Id = "bp_treatment", Branch = "Colony", Order = 12, Name = "Blueprint: Treatment plant", Effect = "The water comes back, for the patches", ArkLevel = 23, Minutes = 240 },
+            new ResearchDef { Id = "bp_fieldstation", Branch = "Colony", Order = 13, Name = "Blueprint: Field station", Effect = "An agronomist on the Green Belt: grass seeds", ArkLevel = 25, Minutes = 180 },
+            new ResearchDef { Id = "bp_nursery", Branch = "Colony", Order = 14, Name = "Blueprint: Nursery", Effect = "Saplings, hardened in the yard", ArkLevel = 26, Minutes = 180 },
+            new ResearchDef { Id = "insulation", Branch = "Colony", Order = 15, Name = "Insulation", Effect = "Rock wool on the brick home, the canteen and the greenhouses: 15% less power at night", ArkLevel = 29, Minutes = 180 },
+            new ResearchDef { Id = "bp_university", Branch = "Colony", Order = 16, Name = "Blueprint: University", Effect = "Swapping work", ArkLevel = 31, Minutes = 300 },
+            new ResearchDef { Id = "bp_park", Branch = "Colony", Order = 17, Name = "Blueprint: Park", Effect = "The first building for happiness", ArkLevel = 32, Minutes = 240 },
+            new ResearchDef { Id = "bp_dispatch", Branch = "Colony", Order = 18, Name = "Blueprint: Dispatch", Effect = "Managing the buildings", ArkLevel = 33, Minutes = 240 },
+            new ResearchDef { Id = "bp_medpost", Branch = "Colony", Order = 19, Name = "Blueprint: Medical post", Effect = "The doctor", ArkLevel = 35, Minutes = 240 },
+            new ResearchDef { Id = "bp_roaddepot", Branch = "Colony", Order = 20, Name = "Blueprint: Road depot", Effect = "The roads and their upkeep", ArkLevel = 36, Minutes = 240 },
 
             new ResearchDef { Id = "fast_robot", Branch = "Space", Order = 1, Name = "Faster robot", Effect = "The collector robot drives faster", ArkLevel = 4, Minutes = 30 },
             new ResearchDef { Id = "big_cargo", Branch = "Space", Order = 2, Name = "Bigger cargo", Effect = "The collector robot carries more", ArkLevel = 9, Minutes = 180 },
             new ResearchDef { Id = "antenna", Branch = "Space", Order = 3, Name = "The Ark's antenna", Effect = "The map of the planet; the robot goes farther, where you send it",
                 ArkLevel = 18, Minutes = 300 },
+            new ResearchDef { Id = "bp_weather", Branch = "Space", Order = 4, Name = "Blueprint: Weather station", Effect = "When the storm comes, and \"Prepare the colony\"", ArkLevel = 37, Minutes = 240 },
         };
 
         public static ResearchDef R(string id) => Research.First(r => r.Id == id);
@@ -324,6 +440,23 @@ namespace Zerks.Sim
             [18] = new[] { "antenna", "copper_bars" },
             [19] = new[] { "bp_copperworks" },
             [20] = new[] { "bp_brickhome", "bp_canteen" },
+            [21] = new[] { "zone3", "lichens" },
+            [22] = new[] { "steel_sheets" },
+            [23] = new[] { "bp_treatment" },
+            [25] = new[] { "hydroseeding", "bp_fieldstation" },
+            [26] = new[] { "buckthorn", "bp_nursery" },
+            [27] = new[] { "bp_woolworks" },
+            [28] = new[] { "bp_slagmill" },
+            [29] = new[] { "insulation" },
+            [30] = new[] { "bp_glassworks" },
+            [31] = new[] { "bp_university" },
+            [32] = new[] { "bp_park" },
+            [33] = new[] { "bp_dispatch" },
+            [34] = new[] { "clean_glass", "reactor_vessel" },
+            [35] = new[] { "bp_medpost" },
+            [36] = new[] { "bp_roaddepot" },
+            [37] = new[] { "bp_weather" },
+            [38] = new[] { "bp_seedvault" },
         };
 
         // ---------- The ship ----------
@@ -337,6 +470,26 @@ namespace Zerks.Sim
             new FrameStage { Stage = 4, ArkLevel = 19, Steel = 1500, Minutes = 90 },
         };
 
+        /// <summary>
+        /// The hull on the frame (levels.md: 22, 24, 27, 29; stages 1-2 from levels.md, 3-4 a proposal) and the ship's reactor
+        /// in the middle of it (32, 34, 37, 39; a proposal: "how much the stages cost, we decide later"). The minutes are a proposal.
+        /// </summary>
+        public static readonly ShipStage[] Hull =
+        {
+            new ShipStage { Part = "hull", Stage = 1, ArkLevel = 22, Cost = Bag((Res.Steel, 2000), (Res.Cables, 100)), Minutes = 90, Research = "steel_sheets", Name = "the middle of both sides" },
+            new ShipStage { Part = "hull", Stage = 2, ArkLevel = 24, Cost = Bag((Res.Steel, 3000), (Res.Cables, 200)), Minutes = 120, Research = "steel_sheets", Name = "the rest of the sides" },
+            new ShipStage { Part = "hull", Stage = 3, ArkLevel = 27, Cost = Bag((Res.Steel, 4000), (Res.Cables, 300), (Res.Wool, 400)), Minutes = 150, Research = "steel_sheets", Name = "the bottom and the back" },
+            new ShipStage { Part = "hull", Stage = 4, ArkLevel = 29, Cost = Bag((Res.Steel, 4500), (Res.Cables, 300), (Res.Wool, 400)), Minutes = 180, Research = "steel_sheets", Name = "the bow and the stern" },
+        };
+
+        public static readonly ShipStage[] ReactorStages =
+        {
+            new ShipStage { Part = "reactor", Stage = 1, ArkLevel = 32, Cost = Bag((Res.Steel, 3000), (Res.Wool, 200)), Minutes = 120, Name = "the compartment" },
+            new ShipStage { Part = "reactor", Stage = 2, ArkLevel = 34, Cost = Bag((Res.Steel, 5000)), Minutes = 150, Research = "reactor_vessel", Name = "the vessel" },
+            new ShipStage { Part = "reactor", Stage = 3, ArkLevel = 37, Cost = Bag((Res.Steel, 4000), (Res.Cables, 600)), Minutes = 150, Name = "the pipes and the generator" },
+            new ShipStage { Part = "reactor", Stage = 4, ArkLevel = 39, Cost = new Bag(), Minutes = 60, Name = "the fuel" },
+        };
+
         // ---------- The Ark ----------
 
         /// <summary>The level's target length in game minutes (game/src/balance/data.ts); the Ark's own upgrade is 12% of it.</summary>
@@ -344,6 +497,9 @@ namespace Zerks.Sim
         {
             [1] = 10, [2] = 15, [3] = 45, [4] = 75, [5] = 120, [6] = 105, [7] = 135, [8] = 180, [9] = 150, [10] = 210,
             [11] = 300, [12] = 210, [13] = 225, [14] = 210, [15] = 300, [16] = 240, [17] = 360, [18] = 360, [19] = 360, [20] = 360, [21] = 360,
+            // levels 22-40: a proposal (balance 0.2, 28.11.2026)
+            [22] = 330, [23] = 330, [24] = 330, [25] = 330, [26] = 330, [27] = 330, [28] = 330, [29] = 330, [30] = 360,
+            [31] = 360, [32] = 330, [33] = 330, [34] = 630, [35] = 330, [36] = 330, [37] = 330, [38] = 330, [39] = 330, [40] = 360,
         };
 
         public static double ArkUpgradeMinutes(int fromLevel) => 0.12 * (TargetMin.TryGetValue(fromLevel, out var t) ? t : 360);
@@ -359,6 +515,8 @@ namespace Zerks.Sim
         {
             [1] = 0, [2] = 0, [3] = 4, [4] = 5, [5] = 6, [6] = 7, [7] = 8, [8] = 9, [9] = 10, [10] = 11,
             [11] = 14, [12] = 14, [13] = 16, [14] = 17, [15] = 18, [16] = 19, [17] = 19, [18] = 19, [19] = 20, [20] = 21,
+            [21] = 21, [22] = 22, [23] = 23, [24] = 24, [25] = 25, [26] = 26, [27] = 27, [28] = 29, [29] = 29, [30] = 31,
+            [31] = 32, [32] = 33, [33] = 34, [34] = 35, [35] = 36, [36] = 38, [37] = 39, [38] = 40, [39] = 40,
         };
 
         /// <summary>The Ark holds 1000 of each resource; the store adds 1000 x 1.4^(n-1) to level 11, then x1.1 a level (levels.md).</summary>
@@ -398,6 +556,22 @@ namespace Zerks.Sim
             return req;
         }
 
+        /// <summary>Chapter 3 (levels.md): the first smelter on L-7 and the copper works on L-19 (the requirement for 31 too).</summary>
+        static LevelReq Ch3(int level, double carbon, double water, double stone, double food, double silicon, int atmo, params (Res r, double a)[] stock)
+        {
+            var req = Ch2(level, carbon, water, stone, food, silicon, atmo, level - 7, 0, stock);
+            req.Overrides["copperworks"] = level - 19;
+            return req;
+        }
+
+        /// <summary>Chapter 4 (levels.md, Joro 24.11.2026): the first smelter on L-7 and the glassworks on L-29; glass in the store.</summary>
+        static LevelReq Ch4(int level, double carbon, double water, double stone, double food, double silicon, double glass, int atmo)
+        {
+            var req = Ch2(level, carbon, water, stone, food, silicon, atmo, level - 7, 0, (Res.Glass, glass));
+            req.Overrides["glassworks"] = level - 29;
+            return req;
+        }
+
         public static readonly Dictionary<int, LevelReq> Requirements = new Dictionary<int, LevelReq>
         {
             [2] = new LevelReq { Level = 2, Res = Bag(150, 100), Atmo = 10 },
@@ -424,6 +598,29 @@ namespace Zerks.Sim
             [19] = Mod(Ch2(19, 45900, 29400, 12900, 8400, 4300, 33, 12, 18), r => r.Antenna = true),
             [20] = Mod(Ch2(20, 50500, 32300, 14100, 9200, 4700, 33, 13, 19, (Res.Cables, 300), (Res.Bricks, 800)), r => { r.Built = new[] { "copperworks" }; r.Frame = 4; }),
             [21] = Mod(Ch2(21, 55500, 35500, 15600, 10100, 5200, 33, 14, 20, (Res.Seedlings, 300)), r => r.Built = new[] { "brickhome", "canteen" }),
+
+            // Chapter 3 (levels.md, levels 21-30): the first smelter on L-7 and the copper works on L-19.
+            [22] = Mod(Ch3(22, 61000, 39000, 17200, 11100, 5700, 34), r => { r.Research = new[] { "zone3" }; r.Patches = 6; r.PatchStage = 1; }),
+            [23] = Mod(Ch3(23, 67100, 42900, 18900, 12200, 6300, 34), r => { r.Hull = 1; r.Built = new[] { "smelter2" }; }),
+            [24] = Mod(Ch3(24, 73800, 47200, 20800, 13400, 6900, 34), r => { r.Built = new[] { "treatment" }; r.Patches = 6; r.PatchStage = 2; }),
+            [25] = Mod(Ch3(25, 81200, 51900, 22900, 14700, 7600, 35), r => { r.Hull = 2; r.Overrides["mine"] = 20; }),
+            [26] = Mod(Ch3(26, 89300, 57100, 25200, 16200, 8400, 35), r => { r.Patches = 6; r.PatchStage = 4; r.Built = new[] { "fieldstation" }; }),
+            [27] = Mod(Ch3(27, 98200, 62800, 27700, 17800, 9200, 35), r => { r.Patches = 6; r.PatchStage = 5; r.Built = new[] { "nursery" }; }),
+            [28] = Mod(Ch3(28, 108000, 69100, 30500, 19600, 10100, 36), r => { r.Hull = 3; r.Built = new[] { "woolworks" }; }),
+            [29] = Mod(Ch3(29, 118800, 76000, 33600, 21600, 11100, 36), r => r.Built = new[] { "slagmill" }),
+            [30] = Mod(Ch3(30, 130700, 83600, 37000, 23800, 12200, 36), r => { r.Hull = 4; r.Insulated = 5; }),
+            [31] = Mod(Ch3(31, 143800, 92000, 40700, 26200, 13400, 37, (Res.Glass, 500)), r => r.Built = new[] { "glassworks" }),
+
+            // Chapter 4 (levels.md, levels 31-39): the first smelter on L-7 and the glassworks on L-29.
+            [32] = Mod(Ch4(32, 158200, 101200, 44800, 28800, 14700, 550, 37), r => r.Built = new[] { "university" }),
+            [33] = Mod(Ch4(33, 174000, 111300, 49300, 31700, 16200, 600, 37), r => { r.Built = new[] { "park" }; r.Reactor = 1; }),
+            [34] = Mod(Ch4(34, 191400, 122400, 54200, 34900, 17800, 660, 38), r => r.Built = new[] { "dispatch" }),
+            [35] = Mod(Ch4(35, 210500, 134600, 59600, 38400, 19600, 730, 38), r => { r.Built = new[] { "greenhouse4" }; r.Reactor = 2; }),
+            [36] = Mod(Ch4(36, 231600, 148100, 65600, 42200, 21600, 800, 38), r => r.Built = new[] { "medpost" }),
+            [37] = Mod(Ch4(37, 254800, 162900, 72200, 46400, 23800, 880, 39), r => { r.Built = new[] { "roaddepot" }; r.PavedArk = true; }),
+            [38] = Mod(Ch4(38, 280300, 179200, 79400, 51000, 26200, 970, 39), r => { r.Built = new[] { "weather" }; r.Reactor = 3; }),
+            [39] = Mod(Ch4(39, 308300, 197100, 87300, 56100, 28800, 1070, 39), r => r.Built = new[] { "seedvault" }),
+            [40] = Mod(Ch4(40, 339100, 216800, 96000, 61700, 31700, 1180, 40), r => { r.Reactor = 4; r.ReactorTested = true; }),
         };
 
         static LevelReq Mod(LevelReq r, Action<LevelReq> f) { f(r); return r; }
@@ -442,13 +639,13 @@ namespace Zerks.Sim
         /// </summary>
         public static int PlanLevel(string id, int L)
         {
-            int people = ColonistsAfter.TryGetValue(L - 1, out var p) ? p : 21;
+            int people = ColonistsAfter.TryGetValue(L - 1, out var p) ? p : 40;
             int since(int unlock) => Math.Max(1, L - unlock + 1);
             switch (id)
             {
                 case "geolocator": return Math.Min(L, 11);
                 case "research": return L <= 10 ? 1 : 2;
-                case "mine": return L <= 2 ? 1 : L == 3 ? 2 : Math.Min(L, 19);
+                case "mine": return L <= 2 ? 1 : L == 3 ? 2 : Math.Min(L, L >= 25 ? 20 : 19); // the fifth place on 20 wants the Ark on 24
                 case "home": case "kitchen": return L <= 10 ? L : Math.Min(20, people);
                 case "smelter": return Math.Max(1, L - 7);
                 case "greenhouse2": return since(11);
@@ -457,6 +654,22 @@ namespace Zerks.Sim
                 case "greenhouse3": return since(16);
                 case "copperworks": return since(19);
                 case "brickhome": case "canteen": return Math.Max(1, people - 20);
+                // chapters 3 and 4 (balance 0.2): the second smelter catches up two levels an Ark level; the rest grow with the Ark
+                case "smelter2": return Math.Max(1, Math.Min(2 * (L - 22) + 1, L - 7)); // then it follows the first one (from 36)
+                case "treatment": return since(23);
+                case "fieldstation": return since(25);
+                case "nursery": return since(26);
+                case "woolworks": return since(27);
+                case "slagmill": return since(28);
+                case "glassworks": return since(30);
+                case "university": return since(31);
+                case "park": return since(32);
+                case "dispatch": return since(33);
+                case "greenhouse4": return Math.Max(1, 2 * (L - 34) + 1);
+                case "medpost": return since(35);
+                case "roaddepot": return since(36);
+                case "weather": return since(37);
+                case "seedvault": return since(38);
                 default: return L;
             }
         }

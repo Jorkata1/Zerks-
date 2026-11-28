@@ -117,12 +117,16 @@ namespace Zerks.Game
                     Hud.Toast($"{Content.B(e.Id).Name} is ready");
                     break;
                 case Ev.Upgraded: break;
-                case Ev.Ready: Hud.Toast($"{Content.B(e.Id).Name}: Ready. Tap it, the drone prints the new part."); break;
+                case Ev.Ready:
+                    if (e.Id == "university") { Hud.Toast("The university: the pair has learned. Tap it to swap them."); break; }
+                    Hud.Toast(Colony.S.Get(e.Id)?.InsulateReady == true ? $"{Content.B(e.Id).Name}: Ready. Tap it, the drone lays the insulation." : $"{Content.B(e.Id).Name}: Ready. Tap it, the drone prints the new part.");
+                    break;
                 case Ev.ArkLevel:
                     World.Commander.Wave();
                     Hud.Toast($"The Ark is on level {e.Id}");
                     if (e.Id == "10") Hud.ShowSketch("frame");
                     if (e.Id == "20") Hud.ShowSketch("hull");
+                    if (e.Id == "30") Hud.ShowSketch("reactor");
                     break;
                 case Ev.ResearchDone: Hud.Toast($"Research done: {Content.R(e.Id).Name}"); break;
                 case Ev.RobotBack: Hud.Toast($"The robot is back with {e.Text}"); break;
@@ -151,7 +155,29 @@ namespace Zerks.Game
                     var gh = Colony.S.Get(e.Id);
                     if (gh != null) Hud.Toast($"{Content.B(e.Id).Name}: {(gh.Food ? "air and food" : "air only")}");
                     break;
-                case Ev.ZoneOpened: Rig.FocusOn(e.Id == "1" ? World.PlotOf("warehouse") : Look.Plot(0, 5), 70, 1.6f); break;
+                case Ev.ZoneOpened: Rig.FocusOn(e.Id == "1" ? World.PlotOf("warehouse") : e.Id == "3" ? Look.Plot(0, -9) : Look.Plot(0, 5), 70, 1.6f); break;
+                // ---- chapters 3 and 4 ----
+                case Ev.Chapter3Done:
+                    Hud.Modal("Chapter 3 · Green Belt", "Lichens, moss, grass and sea buckthorn on the Green Belt; the hull whole in the dock; our own wool and glass; thirty-one people.\nChapter 4, \"Life\", starts here.", "We make everything we need.", ("Keep playing", null));
+                    break;
+                case Ev.Chapter4Done:
+                    Hud.Modal("Chapter 4 · Life", "The university, the park, the dispatch, the doctor, paved streets, the weather station and the seed vault; the ship's reactor has beaten once. Forty percent: the sky is blue.\nLevel 40, the fields and the forests, is not written yet.", "Look up.", ("Keep playing", null));
+                    break;
+                case Ev.DockStarted: Hud.Toast($"The fabricator is making {Colony.PartName(e.Id).ToLowerInvariant()}: stage {e.Text}"); break;
+                case Ev.DockDone:
+                    Hud.Toast($"{Colony.PartName(e.Id)}: stage {e.Text} is done");
+                    Rig.FocusOn(World.WorldOf("dock") - Vector3.up * 4, Mathf.Min(Rig.View, 62), 1.8f);
+                    break;
+                case Ev.TrialReady: Hud.Toast("The fuel is in the reactor. Tap the dock: the trial run."); break;
+                case Ev.TrialRun: Hud.ShowTrialRun(); break;
+                case Ev.StormWarn: Hud.Toast("A dust storm is coming"); break;
+                case Ev.StormStart: Hud.Toast("A dust storm: the panels give little, the batteries hold"); break;
+                case Ev.StormEnd: Hud.Toast("The storm has passed"); break;
+                case Ev.Swapped: Hud.Toast("The university: the pair has swapped"); break;
+                case Ev.Paved: Hud.Toast($"Paved: {Colony.StreetName(e.Id).ToLowerInvariant()}"); break;
+                case Ev.Insulated: Hud.Toast($"{Content.B(e.Id).Name}: insulated"); break;
+                case Ev.Rocks: Hud.Toast($"+{e.Text} stone"); break;
+                case Ev.CareSign: break;
             }
         }
 
@@ -229,13 +255,23 @@ namespace Zerks.Game
                     Hud.Open("ark");
                     return;
                 case WorldView.PickKind.Dock:
+                    if (Colony.S.TrialReady) { Colony.TrialRun(); return; }
                     if (Hud.SheetOpen) Hud.Close();
                     Hud.Open("dock");
+                    return;
+                case WorldView.PickKind.Patch:
+                    if (Hud.SheetOpen) Hud.Close();
+                    Hud.Open("patch", id);
+                    return;
+                case WorldView.PickKind.Rocks:
+                    if (Colony.CollectRocks() <= 0) Hud.Toast("Nothing to pick up");
                     return;
                 case WorldView.PickKind.Building:
                     if (impulseArmed) { impulseArmed = false; if (Colony.Impulse(id)) { Hud.Toast("ECHO's impulse: twice as fast for 5 minutes"); return; } }
                     var b = Colony.S.Get(id);
                     if (b != null && b.Ready) { Colony.Reprint(id); World.Reprint(id); return; }
+                    if (id == "university" && Colony.S.Study != null && Colony.S.Study.Ready) { Colony.Swap(); return; }
+                    if (Colony.S.Care.Contains(id) && Colony.WhyNotTend(id) == "") { Colony.Tend(id); Hud.Toast($"{Content.B(id).Name}: seen to"); return; }
                     if (b != null && b.Built && !Colony.Staffed(b) && b.Buffer.V.Sum() >= 1 && (Colony.InTutorial || !Hud.SheetOpen))
                     {
                         var got2 = Colony.Collect(id);

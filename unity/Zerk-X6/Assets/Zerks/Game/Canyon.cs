@@ -32,7 +32,9 @@ namespace Zerks.Game
         readonly List<Color> dustDay = new List<Color>();
         readonly Dictionary<int, GameObject> channel = new Dictionary<int, GameObject>();
         public readonly Dictionary<string, GameObject> Kerbs = new Dictionary<string, GameObject>();
-        float open1 = 1, open2 = 1, time;
+        float open1 = 1, open2 = 1, open3 = 1, time;
+        /// <summary>Where the dust stays after zone III, in the rows of the dust picture: just beyond the last row of the Green Belt (s = -13).</summary>
+        static float Front3Row => (-13 * 11.314f - 12 - CanyonBake.DustT0) / (CanyonBake.DustT1 - CanyonBake.DustT0);
         Task<Rebake> pending;
 
         static readonly Color DustNight = Look.Hex(0x56596e);
@@ -117,8 +119,8 @@ namespace Zerks.Game
             }
         }
 
-        /// <summary>A stone's group still lies on the ground: its zone is closed, or it never opens (-1, 3).</summary>
-        bool Shown(int group, int z) => group < 0 || group > 2 || group > z;
+        /// <summary>A stone's group still lies on the ground: its zone is closed, or it never opens (-1). Zone III opens in chapter 3.</summary>
+        bool Shown(int group, int z) => group < 0 || group > z;
 
         /// <summary>The stones that show, in one mesh with their colours (and where each sits on the floor, for its shade).</summary>
         (MeshData mesh, List<Vector3> placed) StoneMesh(CanyonShape s, int z)
@@ -247,6 +249,7 @@ namespace Zerks.Game
             ZoneEdge();
             open1 = startZone >= 1 ? 0 : 1;
             open2 = startZone >= 2 ? 0 : 1;
+            open3 = startZone >= 3 ? 0 : 1;
             Debug.Log($"[Zerks] The canyon is made in {clock.ElapsedMilliseconds} ms ({stones.Count} stones)");
         }
 
@@ -397,7 +400,9 @@ namespace Zerks.Game
             bool sideX = Mathf.Abs(dx) > Mathf.Abs(dz);
             float kx = sideX ? cx + Mathf.Sign(dx) * half : Mathf.Clamp(px, cx - half + 1.2f, cx + half - 1.2f);
             float kz = sideX ? Mathf.Clamp(pz, cz - half + 1.2f, cz + half - 1.2f) : cz + Mathf.Sign(dz) * half;
-            var (nx, nz, _) = Near(runs, kx, kz);
+            var (nx, nz, far) = Near(runs, kx, kz);
+            // the plots of chapters 3 and 4 up the Green Belt are far from the channel of the colony: no box there (proposal)
+            if (far > 14) return;
             var b = new Batch();
             if (Mathf.Sqrt((nx - kx) * (nx - kx) + (nz - kz) * (nz - kz)) > 0.7f) Run(b, nx, nz, kx, kz, true);   // across the street, flush with it
             var at = Matrix4x4.TRS(U3.V(kx, id == "ark" ? Road : 0.1f, kz), Quaternion.Euler(0, sideX ? 90 : 0, 0), Vector3.one);
@@ -426,7 +431,8 @@ namespace Zerks.Game
                 b.Add(Shapes.RoundedBox(0.62f, 0.36f, 0.04f, 0.02f), at * Matrix4x4.Translate(new Vector3(-0.33f, 1.62f, 0)), flag);
                 b.Add(Shapes.Sphere, at * Matrix4x4.TRS(new Vector3(0, 1.95f, 0), Quaternion.identity, Vector3.one * 0.18f), glow);
             }
-            bool Closed(Block? n) => n.HasValue && !n.Value.Built && n.Value.Zone >= 1 && n.Value.Zone > zone;
+            // zone III (chapters 3-4) is marked only once zone II is open, so the map of chapters 1 and 2 stays as approved
+            bool Closed(Block? n) => n.HasValue && !n.Value.Built && n.Value.Zone >= 1 && n.Value.Zone > zone && (n.Value.Zone < 3 || zone >= 2);
             var now = WithZone(zone);
             foreach (var bl in now)
             {
@@ -440,7 +446,9 @@ namespace Zerks.Game
             }
             stakesGo = b.Build(transform, "zone stakes");
 
-            // the sign: at the head of the street that runs up into the closed zone, a row behind the last open one
+            // the sign: at the head of the street that runs up into the closed zone, a row behind the last open one;
+            // once zone III is open nothing up the canyon waits for research yet (chapter 5 is not written)
+            if (zone >= 3) return;
             int reach = zone >= 2 ? 5 : 3;
             var (sx, sz) = Cm.P(13.1f, -(reach * 11.314f) - 13.2f);
             signGo = new GameObject("zone sign");
@@ -495,6 +503,7 @@ namespace Zerks.Game
             }
             open1 = Mathf.MoveTowards(open1, zone >= 1 ? 0 : 1, dt / 2.5f);
             open2 = Mathf.MoveTowards(open2, zone >= 2 ? 0 : 1, dt / 2.5f);
+            open3 = Mathf.MoveTowards(open3, zone >= 3 ? 0 : 1, dt / 2.5f);
             foreach (var kv in channel) kv.Value.SetActive(kv.Key <= Mathf.Max(zone, 0));
             // the dust: darker at night, drifting slowly, each layer its own way
             for (int i = 0; i < dustMats.Count; i++)
@@ -504,6 +513,8 @@ namespace Zerks.Game
                 m.SetColor("_Color", Color.Lerp(day, new Color(day.r * DustNight.r, day.g * DustNight.g, day.b * DustNight.b, 1), night));
                 m.SetFloat("_Open1", open1);
                 m.SetFloat("_Open2", open2);
+                m.SetFloat("_Open3", open3);
+                m.SetFloat("_Front3", Front3Row);
                 m.SetVector("_Drift", new Vector4(Mathf.Sin(time * 0.07f + i * 1.3f) * 1.4f / CanyonBake.DustW, Mathf.Cos(time * 0.05f + i * 0.9f) * 1.0f / (CanyonBake.DustT1 - CanyonBake.DustT0), 0, 0));
             }
             glow.SetColor("_EmissionColor", GlowColour * Mathf.Lerp(1.2f, 2.2f, night));

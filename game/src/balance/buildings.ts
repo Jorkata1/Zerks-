@@ -1,7 +1,8 @@
 import { COLONISTS } from './data.js'
 
-// The buildings of levels 1-25 and the rules for their level while the Ark is on level L.
+// The buildings of levels 1-38 and the rules for their level while the Ark is on level L.
 // Unlock levels and who works where come from docs/levels.md; cost weights and energy are proposals.
+// The buildings of levels 26-38 are balance 0.2 (28.11.2026, proposal).
 
 export interface Building {
   id: string
@@ -61,14 +62,40 @@ export const BUILDINGS: Building[] = [
     levelAt: (L) => Math.max(1, colonistsAt(L) - 20) },
   { id: 'canteen', bg: 'Столова', en: 'Canteen', unlock: 20, costWeight: 0.04, energy: 1, staffedFrom: 20,
     levelAt: (L) => Math.max(1, colonistsAt(L) - 20) },
-  // The second smelter catches up two levels per Ark level (proposal: its first levels are cheap and quick).
+  // The second smelter catches up two levels per Ark level (proposal: its first levels are cheap and quick);
+  // 0.2: once it has caught up with the first smelter (on level 36) it follows it.
   { id: 'smelter2', bg: 'Втора топилня', en: 'Second smelter', unlock: 22, costWeight: 0.06, energy: 20, staffedFrom: 22,
-    levelAt: (L) => Math.max(1, 2 * (L - 22) + 1) },
+    levelAt: (L) => Math.max(1, Math.min(2 * (L - 22) + 1, L - 7)) },
   { id: 'treatment', bg: 'Пречиствателна станция', en: 'Treatment plant', unlock: 23, costWeight: 0.05, energy: 4, staffedFrom: 23, levelAt: since(23) },
   { id: 'fieldstation', bg: 'Полева станция', en: 'Field station', unlock: 25, costWeight: 0.04, energy: 1, staffedFrom: 25, levelAt: since(25) },
+  // ---- 0.2: chapter 3 (levels.md 26-30) ----
+  // A small glass house and a yard under a net; the agronomist grows saplings (levels.md, level 26).
+  { id: 'nursery', bg: 'Разсадник', en: 'Nursery', unlock: 26, costWeight: 0.04, energy: 1.5, staffedFrom: 26, levelAt: since(26) },
+  // An electric furnace melts stone at about 1500 °C: a heavy user of power (levels.md, level 27).
+  { id: 'woolworks', bg: 'Цех за каменна вата', en: 'Rock wool works', unlock: 27, costWeight: 0.05, energy: 15, staffedFrom: 27,
+    levelAt: since(27) },
+  // Crusher and magnet (geologist) and mill (engineer): iron back to the smelters (levels.md, level 28).
+  { id: 'slagmill', bg: 'Мелница за шлака', en: 'Slag mill', unlock: 28, costWeight: 0.05, energy: 6, staffedFrom: 28, levelAt: since(28) },
+  // Key building of chapter 4: level L-29 for Ark level L (levels.md); two engineers, furnace and rollers.
+  { id: 'glassworks', bg: 'Стъкларска пещ', en: 'Glassworks', unlock: 30, costWeight: 0.06, energy: 18, staffedFrom: 30,
+    levelAt: since(30) },
+  // ---- 0.2: chapter 4 (levels.md 31-39) ----
+  { id: 'university', bg: 'Университет', en: 'University', unlock: 31, costWeight: 0.04, energy: 1.5, staffedFrom: 31, levelAt: since(31) },
+  { id: 'park', bg: 'Парк', en: 'Park', unlock: 32, costWeight: 0.04, energy: 1, staffedFrom: 32, levelAt: since(32) },
+  { id: 'dispatch', bg: 'Диспечерска', en: 'Dispatch', unlock: 33, costWeight: 0.04, energy: 1.5, staffedFrom: 33, levelAt: since(33) },
+  // Built with "Строй" without a blueprint (levels.md, level 34); catches up two levels per Ark level, like the
+  // second smelter (proposal).
+  { id: 'greenhouse4', bg: 'Четвърта оранжерия', en: 'Fourth greenhouse', unlock: 34, costWeight: 0.06, silicon: true, energy: 5,
+    staffedFrom: 34, levelAt: (L) => Math.max(1, 2 * (L - 34) + 1) },
+  { id: 'medpost', bg: 'Медицински пункт', en: 'Medical post', unlock: 35, costWeight: 0.04, energy: 1, staffedFrom: 35, levelAt: since(35) },
+  // The press and two machines (builder and maintenance technician); paving costs stone from the store.
+  { id: 'roaddepot', bg: 'Пътна база', en: 'Road depot', unlock: 36, costWeight: 0.04, energy: 3, staffedFrom: 36, levelAt: since(36) },
+  { id: 'weather', bg: 'Метеостанция', en: 'Weather station', unlock: 37, costWeight: 0.04, energy: 1, staffedFrom: 37, levelAt: since(37) },
+  // Cold and rock wool keep the seeds without power; only the small glass room with lamps uses some.
+  { id: 'seedvault', bg: 'Семенен трезор', en: 'Seed vault', unlock: 38, costWeight: 0.05, energy: 1, staffedFrom: 38, levelAt: since(38) },
 ]
 
 /** Colonists at the start of Ark level L (COLONISTS holds the count at the end of each level). */
 function colonistsAt(L: number): number {
-  return COLONISTS[L - 1] ?? COLONISTS[25]!
+  return COLONISTS[L - 1] ?? COLONISTS[40]!
 }

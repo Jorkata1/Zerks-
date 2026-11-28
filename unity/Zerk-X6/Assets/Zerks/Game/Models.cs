@@ -24,6 +24,10 @@ namespace Zerks.Game
             // chapter 2, at the scales of stage 2 (game/src/view/layout.ts, level 20)
             ["smelter"] = 4.15f, ["copperworks"] = 4.15f, ["claypit"] = 4.15f, ["kiln"] = 4.15f, ["dock"] = 4.15f,
             ["brickhome"] = 4.5f, ["canteen"] = 4.5f,
+            // chapters 3 and 4: made in the same Blender units as the dock and the Ark (art/3d/buildings, 25.11.2026), map scale 4.15
+            ["treatment"] = 4.15f, ["fieldstation"] = 4.15f, ["nursery"] = 4.15f, ["woolworks"] = 4.15f, ["slagmill"] = 4.15f,
+            ["glassworks"] = 4.15f, ["university"] = 4.15f, ["park"] = 4.15f, ["dispatch"] = 4.15f, ["medpost"] = 4.15f,
+            ["roaddepot"] = 4.15f, ["weather"] = 4.15f, ["seedvault"] = 4.15f, ["patch"] = 4.15f, ["street"] = 4.15f,
             // the people and ECHO (art/3d/characters): real metres times 1.4 and 2.4, as on the mockup (a proposal)
             ["colonist"] = People.PersonScale, ["echo"] = People.EchoScale,
         };

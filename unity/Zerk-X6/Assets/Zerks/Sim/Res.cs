@@ -5,18 +5,20 @@ using Newtonsoft.Json;
 namespace Zerks.Sim
 {
     /// <summary>
-    /// The stock resources of chapters 1 and 2 (docs/levels.md). Air and energy are flows, not stock. New ones go at the
+    /// The stock resources of chapters 1 to 4 (docs/levels.md). Air and energy are flows, not stock. New ones go at the
     /// end: a save keeps the amounts by their place in this list.
     /// </summary>
-    public enum Res { Carbon, Water, Stone, Food, Quartz, Silicon, Iron, Steel, Clay, Bricks, Copper, Cables, Seedlings }
+    public enum Res { Carbon, Water, Stone, Food, Quartz, Silicon, Iron, Steel, Clay, Bricks, Copper, Cables, Seedlings, Saplings, Wool, Glass, Grain }
 
     public static class ResInfo
     {
-        public const int Count = 13;
+        public const int Count = 17;
         public static readonly Res[] All =
         {
             Res.Carbon, Res.Water, Res.Stone, Res.Food, Res.Quartz, Res.Silicon, Res.Iron,
             Res.Steel, Res.Clay, Res.Bricks, Res.Copper, Res.Cables, Res.Seedlings,
+            // chapters 3 and 4 (levels.md: saplings on 26, rock wool on 27, glass on 30, grain on 38)
+            Res.Saplings, Res.Wool, Res.Glass, Res.Grain,
         };
 
         /// <summary>The key balance.json uses ("carbon", "water", ...).</summary>
@@ -38,6 +40,10 @@ namespace Zerks.Sim
             Res.Copper => "Copper ore",
             Res.Cables => "Cables",
             Res.Seedlings => "Seedlings",
+            Res.Saplings => "Saplings",
+            Res.Wool => "Rock wool",
+            Res.Glass => "Glass",
+            Res.Grain => "Grain",
             _ => r.ToString(),
         };
 
@@ -62,7 +68,7 @@ namespace Zerks.Sim
         public Bag() { }
         public Bag(Bag other) { other.Fit(); Array.Copy(other.V, V, ResInfo.Count); }
 
-        /// <summary>A save from before chapter 2 holds 7 amounts: make room for the new resources.</summary>
+        /// <summary>A save from an earlier chapter holds fewer amounts (7, then 13): make room for the new resources.</summary>
         public void Fit()
         {
             if (V == null) V = new double[ResInfo.Count];

@@ -29,7 +29,9 @@ namespace Zerks.Game
             }
         }
 
-        static readonly string[] Optional = { "hair_short", "hair_bun", "hair_full", "beard", "stripe", "aerial" };
+        // the more detailed people (21.11.2026): five tools, of which each person carries the one of their profession
+        static readonly string[] Optional = { "hair_short", "hair_bun", "hair_full", "beard", "stripe", "aerial",
+            "tool_hammer", "tool_wrench", "tool_trowel", "tool_ladle", "tool_tablet" };
         static readonly Dictionary<string, Material> tints = new Dictionary<string, Material>();
 
         public static bool HasModels => Models.Prefab("colonist") != null && Models.Prefab("echo") != null;
@@ -43,6 +45,7 @@ namespace Zerks.Game
             var show = new HashSet<string> { "hair_" + look.Style };
             if (look.Beard) show.Add("beard");
             if (commander) { show.Add("stripe"); show.Add("aerial"); }
+            else if (Looks.Tool.TryGetValue(look.Profession, out var tool) && !string.IsNullOrEmpty(tool)) show.Add(tool);
             foreach (var t in holder.GetComponentsInChildren<Transform>(true))
                 if (System.Array.IndexOf(Optional, t.name) >= 0) t.gameObject.SetActive(show.Contains(t.name));
             var colour = new Dictionary<string, string>

@@ -38,6 +38,15 @@ namespace Zerks.Game
         [System.NonSerialized] public Vector3? EchoPoint;
 
         readonly Dictionary<string, GameObject> plotPick = new Dictionary<string, GameObject>();
+        // chapters 3 and 4: the patches of the Green Belt, the street blocks that can be paved, the stones after a storm
+        public readonly Dictionary<string, BuildingView> PatchViews = new Dictionary<string, BuildingView>();
+        readonly Dictionary<string, Material> patchGlow = new Dictionary<string, Material>();
+        readonly Dictionary<string, GameObject> roadOf = new Dictionary<string, GameObject>();
+        readonly HashSet<string> pavedShown = new HashSet<string>();
+        Material pavedMat;
+        readonly List<GameObject> rocks = new List<GameObject>();
+        float stormK, blueK = -1;
+        int limitsZone = -1;
         readonly Dictionary<string, GameObject> plotGlow = new Dictionary<string, GameObject>();
         readonly List<(int zone, GameObject g)> zoneThings = new List<(int, GameObject)>();
         /// <summary>The canyon, the ground, the ice, the channel, the edge of the closed zone and the dust over it.</summary>
@@ -97,7 +106,7 @@ namespace Zerks.Game
                 var g = new GameObject($"block {d},{s}");
                 g.transform.SetParent(env, false);
                 g.transform.localPosition = at;
-                Look.Prim(PrimitiveType.Cube, g.transform, new Vector3(0, 0.02f, 0), new Vector3(16.2f, 0.04f, 16.2f), road);
+                roadOf[$"{d},{s}"] = Look.Prim(PrimitiveType.Cube, g.transform, new Vector3(0, 0.02f, 0), new Vector3(16.2f, 0.04f, 16.2f), road);
                 if (plot)
                 {
                     Look.Prim(PrimitiveType.Cube, g.transform, new Vector3(0, 0.06f, 0), new Vector3(12.6f, 0.08f, 12.6f), edge);
@@ -114,6 +123,20 @@ namespace Zerks.Game
             }
             foreach (var (d, s, z) in EmptyBlocks) Block(d, s, z, true);
             foreach (var (d, s) in ArkBlocks) Block(d, s, 0, false);
+            // The Green Belt (levels.md, level 21): its patches are not buildings, only the street round them and the rock.
+            foreach (var (id, d, s) in Content.PatchPlots)
+            {
+                Block(d, s, 3, false);
+                var pdef = new BuildingDef { Id = id, Kind = "patch", Name = "Green Belt patch", D = d, S = s, Zone = 3,
+                    Models = { [1] = "patch-1", [2] = "patch-2", [3] = "patch-3", [4] = "patch-4" } };
+                var pv = BuildingView.Make(pdef, transform);
+                var pc = pv.GetComponent<BoxCollider>();
+                pc.center = new Vector3(0, 0.5f, 0); pc.size = new Vector3(12, 1, 12);
+                PatchViews[id] = pv;
+                var gm = Look.Glow(Look.Teal, 0);
+                patchGlow[id] = gm;
+                Look.Decal(transform, Look.Plot(d, s) + new Vector3(0, 0.25f, 0), 14, gm, "glow " + id);
+            }
 
             // The Ark on its 2x2 plot, with the containers next to it; from level 18 with its dish unfolded.
             var ark = new GameObject("ark");
@@ -219,14 +242,15 @@ namespace Zerks.Game
         }
 
         /// <summary>
-        /// Every block of the grid (|d| &lt;= 3, |s| &lt;= 10, as on the mockup) with its zone: the plots of the colony and
-        /// the Ark's (0), zone I (1), zone II at the back (2), the rest of the back up the canyon (3, closed for all of
-        /// chapter 1), and the blocks beside and in front of the colony that are never plots (-1).
+        /// Every block of the grid (|d| &lt;= 3, -13 &lt;= s &lt;= 10) with its zone: the plots of the colony and the Ark's (0),
+        /// zone I (1), zone II at the back (2), zone III (3): the Green Belt further up the canyon and the plots of chapters 3
+        /// and 4 beside the colony; and the blocks that are never plots (-1).
         /// </summary>
         static Block[] Blocks()
         {
             var zones = new Dictionary<(int, int), int>();
             foreach (var def in Content.Buildings) zones[(def.D, def.S)] = def.Zone;
+            foreach (var (_, d, s) in Content.PatchPlots) zones[(d, s)] = 3;
             foreach (var (d, s, z) in EmptyBlocks) zones[(d, s)] = z;
             foreach (var (d, s) in ArkBlocks) zones[(d, s)] = 0;
             var list = new List<Block>();
@@ -234,7 +258,8 @@ namespace Zerks.Game
                 for (int j = -7; j <= 7; j++)
                 {
                     int d = i - j, s = i + j;
-                    if (Mathf.Abs(d) > 3 || Mathf.Abs(s) > 10) continue;
+                    // the Green Belt reaches up the canyon to s = -13 (chapters 3 and 4, a proposal of 28.11.2026)
+                    if (Mathf.Abs(d) > 3 || s > 10 || s < -13) continue;
                     var z = zones.TryGetValue((d, s), out var known) ? known : Mathf.Abs(d) <= 2 && s < -5 ? 3 : -1;
                     list.Add(new Block { D = d, S = s, Cx = i * Content.Pitch, Cz = j * Content.Pitch, Zone = z });
                 }
@@ -392,7 +417,7 @@ namespace Zerks.Game
                     DockV.ShowPrint("dock-0", Mathf.Min(1, dockPrint));
                     if (dockPrint >= 1) dockPrint = -1;
                 }
-                else DockV.ShowStanding($"dock-{Mathf.Clamp(s.Frame, 0, 4)}", NightK);
+                else DockV.ShowStanding(DockModel(s), NightK);
             }
             if (s.AntennaFixed && !s.AntennaReady) SetArk("ark-18");
             for (int i = 0; i < nightPools.Count; i++) nightPools[i].SetFloat("_Alpha", 0.28f * NightK);
@@ -401,6 +426,10 @@ namespace Zerks.Game
             foreach (var (zone, g) in zoneThings)
                 if (zone > 0 && zone <= s.Zone && !g.activeSelf) g.SetActive(true);
             Land.SetZone(s.Zone);
+            if (s.Zone >= 3 && limitsZone != 3 && Rig != null) { limitsZone = 3; Rig.Limits = new Rect(-75, -105, 185, 185); }
+            SyncPatches(c);
+            SyncStreets(s);
+            SyncRocks(s);
             Land.Sync(dt, NightK);
             // a box on the channel at every building that stands (or is being printed), and always at the Ark
             foreach (var kv in Land.Kerbs)
@@ -437,6 +466,8 @@ namespace Zerks.Game
             else if (antennaLeft > 0) DroneBot.Drive(arkTop, 1, true);
             else if (dockPrint >= 0) DroneBot.Drive(DockV, dockPrint, false);
             else if (printing != null) DroneBot.Drive(Views[printing.Id], 1 - (float)(printing.BuildLeft / System.Math.Max(0.001, printing.BuildTotal)), false);
+            else if (s.Patches.FirstOrDefault(p => p.WorkLeft > 0 && p.WorkTo != 5) is PatchState sow && PatchViews.TryGetValue(sow.Id, out var sv))
+                DroneBot.Drive(sv, 1 - (float)(sow.WorkLeft / System.Math.Max(0.001, sow.WorkTotal)), true);
             else DroneBot.Drive(null, 0, false);
 
             // The robot.
@@ -468,13 +499,155 @@ namespace Zerks.Game
         void Lighting()
         {
             var n = NightK;
-            Rig.Cam.backgroundColor = Color.Lerp(Look.DayBg, Look.NightBg, n);
-            Sun.color = Color.Lerp(Look.DaySun, Look.NightSun, n);
-            Sun.intensity = Mathf.Lerp(1.6f, 0.18f, n);
-            RenderSettings.ambientSkyColor = Color.Lerp(Look.DaySky * 0.9f, Look.NightSky * 0.32f, n);
+            // a dust storm (levels.md, rule 13): the sky turns yellow-brown, the sun is weak, the far end of the canyon fades
+            stormK = Mathf.MoveTowards(stormK, colony != null && colony.StormNow ? 1 : 0, Time.deltaTime * 0.35f);
+            var dusty = Look.Hex(0xc49a6c);
+            // at 40% the sky turns blue (levels.md, rule 9; concept.md, the end of chapter 4): slowly, over a few seconds
+            var blue = colony != null && colony.S.Atmo >= 40 ? 1f : 0f;
+            blueK = blueK < 0 ? blue : Mathf.MoveTowards(blueK, blue, Time.deltaTime * 0.15f);
+            var dayBg = Color.Lerp(Look.DayBg, Look.Hex(0x9cc9ea), blueK);
+            Rig.Cam.backgroundColor = Color.Lerp(Color.Lerp(dayBg, Look.NightBg, n), dusty * (1 - 0.6f * n), stormK * 0.8f);
+            Sun.color = Color.Lerp(Color.Lerp(Look.DaySun, Look.NightSun, n), dusty, stormK * 0.6f);
+            Sun.intensity = Mathf.Lerp(1.6f, 0.18f, n) * (1 - 0.65f * stormK);
+            RenderSettings.ambientSkyColor = Color.Lerp(Color.Lerp(Look.DaySky * 0.9f, Look.NightSky * 0.32f, n), dusty * 0.7f * (1 - 0.6f * n), stormK * 0.7f);
             RenderSettings.ambientEquatorColor = Color.Lerp(Look.DayBounce * 0.8f, Look.NightBounce * 0.7f, n);
             RenderSettings.ambientGroundColor = Color.Lerp(Look.DayBounce * 0.5f, Look.NightBounce * 0.4f, n);
+            RenderSettings.fog = stormK > 0.01f;
+            if (stormK > 0.01f)
+            {
+                RenderSettings.fogMode = FogMode.Linear;
+                RenderSettings.fogColor = dusty * (1 - 0.6f * n);
+                RenderSettings.fogStartDistance = Mathf.Lerp(400, 40, stormK);
+                RenderSettings.fogEndDistance = Mathf.Lerp(900, 260, stormK);
+            }
         }
+
+        // ---------------------------------------------------------------- chapters 3 and 4
+
+        /// <summary>The dock: the frame stage by stage (dock-0 … dock-4), then the hull (hull-1 … hull-4), then the reactor in it (reactor-1 … reactor-4).</summary>
+        static string DockModel(GameState s)
+        {
+            if (s.Reactor > 0) return $"reactor-{Mathf.Clamp(s.Reactor, 1, 4)}";
+            if (s.Hull > 0) return $"hull-{Mathf.Clamp(s.Hull, 1, 4)}";
+            return $"dock-{Mathf.Clamp(s.Frame, 0, 4)}";
+        }
+
+        /// <summary>The model of a patch: lichen, moss, thin soil and grass, sea buckthorn in strips (art/3d/buildings patch-1 … patch-4).</summary>
+        static string PatchModel(int stage) => stage switch { 1 => "patch-1", 2 => "patch-2", 3 => "patch-3", 4 => "patch-3", 5 => "patch-4", _ => null };
+
+        void SyncPatches(Colony c)
+        {
+            var s = c.S;
+            var open = s.Zone >= 3;
+            foreach (var kv in PatchViews)
+            {
+                var p = s.Patch(kv.Key);
+                var v = kv.Value;
+                v.GetComponent<BoxCollider>().enabled = open;
+                var model = p != null ? PatchModel(p.Stage) : null;
+                if (!open || p == null) v.Hide();
+                else if (p.WorkLeft > 0 && p.WorkTo <= 4) v.ShowPrint(PatchModel(p.WorkTo), 1 - (float)(p.WorkLeft / System.Math.Max(0.001, p.WorkTotal)));
+                else if (model != null) v.ShowStanding(model, NightK);
+                else v.Hide();
+                // a patch glows when it can take its next step (levels.md: "the patches light up")
+                var can = open && p != null && c.WhyNotPatch(p.Id) == "";
+                patchGlow[kv.Key].SetFloat("_Alpha", can ? 0.35f + 0.2f * Mathf.Sin(time * 4) : 0);
+            }
+        }
+
+        /// <summary>The paved streets (levels.md, level 36): the road of each paved block gets the pavers of the approved look.</summary>
+        void SyncStreets(GameState s)
+        {
+            foreach (var key in s.Paved)
+            {
+                if (pavedShown.Contains(key) || !roadOf.TryGetValue(key, out var road)) continue;
+                pavedShown.Add(key);
+                road.GetComponent<Renderer>().sharedMaterial = PavedMaterial();
+            }
+        }
+
+        /// <summary>
+        /// One texture for a whole block of 16 m, as on the approved map (mockup/src/map.js, pavedMat; Joro, 27.11.2026: "паветата
+        /// да"): herringbone pavers in two warm greys over dark joints, a band of darker pavers along the kerb, and at the
+        /// crossings a ring of dark pavers round a circle of brick pavers from our kiln.
+        /// </summary>
+        Material PavedMaterial()
+        {
+            if (pavedMat != null) return pavedMat;
+            const int S = 512; const float PX = S / 16f;
+            var px = new Color32[S * S];
+            var joint = new Color32(0x7f, 0x78, 0x6d, 255);
+            for (int i = 0; i < px.Length; i++) px[i] = joint;
+            long seed = 9;
+            float Lcg() { seed = seed * 16807 % 2147483647; return seed / 2147483647f; }
+            Color32 Tone(int r, int g, int b, int v) { var t = Mathf.RoundToInt((Lcg() - 0.5f) * v); return new Color32((byte)Mathf.Clamp(r + t, 0, 255), (byte)Mathf.Clamp(g + t, 0, 255), (byte)Mathf.Clamp(b + t, 0, 255), 255); }
+            Color32 Col(float x, float y)
+            {
+                float mx = (x - S / 2f) / PX, my = (y - S / 2f) / PX;
+                var rc = Mathf.Sqrt((Mathf.Abs(mx) - 8) * (Mathf.Abs(mx) - 8) + (Mathf.Abs(my) - 8) * (Mathf.Abs(my) - 8));
+                if (rc < 1.0f) return Tone(178, 96, 70, 16);
+                if (rc < 1.55f) return Tone(96, 89, 80, 10);
+                var cheb = Mathf.Max(Mathf.Abs(mx), Mathf.Abs(my));
+                if (cheb > 6.15f && cheb < 6.75f) return Tone(104, 97, 88, 10);
+                return Lcg() < 0.5f ? Tone(205, 197, 183, 10) : Tone(184, 176, 162, 10);
+            }
+            const int wd = 8, gap = 1;
+            void Fill(int x0, int y0, int w, int h, Color32 c)
+            {
+                for (int y = Mathf.Max(0, y0 + gap); y < Mathf.Min(S, y0 + h - gap); y++)
+                    for (int x = Mathf.Max(0, x0 + gap); x < Mathf.Min(S, x0 + w - gap); x++) px[y * S + x] = c;
+            }
+            for (int i = -80; i <= 80; i++)
+                for (int j = -40; j <= 40; j++)
+                {
+                    int bx = (i + 2 * j) * wd, by = (i - 2 * j) * wd;
+                    if (bx < -24 || bx > S + 8 || by < -24 || by > S + 8) continue;
+                    Fill(bx, by, 2 * wd, wd, Col(bx + wd, by + wd / 2f));
+                    Fill(bx, by + wd, wd, 2 * wd, Col(bx + wd / 2f, by + wd * 2));
+                }
+            var tex = new Texture2D(S, S, TextureFormat.RGBA32, true) { name = "pavers", wrapMode = TextureWrapMode.Clamp, anisoLevel = 4 };
+            tex.SetPixels32(px);
+            tex.Apply(true, true);
+            pavedMat = new Material(Look.Lit(Color.white, 0.1f)) { name = "paved" };
+            pavedMat.SetTexture("_BaseMap", tex);
+            pavedMat.SetColor("_BaseColor", Color.white);
+            return pavedMat;
+        }
+
+        /// <summary>The stones a storm threw up lie by the square round the Ark until they are tapped (levels.md, rule 13).</summary>
+        void SyncRocks(GameState s)
+        {
+            if (rocks.Count == 0)
+            {
+                var rnd = new System.Random(5);
+                var spots = new[] { new Vector3(-14, 0, 22), new Vector3(20, 0, 10), new Vector3(-22, 0, -14), new Vector3(10, 0, -26) };
+                foreach (var at in spots)
+                {
+                    var g = new GameObject("rocks");
+                    g.transform.SetParent(transform, false);
+                    g.transform.localPosition = Look.ArkAt + at;
+                    for (int i = 0; i < 4; i++)
+                    {
+                        var sz = 0.7f + (float)rnd.NextDouble() * 0.8f;
+                        var r = Look.Prim(PrimitiveType.Sphere, g.transform, new Vector3((float)rnd.NextDouble() * 2.4f - 1.2f, sz * 0.3f, (float)rnd.NextDouble() * 2.4f - 1.2f),
+                            new Vector3(sz * 1.3f, sz * 0.8f, sz), Look.Lit(rnd.NextDouble() < 0.5 ? Look.Rock : Look.Rock2, 0.05f));
+                        r.transform.rotation = Quaternion.Euler(0, (float)rnd.NextDouble() * 360, 0);
+                        Destroy(r.GetComponent<Collider>());
+                    }
+                    var bc = g.AddComponent<BoxCollider>();
+                    bc.center = new Vector3(0, 1, 0); bc.size = new Vector3(5, 2.5f, 5);
+                    rocks.Add(g);
+                }
+            }
+            for (int i = 0; i < rocks.Count; i++)
+            {
+                var on = i < s.Rocks;
+                if (rocks[i].activeSelf != on) rocks[i].SetActive(on);
+            }
+        }
+
+        /// <summary>Where a pile of stones from the storm lies (the first one still there), for the tag over it.</summary>
+        public Vector3? RocksAt => rocks.FirstOrDefault(r => r.activeSelf)?.transform.position;
 
         // ---------------------------------------------------------------- people
 
@@ -543,7 +716,7 @@ namespace Zerks.Game
 
         // ---------------------------------------------------------------- picking
 
-        public enum PickKind { None, Building, Ark, Debris, Robot, Echo, Commander, Colonist, Plot, Dock }
+        public enum PickKind { None, Building, Ark, Debris, Robot, Echo, Commander, Colonist, Plot, Dock, Patch, Rocks }
 
         public (PickKind kind, string id) Pick(Vector2 screen)
         {
@@ -563,13 +736,16 @@ namespace Zerks.Game
                 if (fig != null) return (PickKind.Colonist, fig.ColonistId.ToString());
                 if (t == ArkT) return (PickKind.Ark, "ark");
                 if (t == DockV.transform && colony.S.Ark >= 12) return (PickKind.Dock, "dock");
+                if (t.name == "rocks") return (PickKind.Rocks, null);
                 var bv = t.GetComponent<BuildingView>();
+                if (bv != null && PatchViews.ContainsKey(bv.Id)) return (PickKind.Patch, bv.Id);
                 if (bv != null && bv.Visible) return (PickKind.Building, bv.Id);
             }
             return (PickKind.None, null);
         }
 
-        public Vector3 WorldOf(string id) => id == "ark" ? Look.ArkAt + Vector3.up * 30 : id == "dock" ? DockV.Top : Views.TryGetValue(id, out var v) ? v.Top : Look.ArkAt;
-        public Vector3 PlotOf(string id) => Look.Plot(Content.B(id));
+        public Vector3 WorldOf(string id) => id == "ark" ? Look.ArkAt + Vector3.up * 30 : id == "dock" ? DockV.Top : Views.TryGetValue(id, out var v) ? v.Top
+            : PatchViews.TryGetValue(id, out var pv) ? pv.transform.position + Vector3.up * 4 : Look.ArkAt;
+        public Vector3 PlotOf(string id) => PatchViews.TryGetValue(id, out var pv) ? pv.transform.position : Look.Plot(Content.B(id));
     }
 }

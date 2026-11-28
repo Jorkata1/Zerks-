@@ -48,6 +48,10 @@ namespace Zerks.Sim
         public double RobotShare = 0.06;
         public double NightMin = 8;
         public int TestTempo = 60;
+        /// <summary>Air a Green Belt patch makes a minute: lichen, moss, thin soil, grass, sea buckthorn (balance 0.2, proposal).</summary>
+        public double[] PatchAir = { 0.5, 1.0, 1.5, 2.5, 4.0 };
+        /// <summary>Game minutes a patch grows: lichen to moss, moss to soil, the grass, the buckthorn (balance 0.2, proposal).</summary>
+        public double[] PatchStageMin = { 240, 240, 180, 1440 };
 
         public BuildingBalance B(string id)
         {
@@ -74,6 +78,8 @@ namespace Zerks.Sim
                 bal.RobotShare = (double?)p["ROBOT_SHARE"] ?? 0.06;
                 bal.NightMin = (double?)p["NIGHT_MIN"] ?? 8;
                 bal.TestTempo = (int?)p["TEST_TEMPO"] ?? 60;
+                ReadFive(p["PATCH_AIR"], bal.PatchAir, "lichen", "moss", "soil", "grass", "buckthorn");
+                ReadFive(p["PATCH_STAGE_MIN"], bal.PatchStageMin, "lichen", "moss", "grass", "buckthorn");
             }
             foreach (var a in root["air"] as JArray ?? new JArray())
                 bal.AirPerPercent[(int)a["p"]] = (double)a["units"];
@@ -109,6 +115,22 @@ namespace Zerks.Sim
                 bal.Buildings[b.Id] = b;
             }
             return bal;
+        }
+
+        /// <summary>Numbers that come as a list in order, or as an object whose keys contain these words (in this order).</summary>
+        static void ReadFive(JToken t, double[] into, params string[] words)
+        {
+            if (t is JArray a)
+                for (int i = 0; i < Math.Min(a.Count, into.Length); i++) into[i] = (double)a[i];
+            else if (t is JObject o)
+                for (int i = 0; i < Math.Min(words.Length, into.Length); i++)
+                {
+                    // a key that starts with the word first ("mossToSoil" for moss, not "lichenToMoss"), then one that has it
+                    JToken v = null;
+                    foreach (var kv in o) if (kv.Key.StartsWith(words[i], StringComparison.OrdinalIgnoreCase)) { v = kv.Value; break; }
+                    if (v == null) foreach (var kv in o) if (kv.Key.IndexOf(words[i], StringComparison.OrdinalIgnoreCase) >= 0) { v = kv.Value; break; }
+                    if (v != null && (v.Type == JTokenType.Float || v.Type == JTokenType.Integer)) into[i] = (double)v;
+                }
         }
 
         static Bag ParseBag(JObject o)

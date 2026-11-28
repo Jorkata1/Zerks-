@@ -21,6 +21,8 @@ namespace Zerks.Sim
     public sealed class Looks
     {
         public readonly Dictionary<string, string> Accent = new Dictionary<string, string>();
+        /// <summary>The tool each profession carries (the more detailed people, Joro 21.11.2026; a proposal): a part of colonist.glb.</summary>
+        public readonly Dictionary<string, string> Tool = new Dictionary<string, string>();
         public readonly Dictionary<string, PersonLook> People = new Dictionary<string, PersonLook>();
 
         public static Looks Parse(string json)
@@ -30,6 +32,8 @@ namespace Zerks.Sim
             var root = JObject.Parse(json);
             if (root["accent"] is JObject acc)
                 foreach (var p in acc.Properties()) l.Accent[p.Name] = (string)p.Value;
+            if (root["tool"] is JObject tool)
+                foreach (var p in tool.Properties()) l.Tool[p.Name] = (string)p.Value;
             if (root["people"] is JObject ppl)
                 foreach (var p in ppl.Properties())
                 {
@@ -54,6 +58,9 @@ namespace Zerks.Sim
             Profession.Engineer => "engineer",
             Profession.Scientist => "scientist",
             Profession.Builder => "builder",
+            Profession.Dispatcher => "dispatcher",
+            Profession.Doctor => "doctor",
+            Profession.Technician => "technician",
             _ => "engineer",
         };
 

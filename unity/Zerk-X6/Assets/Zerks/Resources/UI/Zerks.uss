@@ -37,6 +37,10 @@
 .res3 { top: 124px; left: 12px; }
 .res3 .pill.s { width: 60px; padding-right: 3px; margin-right: 2px; }
 .res3 .pill-text { font-size: 11px; }
+/* chapters 3 and 4: saplings, rock wool, glass, grain, a row lower (proposal, 28.11.2026) */
+.res4 { top: 156px; left: 12px; }
+.res4 .pill.s { width: 60px; padding-right: 3px; margin-right: 2px; }
+.res4 .pill-text { font-size: 11px; }
 .res2 .pill.wide { width: 86px; }
 .crew.pill.s { width: auto; }
 .pill-ic { width: 22px; height: 22px; border-radius: 11px; margin-right: 3px; }
